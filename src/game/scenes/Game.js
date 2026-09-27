@@ -88,6 +88,10 @@ export class Game extends Scene
         this.attackStartedAt = 0;
         this.nextAttackAt = 0;
         this.attackDirection = 1;
+        this.attackBufferUntil = 0;
+        this.attackBufferMs = 100;
+        this.attackVisualVariant = -1;
+        this.attackArcShown = false;
         this.attackHitRegistered = false;
         this.attackHitCarapanaRegistered = false;
 
@@ -107,8 +111,8 @@ export class Game extends Scene
         this.keyJ = this.input.keyboard.addKey('J');
         this.keyX = this.input.keyboard.addKey('X');
 
-        this.keyJ.on('down', () => this.startAttack());
-        this.keyX.on('down', () => this.startAttack());
+        this.keyJ.on('down', () => this.queueAttackInput());
+        this.keyX.on('down', () => this.queueAttackInput());
 
         // Câmera lateral preservada.
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -1050,65 +1054,252 @@ export class Game extends Scene
         });
     }
 
-    startAttack ()
+    queueAttackInput ()
     {
-        const now = this.time.now;
+        const now=this.time.now;
+        if(this.phaseCompleted||this.isPlayerDead)return;
 
-        if (this.phaseCompleted || this.isPlayerDead || this.isAttacking || now < this.nextAttackAt)
-        {
+        if(!this.isAttacking&&now>=this.nextAttackAt){
+            this.startAttack();
             return;
         }
 
-        this.isAttacking = true;
-        this.attackStartedAt = now;
-        this.nextAttackAt = now + 400;
-        this.attackDirection = this.playerVisual.facing || 1;
-        this.attackHitRegistered = false;
-        this.attackHitCarapanaRegistered = false;
+        const remaining=this.nextAttackAt-now;
+        if(remaining>0&&remaining<=this.attackBufferMs){
+            this.attackBufferUntil=this.nextAttackAt+60;
+        }
+    }
+
+    showMacheteArc (direction,variant)
+    {
+        const angles=variant===0?[-36,-18,2]:[-15,0,14];
+        for(let i=0;i<3;i++){
+            const x=this.player.x+direction*(28+i*9);
+            const y=this.player.y+(variant===0?-24+i*10:-12+i*5);
+            const segment=this.add.rectangle(
+                x,y,26-i*3,3,
+                i===1?0xdce2df:0xbfc9c5,
+                .3-i*.045
+            ).setDepth(24).setAngle(direction*angles[i]);
+
+            this.tweens.add({
+                targets:segment,
+                x:segment.x+direction*(8+i*2),
+                alpha:0,
+                scaleX:1.15,
+                duration:115+i*12,
+                ease:'Quad.Out',
+                onComplete:()=>segment.destroy()
+            });
+        }
+    }
+
+    showCombatImpact (x,y,visual,options={})
+    {
+        const small=options.small===true;
+        const boss=options.boss===true;
+        const heavy=options.heavy===true;
+        const final=options.final===true;
+        const count=final?6:boss?5:small?3:heavy?5:4;
+        const flash=this.add.circle(
+            x,y,
+            final?22:boss?18:small?10:14,
+            0xf2ead4,
+            final?.48:boss?.38:small?.28:.34
+        ).setDepth(30);
+
+        this.tweens.add({
+            targets:flash,
+            scale:final?2.3:1.8,
+            alpha:0,
+            duration:final?150:120,
+            onComplete:()=>flash.destroy()
+        });
+
+        for(let i=0;i<count;i++){
+            const angle=(-.8+(1.6*i/Math.max(1,count-1)))+(this.attackDirection<0?Math.PI:0);
+            const particle=this.add.rectangle(
+                x,y,
+                small?5:6+(i%2)*2,
+                2,
+                i%2?0xd8d0b7:0x8ea06b,
+                .72
+            ).setDepth(30).setAngle(angle*57.2958);
+
+            const distance=(small?16:24)+(i%3)*6+(final?8:0);
+            this.tweens.add({
+                targets:particle,
+                x:x+Math.cos(angle)*distance,
+                y:y+Math.sin(angle)*distance,
+                alpha:0,
+                angle:particle.angle+(i%2?55:-55),
+                duration:(small?145:185)+i*10,
+                onComplete:()=>particle.destroy()
+            });
+        }
+
+        if(visual&&visual.parts&&visual.parts.head){
+            const head=visual.parts.head;
+            const baseX=head.x;
+            const recoil=(boss?3:small?2.5:heavy?6:4.5)*this.attackDirection;
+            this.tweens.killTweensOf(head);
+            this.tweens.add({
+                targets:head,
+                x:baseX+recoil,
+                duration:42,
+                yoyo:true,
+                ease:'Quad.Out',
+                onComplete:()=>{head.x=baseX;}
+            });
+        }
+
+        const shakeDuration=final?68:boss?56:small?36:heavy?52:46;
+        const shakeIntensity=final?.0021:boss?.00155:small?.0007:heavy?.00125:.001;
+        this.cameras.main.shake(shakeDuration,shakeIntensity);
+    }
+
+    showBlockDeflect (x,y,heavy=false)
+    {
+        const ring=this.add.circle(x,y,heavy?12:9,0xe7e1cf,.06).setDepth(30);
+        ring.setStrokeStyle(2,heavy?0xd6b56c:0xcbd8cf,.58);
+        this.tweens.add({
+            targets:ring,
+            scale:heavy?1.7:1.45,
+            alpha:0,
+            duration:150,
+            onComplete:()=>ring.destroy()
+        });
+
+        for(let i=0;i<3;i++){
+            const spark=this.add.rectangle(
+                x+this.attackDirection*(i*3),
+                y+(i-1)*5,
+                heavy?10:7,
+                2,
+                0xe5d4a8,
+                .62
+            ).setDepth(31).setAngle(this.attackDirection*(-35+i*35));
+
+            this.tweens.add({
+                targets:spark,
+                x:spark.x-this.attackDirection*(8+i*3),
+                y:spark.y+(i-1)*6,
+                alpha:0,
+                duration:110+i*18,
+                onComplete:()=>spark.destroy()
+            });
+        }
+    }
+
+    resetCombatPolishState ()
+    {
+        this.isAttacking=false;
+        this.attackBufferUntil=0;
+        this.attackArcShown=false;
+
+        if(this.attackHitbox&&this.attackHitbox.body){
+            this.attackHitbox.body.enable=false;
+        }
+
+        if(this.playerVisual&&this.playerVisual.parts){
+            this.playerVisual.parts.machete.angle=18;
+        }
+
+        if('attackHitRegistered' in this)this.attackHitRegistered=false;
+        if('attackHitSnakeRegistered' in this)this.attackHitSnakeRegistered=false;
+        if('attackHitCarapanaRegistered' in this)this.attackHitCarapanaRegistered=false;
+        if('attackHitCurupiraRegistered' in this)this.attackHitCurupiraRegistered=false;
+        if('attackBlockCurupiraRegistered' in this)this.attackBlockCurupiraRegistered=false;
+        if('attackHitBossRegistered' in this)this.attackHitBossRegistered=false;
+    }
+
+    startAttack ()
+    {
+        const now=this.time.now;
+        if(this.phaseCompleted||this.isPlayerDead||this.isAttacking||now<this.nextAttackAt)return false;
+
+        this.isAttacking=true;
+        this.attackStartedAt=now;
+        this.nextAttackAt=now+400;
+        this.attackDirection=this.playerVisual.facing||1;
+        this.attackBufferUntil=0;
+        this.attackArcShown=false;
+        this.attackVisualVariant=(this.attackVisualVariant+1)%2;
+
+        if('attackHitRegistered' in this)this.attackHitRegistered=false;
+        if('attackHitSnakeRegistered' in this)this.attackHitSnakeRegistered=false;
+        if('attackHitCarapanaRegistered' in this)this.attackHitCarapanaRegistered=false;
+        if('attackHitCurupiraRegistered' in this)this.attackHitCurupiraRegistered=false;
+        if('attackBlockCurupiraRegistered' in this)this.attackBlockCurupiraRegistered=false;
+        if('attackHitBossRegistered' in this)this.attackHitBossRegistered=false;
+
+        return true;
     }
 
     updateAttack (time)
     {
-        if (!this.isAttacking)
-        {
-            this.attackHitbox.body.enable = false;
+        if(!this.isAttacking){
+            this.attackHitbox.body.enable=false;
+
+            if(this.attackBufferUntil>=time&&time>=this.nextAttackAt){
+                this.startAttack();
+            } else if(this.attackBufferUntil<time){
+                this.attackBufferUntil=0;
+            }
             return;
         }
 
-        const elapsed = time - this.attackStartedAt;
-        const progress = Math.min(elapsed / 300, 1);
-        const swing = Math.sin(progress * Math.PI);
+        const elapsed=time-this.attackStartedAt;
+        const parts=this.playerVisual.parts;
+        const baseArm=this.playerBaseRightArmAngle??parts.rightArmRig.angle;
+        const baseTorso=this.playerBaseTorsoAngle??parts.torso.angle;
+        const variant=this.attackVisualVariant;
 
-        const parts = this.playerVisual.parts;
-        const direction = this.attackDirection;
+        if(elapsed<70){
+            const prep=Math.max(0,elapsed/70);
+            parts.rightArmRig.angle=baseArm-(variant===0?28:22)*prep;
+            parts.machete.angle=18-(variant===0?32:22)*prep;
+            parts.torso.angle=baseTorso-(variant===0?5:3)*prep;
+        } else if(elapsed<90){
+            const release=(elapsed-70)/20;
+            const armStart=variant===0?12:8;
+            const bladeStart=variant===0?28:23;
+            parts.rightArmRig.angle=baseArm-(variant===0?28:22)+(armStart+(variant===0?28:22))*release;
+            parts.machete.angle=(variant===0?-14:-4)+(bladeStart-(variant===0?-14:-4))*release;
+            parts.torso.angle=baseTorso-(variant===0?5:3)+(variant===0?7:4)*release;
+        } else if(elapsed<=210){
+            const active=(elapsed-90)/120;
+            const swing=Math.sin(active*Math.PI);
+            const armStart=variant===0?12:8;
+            const bladeStart=variant===0?28:23;
+            parts.rightArmRig.angle=baseArm+armStart+(variant===0?48:40)*swing;
+            parts.machete.angle=bladeStart+(variant===0?40:30)*swing;
+            parts.torso.angle=baseTorso+(variant===0?2:1)+(variant===0?6:4)*swing;
 
-        const baseRightArmAngle = this.playerBaseRightArmAngle ?? parts.rightArmRig.angle;
-        const baseTorsoAngle = this.playerBaseTorsoAngle ?? parts.torso.angle;
-
-        parts.rightArmRig.angle = baseRightArmAngle + (55 * swing);
-        parts.machete.angle = 18 + (40 * swing);
-        parts.torso.angle = baseTorsoAngle + (5 * swing);
-
-        const activeWindow = elapsed >= 90 && elapsed <= 210;
-
-        if (activeWindow)
-        {
-            this.attackHitbox.body.enable = true;
+            this.attackHitbox.body.enable=true;
             this.attackHitbox.setPosition(
-                this.player.x + (46 * direction),
-                this.player.y - 2
+                this.player.x+(46*this.attackDirection),
+                this.player.y+(-2)
             );
-        }
-        else
-        {
-            this.attackHitbox.body.enable = false;
+
+            if(!this.attackArcShown){
+                this.attackArcShown=true;
+                this.showMacheteArc(this.attackDirection,variant);
+            }
+        } else {
+            this.attackHitbox.body.enable=false;
+            const recovery=Math.min(1,(elapsed-210)/90);
+            const armStart=variant===0?12:8;
+            const bladeStart=variant===0?28:23;
+            parts.rightArmRig.angle=baseArm+armStart*(1-recovery);
+            parts.machete.angle=bladeStart+(18-bladeStart)*recovery;
+            parts.torso.angle=baseTorso+(variant===0?2:1)*(1-recovery);
         }
 
-        if (elapsed >= 300)
-        {
-            this.isAttacking = false;
-            this.attackHitbox.body.enable = false;
-            parts.machete.angle = 18;
+        if(elapsed>=300){
+            this.isAttacking=false;
+            this.attackHitbox.body.enable=false;
+            parts.machete.angle=18;
         }
     }
 
@@ -1136,6 +1327,12 @@ export class Game extends Scene
         }
 
         this.snakeHealth = Math.max(0, this.snakeHealth - amount);
+        this.showCombatImpact(
+            this.snake.x,
+            this.snake.y - 4,
+            this.snakeVisual,
+            { heavy: this.snakeHealth <= 0 }
+        );
 
         this.tweens.killTweensOf(this.snakeVisual);
         this.snakeVisual.setAlpha(1);
@@ -1427,6 +1624,12 @@ export class Game extends Scene
         }
 
         this.carapanaHealth = Math.max(0, this.carapanaHealth - amount);
+        this.showCombatImpact(
+            this.carapana.x,
+            this.carapana.y,
+            this.carapanaVisual,
+            { small: true }
+        );
 
         if (this.carapanaHealth <= 0)
         {
@@ -1595,12 +1798,13 @@ export class Game extends Scene
         }
 
         this.isPlayerDead = true;
+        this.resetCombatPolishState();
         this.player.body.setVelocity(0, 0);
 
         this.time.delayedCall(650, () => {
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
             this.player.body.setVelocity(0, 0);
-            this.resetMovementPolishState();
+            this.resetMovementPolishState(); this.resetCombatPolishState();
 
             this.health = this.maxHealth;
             this.hunger = this.maxHunger;
@@ -2015,7 +2219,7 @@ export class Game extends Scene
         {
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
             this.player.body.setVelocity(0, 0);
-            this.resetMovementPolishState();
+            this.resetMovementPolishState(); this.resetCombatPolishState();
         }
 
         this.syncPlayerVisual();
