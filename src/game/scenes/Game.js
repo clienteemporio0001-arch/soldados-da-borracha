@@ -393,10 +393,11 @@ export class Game extends Scene
 
         const leftArm = this.add.rectangle(-17, -14, 9, 30, 0xb89562)
             .setOrigin(0.5, 0.12);
-        const rightArm = this.add.rectangle(17, -14, 9, 30, 0xb89562)
+        const rightArmRig = this.add.container(17, -14);
+        const rightArm = this.add.rectangle(0, 0, 9, 30, 0xb89562)
             .setOrigin(0.5, 0.12);
 
-        const machete = this.add.container(24, 7);
+        const machete = this.add.container(7, 21);
         const macheteHandle = this.add.rectangle(0, 0, 6, 16, 0x3a2a1d)
             .setOrigin(0.5, 0.9);
         const macheteBlade = this.add.rectangle(0, -20, 7, 30, 0xb8c0ba)
@@ -405,6 +406,8 @@ export class Game extends Scene
             .setOrigin(0.5, 1);
         machete.add([macheteHandle, macheteBlade, macheteTip]);
         machete.setAngle(18);
+
+        rightArmRig.add([rightArm, machete]);
 
         const head = this.add.circle(0, -34, 11, 0xb98155);
 
@@ -418,8 +421,7 @@ export class Game extends Scene
             rightLeg,
             torso,
             leftArm,
-            rightArm,
-            machete,
+            rightArmRig,
             head,
             hat
         ]);
@@ -429,6 +431,7 @@ export class Game extends Scene
             hat,
             torso,
             leftArm,
+            rightArmRig,
             rightArm,
             machete,
             leftLeg,
@@ -568,7 +571,10 @@ export class Game extends Scene
         parts.hat.angle = lerp(parts.hat.angle, hatAngle);
 
         parts.leftArm.angle = lerp(parts.leftArm.angle, leftArmAngle);
-        parts.rightArm.angle = lerp(parts.rightArm.angle, rightArmAngle);
+        parts.rightArmRig.angle = lerp(parts.rightArmRig.angle, rightArmAngle);
+
+        this.playerBaseRightArmAngle = rightArmAngle;
+        this.playerBaseTorsoAngle = torsoAngle;
 
         parts.leftLeg.angle = lerp(parts.leftLeg.angle, leftLegAngle);
         parts.rightLeg.angle = lerp(parts.rightLeg.angle, rightLegAngle);
@@ -742,9 +748,12 @@ export class Game extends Scene
         const parts = this.playerVisual.parts;
         const direction = this.attackDirection;
 
-        parts.rightArm.angle += (55 * swing);
-        parts.machete.angle = 18 + (95 * swing);
-        parts.torso.angle += (5 * swing);
+        const baseRightArmAngle = this.playerBaseRightArmAngle ?? parts.rightArmRig.angle;
+        const baseTorsoAngle = this.playerBaseTorsoAngle ?? parts.torso.angle;
+
+        parts.rightArmRig.angle = baseRightArmAngle + (55 * swing);
+        parts.machete.angle = 18 + (40 * swing);
+        parts.torso.angle = baseTorsoAngle + (5 * swing);
 
         const activeWindow = elapsed >= 90 && elapsed <= 210;
 
