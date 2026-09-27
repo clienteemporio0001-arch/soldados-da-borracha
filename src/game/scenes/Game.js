@@ -57,6 +57,14 @@ export class Game extends Scene
         this.playerVisual = this.createPlayerPlaceholder();
         this.syncPlayerVisual();
 
+        this.maxHealth = 100;
+        this.health = 100;
+        this.invulnerableUntil = 0;
+        this.knockbackUntil = 0;
+        this.isPlayerDead = false;
+
+        this.createSnake();
+
         // Controles preservados.
         this.cursors = this.input.keyboard.createCursorKeys();
         this.keyA = this.input.keyboard.addKey('A');
@@ -69,6 +77,7 @@ export class Game extends Scene
         this.cameras.main.setDeadzone(220, 160);
 
         this.createHud();
+        this.createHealthHud();
 
         this.spawnPoint = { x: 150, y: 560 };
     }
@@ -542,6 +551,204 @@ export class Game extends Scene
         parts.rightLeg.y = lerp(parts.rightLeg.y, rightLegY);
     }
 
+
+    createSnake ()
+    {
+        this.snakePatrol = {
+            minX: 1040,
+            maxX: 1270,
+            speed: 70
+        };
+
+        this.snake = this.add.rectangle(1120, 620, 72, 24, 0x000000, 0);
+        this.physics.add.existing(this.snake);
+
+        this.snake.body.setSize(72, 24);
+        this.snake.body.setCollideWorldBounds(true);
+        this.snake.body.setVelocityX(this.snakePatrol.speed);
+
+        this.physics.add.collider(this.snake, this.platforms);
+        this.physics.add.overlap(this.player, this.snake, () => {
+            this.handleSnakeContact();
+        });
+
+        this.snakeVisual = this.add.container(this.snake.x, this.snake.y).setDepth(19);
+        this.snakeVisual.facing = 1;
+
+        const tail = this.add.ellipse(-30, 2, 22, 8, 0x49652f).setOrigin(0.5);
+        const bodyBack = this.add.ellipse(-15, 0, 28, 13, 0x58773a).setOrigin(0.5);
+        const bodyFront = this.add.ellipse(7, 0, 34, 15, 0x638342).setOrigin(0.5);
+        const head = this.add.ellipse(29, -2, 23, 18, 0x72924c).setOrigin(0.5);
+        const eyeTop = this.add.circle(34, -6, 2.2, 0xe3d7a5);
+        const eyeBottom = this.add.circle(34, 2, 2.2, 0xe3d7a5);
+        const pupilTop = this.add.circle(35, -6, 1, 0x11170d);
+        const pupilBottom = this.add.circle(35, 2, 1, 0x11170d);
+
+        this.snakeVisual.add([
+            tail,
+            bodyBack,
+            bodyFront,
+            head,
+            eyeTop,
+            eyeBottom,
+            pupilTop,
+            pupilBottom
+        ]);
+
+        this.snakeVisual.parts = {
+            tail,
+            bodyBack,
+            bodyFront,
+            head
+        };
+    }
+
+    updateSnake (time)
+    {
+        if (!this.snake || !this.snake.body)
+        {
+            return;
+        }
+
+        const patrol = this.snakePatrol;
+
+        if (this.snake.x >= patrol.maxX)
+        {
+            this.snake.body.setVelocityX(-patrol.speed);
+            this.snakeVisual.facing = -1;
+        }
+        else if (this.snake.x <= patrol.minX)
+        {
+            this.snake.body.setVelocityX(patrol.speed);
+            this.snakeVisual.facing = 1;
+        }
+
+        const seconds = time * 0.001;
+        const wave = Math.sin(seconds * 8);
+        const waveBack = Math.sin(seconds * 8 - 0.8);
+        const waveTail = Math.sin(seconds * 8 - 1.5);
+
+        this.snakeVisual.setPosition(this.snake.x, this.snake.y - 2 + wave * 1.2);
+        this.snakeVisual.setScale(this.snakeVisual.facing, 1);
+
+        this.snakeVisual.parts.bodyFront.y = wave * 1.4;
+        this.snakeVisual.parts.bodyBack.y = waveBack * 1.8;
+        this.snakeVisual.parts.tail.y = waveTail * 2.2;
+        this.snakeVisual.parts.head.y = wave * 1.1;
+        this.snakeVisual.parts.head.angle = wave * 2.5;
+    }
+
+    handleSnakeContact ()
+    {
+        if (this.isPlayerDead || this.time.now < this.invulnerableUntil)
+        {
+            return;
+        }
+
+        this.health = Math.max(0, this.health - 25);
+        this.invulnerableUntil = this.time.now + 1000;
+        this.knockbackUntil = this.time.now + 180;
+
+        const direction = this.player.x < this.snake.x ? -1 : 1;
+        this.player.body.setVelocityX(220 * direction);
+        this.player.body.setVelocityY(-260);
+
+        this.updateHealthHud();
+        this.flashPlayerDamage();
+
+        if (this.health <= 0)
+        {
+            this.handlePlayerDeath();
+        }
+    }
+
+    flashPlayerDamage ()
+    {
+        this.tweens.killTweensOf(this.playerVisual);
+
+        this.tweens.add({
+            targets: this.playerVisual,
+            alpha: 0.25,
+            duration: 90,
+            yoyo: true,
+            repeat: 4,
+            onComplete: () => {
+                this.playerVisual.setAlpha(1);
+            }
+        });
+    }
+
+    handlePlayerDeath ()
+    {
+        if (this.isPlayerDead)
+        {
+            return;
+        }
+
+        this.isPlayerDead = true;
+        this.player.body.setVelocity(0, 0);
+
+        this.time.delayedCall(650, () => {
+            this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
+            this.player.body.setVelocity(0, 0);
+
+            this.health = this.maxHealth;
+            this.invulnerableUntil = this.time.now + 1000;
+            this.isPlayerDead = false;
+
+            this.playerVisual.setAlpha(1);
+            this.updateHealthHud();
+        });
+    }
+
+    createHealthHud ()
+    {
+        this.healthHud = this.add.container(395, 18)
+            .setScrollFactor(0)
+            .setDepth(102);
+
+        const background = this.add.rectangle(0, 0, 235, 58, 0x06100d, 0.78)
+            .setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.35);
+
+        const label = this.add.text(12, 7, 'VIDA', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#f1e1ae'
+        });
+
+        const barBack = this.add.rectangle(12, 29, 150, 16, 0x351b18, 0.95)
+            .setOrigin(0);
+        barBack.setStrokeStyle(1, 0x8e6f62, 0.65);
+
+        this.healthBar = this.add.rectangle(12, 29, 150, 16, 0x8fb35b, 1)
+            .setOrigin(0);
+
+        this.healthText = this.add.text(172, 27, '100/100', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#ffffff'
+        });
+
+        this.healthHud.add([
+            background,
+            label,
+            barBack,
+            this.healthBar,
+            this.healthText
+        ]);
+
+        this.updateHealthHud();
+    }
+
+    updateHealthHud ()
+    {
+        const ratio = Math.max(0, this.health / this.maxHealth);
+
+        this.healthBar.width = 150 * ratio;
+        this.healthText.setText(`${this.health}/${this.maxHealth}`);
+    }
+
     createHud ()
     {
         const panel = this.add.rectangle(15, 15, 365, 104, 0x06100d, 0.72)
@@ -579,34 +786,40 @@ export class Game extends Scene
         const moveSpeed = 260;
         const jumpSpeed = 520;
 
-        const moveLeft = this.cursors.left.isDown || this.keyA.isDown;
-        const moveRight = this.cursors.right.isDown || this.keyD.isDown;
-
-        if (moveLeft)
+        if (!this.isPlayerDead)
         {
-            this.player.body.setVelocityX(-moveSpeed);
-        }
-        else if (moveRight)
-        {
-            this.player.body.setVelocityX(moveSpeed);
-        }
-        else
-        {
-            this.player.body.setVelocityX(0);
-        }
+            if (this.time.now >= this.knockbackUntil)
+            {
+                const moveLeft = this.cursors.left.isDown || this.keyA.isDown;
+                const moveRight = this.cursors.right.isDown || this.keyD.isDown;
 
-        const wantsToJump =
-            this.keyW.isDown ||
-            this.cursors.up.isDown ||
-            this.spaceKey.isDown;
+                if (moveLeft)
+                {
+                    this.player.body.setVelocityX(-moveSpeed);
+                }
+                else if (moveRight)
+                {
+                    this.player.body.setVelocityX(moveSpeed);
+                }
+                else
+                {
+                    this.player.body.setVelocityX(0);
+                }
+            }
 
-        const isGrounded =
-            this.player.body.blocked.down ||
-            this.player.body.touching.down;
+            const wantsToJump =
+                this.keyW.isDown ||
+                this.cursors.up.isDown ||
+                this.spaceKey.isDown;
 
-        if (wantsToJump && isGrounded)
-        {
-            this.player.body.setVelocityY(-jumpSpeed);
+            const isGrounded =
+                this.player.body.blocked.down ||
+                this.player.body.touching.down;
+
+            if (wantsToJump && isGrounded)
+            {
+                this.player.body.setVelocityY(-jumpSpeed);
+            }
         }
 
         if (this.player.y > 760)
@@ -617,5 +830,6 @@ export class Game extends Scene
 
         this.syncPlayerVisual();
         this.animatePlayerVisual(this.time.now);
+        this.updateSnake(this.time.now);
     }
 }
