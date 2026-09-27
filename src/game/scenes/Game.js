@@ -59,6 +59,10 @@ export class Game extends Scene
 
         this.maxHealth = 100;
         this.health = 100;
+        this.maxHunger = 100;
+        this.hunger = 100;
+        this.nextHungerDrainAt = this.time.now + 2000;
+        this.nextStarvationDamageAt = this.time.now + 2000;
         this.invulnerableUntil = 0;
         this.knockbackUntil = 0;
         this.isPlayerDead = false;
@@ -91,6 +95,7 @@ export class Game extends Scene
 
         this.createHud();
         this.createHealthHud();
+        this.createHungerHud();
 
         this.spawnPoint = { x: 150, y: 560 };
     }
@@ -660,13 +665,15 @@ export class Game extends Scene
         fruit.collected = true;
         fruit.sensor.body.enable = false;
 
-        this.health = Math.min(this.maxHealth, this.health + 20);
+        this.hunger = Math.min(this.maxHunger, this.hunger + 25);
+        this.health = Math.min(this.maxHealth, this.health + 10);
+        this.updateHungerHud();
         this.updateHealthHud();
 
         const feedback = this.add.text(
             fruit.visual.x,
             fruit.visual.y - 18,
-            '+20',
+            '+25 FOME\n+10 VIDA',
             {
                 fontFamily: 'Arial',
                 fontSize: '18px',
@@ -998,12 +1005,122 @@ export class Game extends Scene
             this.player.body.setVelocity(0, 0);
 
             this.health = this.maxHealth;
+            this.hunger = this.maxHunger;
+            this.nextHungerDrainAt = this.time.now + 2000;
+            this.nextStarvationDamageAt = this.time.now + 2000;
             this.invulnerableUntil = this.time.now + 1000;
             this.isPlayerDead = false;
 
             this.playerVisual.setAlpha(1);
             this.updateHealthHud();
+            this.updateHungerHud();
         });
+    }
+
+
+    createHungerHud ()
+    {
+        this.hungerHud = this.add.container(395, 78)
+            .setScrollFactor(0)
+            .setDepth(102);
+
+        const background = this.add.rectangle(0, 0, 235, 58, 0x06100d, 0.78)
+            .setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.35);
+
+        this.hungerLabel = this.add.text(12, 7, 'FOME', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#f1e1ae'
+        });
+
+        const barBack = this.add.rectangle(12, 29, 150, 16, 0x3d2b16, 0.95)
+            .setOrigin(0);
+        barBack.setStrokeStyle(1, 0x9b7b45, 0.65);
+
+        this.hungerBar = this.add.rectangle(12, 29, 150, 16, 0xd49a3a, 1)
+            .setOrigin(0);
+
+        this.hungerText = this.add.text(172, 27, '100/100', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#ffffff'
+        });
+
+        this.hungerHud.add([
+            background,
+            this.hungerLabel,
+            barBack,
+            this.hungerBar,
+            this.hungerText
+        ]);
+
+        this.updateHungerHud();
+    }
+
+    updateHungerHud ()
+    {
+        const ratio = Math.max(0, this.hunger / this.maxHunger);
+
+        this.hungerBar.width = 150 * ratio;
+        this.hungerText.setText(`${this.hunger}/${this.maxHunger}`);
+
+        if (this.hunger <= 0)
+        {
+            this.hungerBar.setFillStyle(0xd85c32, 1);
+            this.hungerLabel.setColor('#ffb08a');
+        }
+        else if (this.hunger < 30)
+        {
+            this.hungerBar.setFillStyle(0xe8782f, 1);
+            this.hungerLabel.setColor('#ffd08a');
+        }
+        else
+        {
+            this.hungerBar.setFillStyle(0xd49a3a, 1);
+            this.hungerLabel.setColor('#f1e1ae');
+        }
+    }
+
+    updateHunger (time)
+    {
+        if (this.isPlayerDead)
+        {
+            return;
+        }
+
+        if (time >= this.nextHungerDrainAt)
+        {
+            const elapsedSteps = Math.floor((time - this.nextHungerDrainAt) / 2000) + 1;
+            this.hunger = Math.max(0, this.hunger - elapsedSteps);
+            this.nextHungerDrainAt += elapsedSteps * 2000;
+            this.updateHungerHud();
+        }
+
+        if (this.hunger <= 0)
+        {
+            if (time >= this.nextStarvationDamageAt)
+            {
+                const elapsedHits = Math.floor((time - this.nextStarvationDamageAt) / 2000) + 1;
+                this.nextStarvationDamageAt += elapsedHits * 2000;
+
+                this.health = Math.max(0, this.health - (5 * elapsedHits));
+                this.updateHealthHud();
+
+                if (this.health <= 0)
+                {
+                    this.handlePlayerDeath();
+                }
+            }
+
+            const pulse = 0.78 + Math.sin(time * 0.008) * 0.12;
+            this.hungerHud.setAlpha(pulse);
+        }
+        else
+        {
+            this.nextStarvationDamageAt = time + 2000;
+            this.hungerHud.setAlpha(1);
+        }
     }
 
     createHealthHud ()
@@ -1138,5 +1255,6 @@ export class Game extends Scene
         this.updateAttack(this.time.now);
         this.updateSnake(this.time.now);
         this.updateFruits(this.time.now);
+        this.updateHunger(this.time.now);
     }
 }
