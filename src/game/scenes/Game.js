@@ -363,7 +363,7 @@ export class Game extends Scene
 
     createForegroundVegetation ()
     {
-        const foreground = this.add.graphics().setDepth(30).setScrollFactor(1.08);
+        const foreground = this.add.graphics().setDepth(30).setScrollFactor(1.08).setAlpha(0.78);
         foreground.fillStyle(0x0b2518, 0.98);
 
         const shrubs = [
@@ -1662,7 +1662,7 @@ export class Game extends Scene
 
     updateHunger (time)
     {
-        if (this.isPlayerDead)
+        if (this.phaseCompleted || this.isPlayerDead)
         {
             return;
         }
@@ -1751,7 +1751,7 @@ export class Game extends Scene
 
     createHud ()
     {
-        const panel = this.add.rectangle(15, 15, 365, 104, 0x06100d, 0.72)
+        const panel = this.add.rectangle(15, 15, 365, 124, 0x06100d, 0.72)
             .setOrigin(0)
             .setScrollFactor(0)
             .setDepth(100);
@@ -1771,7 +1771,7 @@ export class Game extends Scene
         this.add.text(
             30,
             56,
-            'Controles:\nA/D ou ←/→ = mover\nW / ↑ / Espaço = pular',
+            'Controles:\nA/D ou ←/→ = mover\nW / ↑ / Espaço = pular\nJ / X = atacar',
             {
                 fontFamily: 'Arial',
                 fontSize: '15px',
