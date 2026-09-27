@@ -42,6 +42,7 @@ export class Level2Scene extends Scene
         this.phaseCompleted = false;
 
         this.doubleJumpUnlocked = false;
+        this.firstDoubleJumpPending = false;
         this.jumpsUsed = 0;
         this.jumpWasDown = false;
 
@@ -52,6 +53,7 @@ export class Level2Scene extends Scene
         this.attackHitSnakeRegistered = false;
         this.attackHitCarapanaRegistered = false;
         this.attackHitCurupiraRegistered = false;
+        this.attackBlockCurupiraRegistered = false;
 
         this.createSnake();
         this.createCarapana();
@@ -295,9 +297,9 @@ export class Level2Scene extends Scene
             [0, 652, 800, 116], [860, 652, 600, 116], [1520, 652, 760, 116], [2340, 652, 960, 116]
         ];
 
-        ground.forEach(([x, y, w, h], i) => {
-            terrain.fillStyle(i % 2 === 0 ? 0x4b3423 : 0x513824, 1);
-            terrain.fillRect(x, y, w, h);            terrain.fillStyle(0x284f2d, 1);
+        ground.forEach(([x, y, w, h], i) => {            terrain.fillStyle(i % 2 === 0 ? 0x4b3423 : 0x513824, 1);
+            terrain.fillRect(x, y, w, h);
+            terrain.fillStyle(0x284f2d, 1);
             terrain.fillRect(x, y, w, 12);
             terrain.fillStyle(0x173823, 0.92);
             terrain.fillRect(x, y + 12, w, 9);
@@ -595,8 +597,8 @@ export class Level2Scene extends Scene
             leftLegY = 17;
             rightLegY = 17;
         }
-
         visual.y = this.player.y + bodyOffsetY;
+
         parts.torso.y = lerp(parts.torso.y, torsoY);
         parts.torso.angle = lerp(parts.torso.angle, torsoAngle);
 
@@ -638,6 +640,7 @@ export class Level2Scene extends Scene
         this.attackHitSnakeRegistered = false;
         this.attackHitCarapanaRegistered = false;
         this.attackHitCurupiraRegistered = false;
+        this.attackBlockCurupiraRegistered = false;
     }
 
     updateAttack (time)
@@ -892,10 +895,10 @@ export class Level2Scene extends Scene
         this.carapanaReturning = false;
 
         this.physics.add.overlap(this.player, this.carapana, () => {
-            this.handleCarapanaContact();
-        });
+            this.handleCarapanaContact();        });
 
-        this.carapanaVisual = this.add.container(            this.carapana.x,
+        this.carapanaVisual = this.add.container(
+            this.carapana.x,
             this.carapana.y
         ).setDepth(19);
 
@@ -1191,10 +1194,10 @@ export class Level2Scene extends Scene
 
             sensor.body.setAllowGravity(false);
             sensor.body.setImmovable(true);
-
             const fruit = {
                 visual,
-                sensor,                baseY: data.y,
+                sensor,
+                baseY: data.y,
                 phase: index * 0.85,
                 collected: false
             };
@@ -1331,6 +1334,9 @@ export class Level2Scene extends Scene
         this.curupiraNextActionAt = 0;
         this.curupiraAttackPattern = 0;
         this.curupiraLandingDangerUntil = 0;
+        this.curupiraLandingImpactShown = false;
+        this.curupiraLandingMarker = null;
+
         this.curupiraVisual = this.add.container(this.curupira.x, this.curupira.y).setDepth(21).setVisible(false);
         const leftFoot = this.add.rectangle(-9, 26, 12, 22, 0x5c3b28).setAngle(18);
         const rightFoot = this.add.rectangle(9, 26, 12, 22, 0x5c3b28).setAngle(-18);
@@ -1338,13 +1344,30 @@ export class Level2Scene extends Scene
         const head = this.add.circle(0, -31, 13, 0x996247);
         const hair = this.add.ellipse(0, -43, 35, 20, 0xb74427);
         this.curupiraVisual.add([leftFoot, rightFoot, body, head, hair]);
+        this.curupiraVisual.parts = { leftFoot, rightFoot, body, head, hair };
 
         this.curupiraBossHud = this.add.container(512, 155).setScrollFactor(0).setDepth(160).setVisible(false);
-        const bg = this.add.rectangle(0, 0, 430, 54, 0x06100d, 0.88).setOrigin(0.5, 0);
-        this.curupiraBossBarBack = this.add.rectangle(-170, 28, 340, 14, 0x301a17, 1).setOrigin(0, 0.5);
-        this.curupiraBossBar = this.add.rectangle(-170, 28, 340, 14, 0xb64a32, 1).setOrigin(0, 0.5);
-        this.curupiraBossText = this.add.text(0, 8, 'CURUPIRA 100/100', { fontFamily: 'Arial Black', fontSize: '16px', color: '#f1e1ae' }).setOrigin(0.5, 0);
-        this.curupiraBossHud.add([bg, this.curupiraBossBarBack, this.curupiraBossBar, this.curupiraBossText]);
+        const bg = this.add.rectangle(0, 0, 430, 58, 0x06100d, 0.9).setOrigin(0.5, 0);
+        bg.setStrokeStyle(1, 0x8c7558, 0.55);
+        this.curupiraBossName = this.add.text(-170, 7, 'CURUPIRA', {
+            fontFamily: 'Arial Black',
+            fontSize: '15px',
+            color: '#f1e1ae'
+        }).setOrigin(0, 0);
+        this.curupiraBossText = this.add.text(170, 7, '100/100', {
+            fontFamily: 'Arial Black',
+            fontSize: '15px',
+            color: '#ffffff'
+        }).setOrigin(1, 0);
+        this.curupiraBossBarBack = this.add.rectangle(-170, 36, 340, 14, 0x301a17, 1).setOrigin(0, 0.5);
+        this.curupiraBossBar = this.add.rectangle(-170, 36, 340, 14, 0xb64a32, 1).setOrigin(0, 0.5);
+        this.curupiraBossHud.add([
+            bg,
+            this.curupiraBossName,
+            this.curupiraBossText,
+            this.curupiraBossBarBack,
+            this.curupiraBossBar
+        ]);
     }
 
     startCurupiraEncounter ()
@@ -1361,10 +1384,32 @@ export class Level2Scene extends Scene
         const panel = this.add.rectangle(512, 360, 580, 100, 0x06100d, 0.9).setScrollFactor(0).setDepth(180);
         const text = this.add.text(512, 360, '“A mata não permite sua passagem.”', { fontFamily: 'Arial', fontSize: '25px', color: '#f1e1ae' }).setOrigin(0.5).setScrollFactor(0).setDepth(181);
         this.time.delayedCall(1500, () => {
-            panel.destroy(); text.destroy();
-            this.curupiraState = 'ATTACK';
-            this.curupiraNextActionAt = this.time.now + 500;
+            panel.destroy();
+            text.destroy();
+            this.beginCurupiraPreparation(this.time.now + 180);
         });
+    }
+
+    beginCurupiraPreparation (startAt = this.time.now)
+    {
+        if (this.arenaCleared) return;
+
+        this.curupiraState = 'PREPARE';
+        this.curupira.body.setVelocity(0, 0);
+        this.curupiraAttackPattern = (this.curupiraAttackPattern + 1) % 3;
+        this.curupiraNextActionAt = startAt + 300;
+
+        this.curupiraVisual.setAlpha(1);
+        this.curupiraVisual.setScale(1, 1);
+
+        if (this.curupiraAttackPattern === 1) {
+            this.curupiraVisual.setAngle(0);
+            this.curupiraVisual.setScale(1.08, 0.84);
+        } else {
+            const lean = this.player.x < this.curupira.x ? -9 : 9;
+            this.curupiraVisual.setAngle(this.curupiraAttackPattern === 2 ? -lean : lean);
+            this.curupiraVisual.setScale(1.04, 0.97);
+        }
     }
 
     updateCurupira (time)
@@ -1372,33 +1417,66 @@ export class Level2Scene extends Scene
         this.curupiraVisual.setPosition(this.curupira.x, this.curupira.y);
         if (!this.arenaStarted || this.arenaCleared || this.curupiraState === 'INTRO' || this.curupiraState === 'DEFEATED') return;
 
-        if (this.curupiraState === 'VULNERABLE') {
-            this.curupira.body.setVelocityX(0);
+        if (this.curupiraState === 'PREPARE') {
+            this.curupira.body.setVelocity(0, 0);
             if (time >= this.curupiraNextActionAt) {
-                this.curupiraVisual.setAlpha(1);
                 this.curupiraVisual.setAngle(0);
                 this.curupiraVisual.setScale(1, 1);
                 this.curupiraState = 'ATTACK';
-                this.curupiraNextActionAt = time + 400;
+
+                if (this.curupiraAttackPattern === 0) this.curupiraDash(time);
+                else if (this.curupiraAttackPattern === 1) this.curupiraJump(time);
+                else this.curupiraFeint(time);
             }
             return;
         }
 
-        if (this.curupiraAttackPattern === 1 && this.curupira.body.blocked.down && this.curupiraLandingDangerUntil > 0) {
-            if (time <= this.curupiraLandingDangerUntil) {
-                if (Math.abs(this.player.x - this.curupira.x) < 90 && Math.abs(this.player.y - this.curupira.y) < 80) this.damagePlayer(20, this.player.x < this.curupira.x ? -150 : 150, -120);
-            } else {
-                this.curupiraLandingDangerUntil = 0;
+        if (this.curupiraState === 'RECOVERY') {
+            this.curupira.body.setVelocityX(0);
+            if (time >= this.curupiraNextActionAt) {
                 this.enterCurupiraVulnerable(time);
             }
+            return;
         }
 
-        if (time < this.curupiraNextActionAt) return;
+        if (this.curupiraState === 'VULNERABLE') {
+            this.curupira.body.setVelocity(0, 0);
+            if (time >= this.curupiraNextActionAt) {
+                this.resetCurupiraPose();
+                this.beginCurupiraPreparation(time + 120);
+            }
+            return;
+        }
 
-        this.curupiraAttackPattern = (this.curupiraAttackPattern + 1) % 3;
-        if (this.curupiraAttackPattern === 0) this.curupiraDash(time);
-        else if (this.curupiraAttackPattern === 1) this.curupiraJump(time);
-        else this.curupiraFeint(time);
+        if (this.curupiraState === 'HIT') {
+            this.curupira.body.setVelocity(0, 0);
+            if (time >= this.curupiraNextActionAt) {
+                this.resetCurupiraPose();
+                this.beginCurupiraPreparation(time + 120);
+            }
+            return;
+        }
+
+        if (this.curupiraAttackPattern === 1 && this.curupiraLandingMarker && this.curupiraLandingDangerUntil > 0) {
+            this.curupiraLandingMarker.setPosition(this.curupira.x, 640);
+        }
+
+        if (this.curupiraAttackPattern === 1 && this.curupira.body.blocked.down && this.curupiraLandingDangerUntil > 0) {
+            if (!this.curupiraLandingImpactShown) {
+                this.curupiraLandingImpactShown = true;
+                this.showCurupiraLandingImpact();
+            }
+
+            if (time <= this.curupiraLandingDangerUntil) {
+                if (Math.abs(this.player.x - this.curupira.x) < 90 && Math.abs(this.player.y - this.curupira.y) < 80) {
+                    this.damagePlayer(20, this.player.x < this.curupira.x ? -150 : 150, -120);
+                }
+            } else {
+                this.clearCurupiraLandingMarker();
+                this.curupiraLandingDangerUntil = 0;
+                this.enterCurupiraRecovery(time, 240);
+            }
+        }
     }
 
     curupiraDash (time)
@@ -1406,31 +1484,54 @@ export class Level2Scene extends Scene
         const fromLeft = this.curupira.x < (this.arenaMinX + this.arenaMaxX) / 2;
         this.curupira.setPosition(fromLeft ? this.arenaMinX + 40 : this.arenaMaxX - 40, 590);
         this.curupira.body.setVelocityX(fromLeft ? 330 : -330);
-        this.curupiraNextActionAt = time + 800;
+        this.showCurupiraDashLeaves(fromLeft ? 1 : -1);
+
         this.time.delayedCall(760, () => {
-            if (!this.arenaCleared && this.curupiraState === 'ATTACK') this.enterCurupiraVulnerable(this.time.now);
+            if (!this.arenaCleared && this.curupiraState === 'ATTACK') {
+                this.curupira.body.setVelocityX(0);
+                this.enterCurupiraRecovery(this.time.now, 240);
+            }
         });
     }
-
     curupiraJump (time)
     {
         const direction = this.player.x < this.curupira.x ? -1 : 1;
+        this.curupiraLandingImpactShown = false;
+        this.createCurupiraLandingMarker();
         this.curupira.body.setVelocity(direction * 150, -520);
         this.curupiraLandingDangerUntil = time + 1250;
-        this.curupiraNextActionAt = time + 1300;
     }
 
     curupiraFeint (time)
     {
         const direction = this.player.x < this.curupira.x ? -1 : 1;
         this.curupira.body.setVelocityX(-direction * 210);
+        this.curupiraVisual.setAngle(-direction * 7);
+
         this.time.delayedCall(260, () => {
-            if (!this.arenaCleared && this.curupiraState === 'ATTACK') this.curupira.body.setVelocityX(direction * 280);
+            if (!this.arenaCleared && this.curupiraState === 'ATTACK') {
+                this.curupiraVisual.setAngle(direction * 9);
+                this.curupira.body.setVelocityX(direction * 280);
+            }
         });
+
         this.time.delayedCall(720, () => {
-            if (!this.arenaCleared && this.curupiraState === 'ATTACK') this.enterCurupiraVulnerable(this.time.now);
+            if (!this.arenaCleared && this.curupiraState === 'ATTACK') {
+                this.curupira.body.setVelocityX(0);
+                this.curupiraVisual.setAngle(0);
+                this.enterCurupiraRecovery(this.time.now, 240);
+            }
         });
-        this.curupiraNextActionAt = time + 760;
+    }
+
+    enterCurupiraRecovery (time, duration = 240)
+    {
+        this.curupira.body.setVelocity(0, 0);
+        this.curupiraState = 'RECOVERY';
+        this.curupiraNextActionAt = time + duration;
+        this.curupiraVisual.setAlpha(0.9);
+        this.curupiraVisual.setAngle(this.player.x < this.curupira.x ? 4 : -4);
+        this.curupiraVisual.setScale(1, 0.96);
     }
 
     enterCurupiraVulnerable (time)
@@ -1438,9 +1539,34 @@ export class Level2Scene extends Scene
         this.curupira.body.setVelocity(0, 0);
         this.curupiraState = 'VULNERABLE';
         this.curupiraNextActionAt = time + 1200;
-        this.curupiraVisual.setAlpha(0.5);
-        this.curupiraVisual.setAngle(8);
-        this.curupiraVisual.setScale(1, 0.92);
+        this.curupiraVisual.setAlpha(0.52);
+        this.curupiraVisual.setAngle(this.player.x < this.curupira.x ? 10 : -10);
+        this.curupiraVisual.setScale(1, 0.86);
+
+        const tiredLeaf = this.add.ellipse(
+            this.curupira.x,
+            this.curupira.y - 74,
+            13,
+            6,
+            0x8aa85e,
+            0.7
+        ).setDepth(24);
+        this.tweens.add({
+            targets: tiredLeaf,
+            y: tiredLeaf.y - 18,
+            x: tiredLeaf.x + 8,
+            angle: 35,
+            alpha: 0,
+            duration: 720,
+            onComplete: () => tiredLeaf.destroy()
+        });
+    }
+
+    resetCurupiraPose ()
+    {
+        this.curupiraVisual.setAlpha(1);
+        this.curupiraVisual.setAngle(0);
+        this.curupiraVisual.setScale(1, 1);
     }
 
     handleCurupiraContact ()
@@ -1454,12 +1580,10 @@ export class Level2Scene extends Scene
         if (!this.isAttacking || !this.attackHitbox.body.enable || this.arenaCleared) return;
 
         if (this.curupiraState !== 'VULNERABLE') {
-            this.curupiraVisual.setAlpha(0.3);
-            this.time.delayedCall(110, () => {
-                if (!this.arenaCleared && this.curupiraState !== 'VULNERABLE') {
-                    this.curupiraVisual.setAlpha(1);
-                }
-            });
+            if (!this.attackBlockCurupiraRegistered) {
+                this.attackBlockCurupiraRegistered = true;
+                this.showCurupiraBlockFeedback();
+            }
             return;
         }
 
@@ -1467,16 +1591,173 @@ export class Level2Scene extends Scene
         this.attackHitCurupiraRegistered = true;
 
         this.curupiraHealth = Math.max(0, this.curupiraHealth - 25);
-        this.curupiraBossBar.width = 340 * (this.curupiraHealth / 100);
-        this.curupiraBossText.setText(`CURUPIRA ${this.curupiraHealth}/100`);
-        this.curupiraVisual.setAlpha(1);
-        this.curupiraVisual.setAngle(0);
-        this.curupiraVisual.setScale(1, 1);
+        const targetWidth = 340 * (this.curupiraHealth / 100);
+        this.tweens.killTweensOf(this.curupiraBossBar);
+        this.tweens.add({
+            targets: this.curupiraBossBar,
+            width: targetWidth,
+            duration: 180,
+            ease: 'Quad.Out'
+        });
+        this.curupiraBossText.setText(`${this.curupiraHealth}/100`);
 
-        if (this.curupiraHealth <= 0) this.defeatCurupira();
-        else {
-            this.curupiraState = 'ATTACK';
-            this.curupiraNextActionAt = this.time.now + 650;
+        this.showCurupiraValidHitFeedback();
+
+        if (this.curupiraHealth <= 0) {
+            this.defeatCurupira();
+        } else {
+            this.curupiraState = 'HIT';
+            this.curupiraNextActionAt = this.time.now + 420;
+        }
+    }
+
+    showCurupiraBlockFeedback ()
+    {
+        const originalAngle = this.curupiraVisual.angle;
+        this.curupiraVisual.setAlpha(0.35);
+        this.curupiraVisual.setAngle(originalAngle + (this.attackDirection * 7));
+
+        const block = this.add.circle(
+            this.curupira.x - this.attackDirection * 20,
+            this.curupira.y - 5,
+            8,
+            0xd6b56c,
+            0.22
+        ).setDepth(25);
+        block.setStrokeStyle(2, 0xe7e1cf, 0.55);
+
+        this.tweens.add({
+            targets: block,
+            scale: 1.8,
+            alpha: 0,
+            duration: 180,
+            onComplete: () => block.destroy()
+        });
+
+        this.time.delayedCall(110, () => {
+            if (!this.arenaCleared && this.curupiraState !== 'VULNERABLE') {
+                this.curupiraVisual.setAlpha(1);
+                this.curupiraVisual.setAngle(originalAngle);
+            }
+        });
+    }
+
+    showCurupiraValidHitFeedback ()
+    {
+        const hitDirection = this.player.x < this.curupira.x ? 1 : -1;
+        this.curupiraVisual.setAlpha(0.25);
+        this.curupiraVisual.setAngle(hitDirection * 11);
+        this.curupiraVisual.setScale(1.04, 0.92);
+
+        const hitFlash = this.add.circle(this.curupira.x, this.curupira.y - 5, 16, 0xf1e1ae, 0.42).setDepth(25);
+        this.tweens.add({
+            targets: hitFlash,
+            scale: 2.1,
+            alpha: 0,
+            duration: 150,
+            onComplete: () => hitFlash.destroy()
+        });
+
+        this.time.delayedCall(110, () => {
+            if (!this.arenaCleared && this.curupiraState === 'HIT') {
+                this.curupiraVisual.setAlpha(0.82);
+                this.curupiraVisual.setAngle(hitDirection * 7);
+                this.curupiraVisual.setScale(1, 0.94);
+            }
+        });
+    }
+
+    showCurupiraDashLeaves (direction)
+    {
+        for (let i = 0; i < 5; i += 1) {
+            const leaf = this.add.ellipse(
+                this.curupira.x - direction * (12 + i * 6),
+                this.curupira.y + 28 - (i % 2) * 8,
+                10,
+                5,
+                i % 2 === 0 ? 0x6d874b : 0x8b6d43,
+                0.6
+            ).setDepth(18);
+
+            this.tweens.add({
+                targets: leaf,
+                x: leaf.x - direction * (24 + i * 5),
+                y: leaf.y - 10 - (i % 3) * 5,
+                angle: direction * (35 + i * 18),
+                alpha: 0,
+                duration: 320 + i * 35,
+                onComplete: () => leaf.destroy()
+            });
+        }
+    }
+
+    createCurupiraLandingMarker ()
+    {
+        this.clearCurupiraLandingMarker();
+        this.curupiraLandingMarker = this.add.ellipse(
+            this.curupira.x,
+            640,
+            170,
+            30,
+            0xb15f3a,
+            0.18
+        ).setDepth(15);
+        this.curupiraLandingMarker.setStrokeStyle(2, 0xd6b56c, 0.38);
+
+        this.tweens.add({
+            targets: this.curupiraLandingMarker,
+            alpha: { from: 0.12, to: 0.3 },
+            scaleX: 1.08,
+            duration: 240,
+            yoyo: true,
+            repeat: -1
+        });
+    }
+
+    showCurupiraLandingImpact ()
+    {
+        if (this.curupiraLandingMarker) {
+            this.curupiraLandingMarker.setPosition(this.curupira.x, 640);
+        }
+
+        const ring = this.add.ellipse(this.curupira.x, 640, 80, 18, 0xd6b56c, 0.25).setDepth(18);
+        this.tweens.add({
+            targets: ring,
+            scaleX: 2.1,
+            scaleY: 1.45,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => ring.destroy()
+        });
+
+        for (let i = 0; i < 6; i += 1) {
+            const direction = i < 3 ? -1 : 1;
+            const leaf = this.add.ellipse(
+                this.curupira.x,
+                630,
+                9,
+                4,
+                i % 2 === 0 ? 0x6d874b : 0x755137,
+                0.7
+            ).setDepth(19);
+            this.tweens.add({
+                targets: leaf,
+                x: this.curupira.x + direction * (30 + (i % 3) * 18),
+                y: 612 - (i % 3) * 9,
+                angle: direction * (35 + i * 16),
+                alpha: 0,
+                duration: 360,
+                onComplete: () => leaf.destroy()
+            });
+        }
+    }
+
+    clearCurupiraLandingMarker ()
+    {
+        if (this.curupiraLandingMarker) {
+            this.tweens.killTweensOf(this.curupiraLandingMarker);
+            this.curupiraLandingMarker.destroy();
+            this.curupiraLandingMarker = null;
         }
     }
 
@@ -1485,19 +1766,104 @@ export class Level2Scene extends Scene
         this.arenaCleared = true;
         this.curupiraState = 'DEFEATED';
         this.curupira.body.setVelocity(0, 0);
-        this.curupiraBossHud.setVisible(false);
-        this.curupiraVisual.setAlpha(1);
-        this.arenaBarrier.setVisible(false);
-        this.arenaBarrier.body.enable = false;
+        this.clearCurupiraLandingMarker();
 
-        const panel = this.add.rectangle(512, 350, 620, 190, 0x06100d, 0.92).setScrollFactor(0).setDepth(190);
-        const text = this.add.text(512, 320, 'A floresta testou seus passos.', { fontFamily: 'Arial', fontSize: '23px', color: '#c8d8cc' }).setOrigin(0.5).setScrollFactor(0).setDepth(191);
-        const skill = this.add.text(512, 380, 'HABILIDADE DESBLOQUEADA\nSALTO DUPLO', { fontFamily: 'Arial Black', fontSize: '29px', color: '#f1e1ae', align: 'center' }).setOrigin(0.5).setScrollFactor(0).setDepth(191);
-        this.time.delayedCall(1600, () => {
-            this.doubleJumpUnlocked = true;
-            this.registry.set('doubleJumpUnlocked', true);
-            panel.destroy(); text.destroy(); skill.destroy();
-            this.showDoubleJumpTutorial();
+        this.curupiraBossText.setText('0/100');
+        this.tweens.killTweensOf(this.curupiraBossBar);
+        this.tweens.add({
+            targets: this.curupiraBossBar,
+            width: 0,
+            duration: 180,
+            ease: 'Quad.Out'
+        });
+
+        const recoil = this.player.x < this.curupira.x ? 28 : -28;
+        this.curupira.setPosition(
+            Math.max(this.arenaMinX + 30, Math.min(this.arenaMaxX - 30, this.curupira.x + recoil)),
+            this.curupira.y
+        );
+        this.curupiraVisual.setPosition(this.curupira.x, this.curupira.y + 7);
+        this.curupiraVisual.setAlpha(0.88);
+        this.curupiraVisual.setAngle(recoil > 0 ? 12 : -12);
+        this.curupiraVisual.setScale(1, 0.76);
+
+        this.time.delayedCall(420, () => {
+            this.curupiraBossHud.setVisible(false);
+            this.arenaBarrier.setVisible(false);
+            this.arenaBarrier.body.enable = false;
+
+            const panel = this.add.rectangle(512, 350, 620, 190, 0x06100d, 0.92).setScrollFactor(0).setDepth(190);            const text = this.add.text(
+                512,
+                325,
+                'A floresta testou seus passos.',
+                { fontFamily: 'Arial', fontSize: '23px', color: '#c8d8cc' }
+            ).setOrigin(0.5).setScrollFactor(0).setDepth(191);
+
+            this.time.delayedCall(650, () => {
+                const skill = this.add.text(
+                    512,
+                    390,
+                    'HABILIDADE DESBLOQUEADA\nSALTO DUPLO',
+                    { fontFamily: 'Arial Black', fontSize: '29px', color: '#f1e1ae', align: 'center' }
+                ).setOrigin(0.5).setScrollFactor(0).setDepth(191);
+
+                this.showDoubleJumpUnlockEffect();
+
+                this.time.delayedCall(1050, () => {
+                    this.doubleJumpUnlocked = true;
+                    this.firstDoubleJumpPending = true;
+                    this.registry.set('doubleJumpUnlocked', true);
+                    panel.destroy();
+                    text.destroy();
+                    skill.destroy();
+                    this.showDoubleJumpTutorial();
+                });
+            });
+        });
+    }
+
+    showDoubleJumpUnlockEffect ()
+    {
+        const ring = this.add.circle(this.player.x, this.player.y, 18, 0xd6b56c, 0.2).setDepth(40);
+        ring.setStrokeStyle(2, 0xf1e1ae, 0.5);
+
+        this.tweens.add({
+            targets: ring,
+            scale: 4,
+            alpha: 0,
+            duration: 700,
+            onComplete: () => ring.destroy()
+        });
+
+        for (let i = 0; i < 8; i += 1) {
+            const angle = (Math.PI * 2 * i) / 8;
+            const leaf = this.add.ellipse(
+                this.player.x,
+                this.player.y,
+                10,
+                5,
+                i % 2 === 0 ? 0x6f8f4e : 0x8aa85e,
+                0.82
+            ).setDepth(41);
+
+            this.tweens.add({
+                targets: leaf,
+                x: this.player.x + Math.cos(angle) * 58,
+                y: this.player.y + Math.sin(angle) * 48,
+                angle: i * 45,
+                alpha: 0,
+                duration: 650,
+                onComplete: () => leaf.destroy()
+            });
+        }
+
+        this.tweens.add({
+            targets: this.playerVisual,
+            alpha: { from: 0.45, to: 1 },
+            duration: 140,
+            yoyo: true,
+            repeat: 3,
+            onComplete: () => this.playerVisual.setAlpha(1)
         });
     }
 
@@ -1522,14 +1888,52 @@ export class Level2Scene extends Scene
         if (this.doubleJumpUnlocked && this.jumpsUsed === 1 && !isGrounded) {
             this.player.body.setVelocityY(-500);
             this.jumpsUsed = 2;
-            this.showDoubleJumpBurst();
+            const isFirstDoubleJump = this.firstDoubleJumpPending;
+            this.firstDoubleJumpPending = false;
+            this.showDoubleJumpBurst(isFirstDoubleJump);
         }
     }
 
-    showDoubleJumpBurst ()
+    showDoubleJumpBurst (isFirst = false)
     {
-        const burst = this.add.circle(this.player.x, this.player.y + 24, 12, 0xc8d59b, 0.35).setDepth(18);
-        this.tweens.add({ targets: burst, scale: 2.5, alpha: 0, duration: 260, onComplete: () => burst.destroy() });
+        const burst = this.add.circle(
+            this.player.x,
+            this.player.y + 24,
+            isFirst ? 18 : 12,
+            0xc8d59b,
+            isFirst ? 0.5 : 0.35
+        ).setDepth(18);
+
+        this.tweens.add({
+            targets: burst,
+            scale: isFirst ? 3.2 : 2.5,
+            alpha: 0,
+            duration: isFirst ? 420 : 260,
+            onComplete: () => burst.destroy()
+        });
+
+        if (isFirst) {
+            for (let i = 0; i < 6; i += 1) {
+                const angle = (Math.PI * 2 * i) / 6;
+                const leaf = this.add.ellipse(
+                    this.player.x,
+                    this.player.y + 16,
+                    9,
+                    4,
+                    0x7c9954,
+                    0.8
+                ).setDepth(19);
+                this.tweens.add({
+                    targets: leaf,
+                    x: this.player.x + Math.cos(angle) * 42,
+                    y: this.player.y + 16 + Math.sin(angle) * 34,
+                    alpha: 0,
+                    angle: i * 55,
+                    duration: 420,
+                    onComplete: () => leaf.destroy()
+                });
+            }
+        }
     }
 
     createFinalZone ()
@@ -1687,8 +2091,7 @@ export class Level2Scene extends Scene
             this.nextHungerDrainAt += steps * 2000;
             this.updateHungerHud();
         }
-        if (this.hunger <= 0 && time >= this.nextStarvationDamageAt) {
-            this.nextStarvationDamageAt = time + 2000;
+        if (this.hunger <= 0 && time >= this.nextStarvationDamageAt) {            this.nextStarvationDamageAt = time + 2000;
             this.health = Math.max(0, this.health - 5);
             this.updateHealthHud();
             if (this.health <= 0) this.handlePlayerDeath();
