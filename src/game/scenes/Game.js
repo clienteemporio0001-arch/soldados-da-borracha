@@ -361,23 +361,47 @@ export class Game extends Scene
     {
         const container = this.add.container(this.player.x, this.player.y).setDepth(20);
 
-        // Pernas
-        container.add(this.add.rectangle(-9, 22, 12, 28, 0x272820).setOrigin(0.5));
-        container.add(this.add.rectangle(9, 22, 12, 28, 0x272820).setOrigin(0.5));
+        const leftLeg = this.add.rectangle(-8, 16, 11, 28, 0x272820)
+            .setOrigin(0.5, 0.08);
+        const rightLeg = this.add.rectangle(8, 16, 11, 28, 0x272820)
+            .setOrigin(0.5, 0.08);
 
-        // Tronco / camisa de seringueiro provisória
-        container.add(this.add.rectangle(0, -5, 30, 34, 0xc7aa73).setOrigin(0.5));
+        const torso = this.add.rectangle(0, -7, 30, 34, 0xc7aa73)
+            .setOrigin(0.5);
 
-        // Braços
-        container.add(this.add.rectangle(-19, -3, 9, 30, 0xb89562).setOrigin(0.5).setAngle(6));
-        container.add(this.add.rectangle(19, -3, 9, 30, 0xb89562).setOrigin(0.5).setAngle(-6));
+        const leftArm = this.add.rectangle(-17, -14, 9, 30, 0xb89562)
+            .setOrigin(0.5, 0.12);
+        const rightArm = this.add.rectangle(17, -14, 9, 30, 0xb89562)
+            .setOrigin(0.5, 0.12);
 
-        // Cabeça
-        container.add(this.add.circle(0, -31, 11, 0xb98155));
+        const head = this.add.circle(0, -34, 11, 0xb98155);
 
-        // Chapéu simples
-        container.add(this.add.rectangle(0, -44, 34, 5, 0x5a432b).setOrigin(0.5));
-        container.add(this.add.rectangle(0, -49, 21, 10, 0x6a5033).setOrigin(0.5));
+        const hat = this.add.container(0, -47);
+        const hatBrim = this.add.rectangle(0, 0, 34, 5, 0x5a432b).setOrigin(0.5);
+        const hatCrown = this.add.rectangle(0, -5, 21, 10, 0x6a5033).setOrigin(0.5);
+        hat.add([hatBrim, hatCrown]);
+
+        container.add([
+            leftLeg,
+            rightLeg,
+            torso,
+            leftArm,
+            rightArm,
+            head,
+            hat
+        ]);
+
+        container.parts = {
+            head,
+            hat,
+            torso,
+            leftArm,
+            rightArm,
+            leftLeg,
+            rightLeg
+        };
+        container.animationState = 'IDLE';
+        container.facing = 1;
 
         return container;
     }
@@ -385,6 +409,137 @@ export class Game extends Scene
     syncPlayerVisual ()
     {
         this.playerVisual.setPosition(this.player.x, this.player.y);
+    }
+
+    animatePlayerVisual (time)
+    {
+        const visual = this.playerVisual;
+        const parts = visual.parts;
+        const body = this.player.body;
+        const velocityX = body.velocity.x;
+        const velocityY = body.velocity.y;
+        const grounded = body.blocked.down || body.touching.down;
+        const moving = Math.abs(velocityX) > 1;
+
+        let state = 'IDLE';
+
+        if (!grounded)
+        {
+            state = velocityY < 0 ? 'JUMP' : 'FALL';
+        }
+        else if (moving)
+        {
+            state = 'WALK';
+        }
+
+        visual.animationState = state;
+
+        if (velocityX > 1)
+        {
+            visual.facing = 1;
+        }
+        else if (velocityX < -1)
+        {
+            visual.facing = -1;
+        }
+
+        visual.setScale(visual.facing, 1);
+
+        const seconds = time * 0.001;
+        const lerp = (current, target, amount = 0.2) =>
+            current + (target - current) * amount;
+
+        let bodyOffsetY = 0;
+        let torsoAngle = 0;
+        let torsoY = -7;
+        let headY = -34;
+        let hatY = -47;
+        let hatAngle = 0;
+        let leftArmAngle = 5;
+        let rightArmAngle = -5;
+        let leftLegAngle = 0;
+        let rightLegAngle = 0;
+        let leftLegY = 16;
+        let rightLegY = 16;
+
+        if (state === 'IDLE')
+        {
+            const breath = Math.sin(seconds * 2.2);
+            const armSway = Math.sin(seconds * 1.7) * 2;
+
+            bodyOffsetY = breath * 0.7;
+            torsoY = -7 + breath * 0.7;
+            headY = -34 + breath * 0.45;
+            hatY = -47 + breath * 0.45;
+            hatAngle = Math.sin(seconds * 1.4) * 0.7;
+            leftArmAngle = 5 + armSway;
+            rightArmAngle = -5 - armSway;
+        }
+        else if (state === 'WALK')
+        {
+            const speedRatio = Math.min(Math.abs(velocityX) / 260, 1);
+            const phase = seconds * (7 + speedRatio * 4);
+            const swing = Math.sin(phase);
+            const bounce = Math.abs(Math.sin(phase * 2)) * 1.5;
+
+            bodyOffsetY = -bounce;
+            torsoY = -7 - bounce * 0.45;
+            headY = -34 - bounce * 0.35;
+            hatY = -47 - bounce * 0.3;
+            hatAngle = Math.sin(phase) * 1.5;
+
+            leftLegAngle = swing * 24;
+            rightLegAngle = -swing * 24;
+            leftArmAngle = -swing * 20;
+            rightArmAngle = swing * 20;
+        }
+        else if (state === 'JUMP')
+        {
+            bodyOffsetY = -1;
+            torsoY = -8;
+            torsoAngle = -3;
+            headY = -35;
+            hatY = -48;
+            hatAngle = -2;
+            leftArmAngle = -24;
+            rightArmAngle = 24;
+            leftLegAngle = 12;
+            rightLegAngle = -12;
+            leftLegY = 13;
+            rightLegY = 13;
+        }
+        else if (state === 'FALL')
+        {
+            bodyOffsetY = 1;
+            torsoY = -6;
+            torsoAngle = 2;
+            headY = -33;
+            hatY = -46;
+            hatAngle = 2;
+            leftArmAngle = -34;
+            rightArmAngle = 34;
+            leftLegAngle = -15;
+            rightLegAngle = 15;
+            leftLegY = 17;
+            rightLegY = 17;
+        }
+
+        visual.y = this.player.y + bodyOffsetY;
+
+        parts.torso.y = lerp(parts.torso.y, torsoY);
+        parts.torso.angle = lerp(parts.torso.angle, torsoAngle);
+
+        parts.head.y = lerp(parts.head.y, headY);
+        parts.hat.y = lerp(parts.hat.y, hatY);
+        parts.hat.angle = lerp(parts.hat.angle, hatAngle);
+
+        parts.leftArm.angle = lerp(parts.leftArm.angle, leftArmAngle);
+        parts.rightArm.angle = lerp(parts.rightArm.angle, rightArmAngle);
+
+        parts.leftLeg.angle = lerp(parts.leftLeg.angle, leftLegAngle);
+        parts.rightLeg.angle = lerp(parts.rightLeg.angle, rightLegAngle);
+        parts.leftLeg.y = lerp(parts.leftLeg.y, leftLegY);
+        parts.rightLeg.y = lerp(parts.rightLeg.y, rightLegY);
     }
 
     createHud ()
@@ -461,5 +616,6 @@ export class Game extends Scene
         }
 
         this.syncPlayerVisual();
+        this.animatePlayerVisual(this.time.now);
     }
 }
