@@ -55,10 +55,10 @@ export class Level2Scene extends Scene
 
         this.createSnake();
         this.createCarapana();
+        this.createCurupira();
         this.createAttackHitbox();
         this.createFruits();
         this.createArena();
-        this.createCurupira();
         this.createFinalZone();
 
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -232,27 +232,66 @@ export class Level2Scene extends Scene
 
     createPlayerVisual ()
     {
-        const visual = this.add.container(this.player.x, this.player.y).setDepth(20);
-        const leftLeg = this.add.rectangle(-8, 16, 11, 28, 0x44372a).setOrigin(0.5, 0.08);
-        const rightLeg = this.add.rectangle(8, 16, 11, 28, 0x44372a).setOrigin(0.5, 0.08);
-        const torso = this.add.rectangle(0, -7, 30, 34, 0x6c7350);
-        const leftArm = this.add.rectangle(-17, -14, 9, 30, 0x8a6549).setOrigin(0.5, 0.12);
+        const container = this.add.container(this.player.x, this.player.y).setDepth(20);
+
+        const leftLeg = this.add.rectangle(-8, 16, 11, 28, 0x272820)
+            .setOrigin(0.5, 0.08);
+        const rightLeg = this.add.rectangle(8, 16, 11, 28, 0x272820)
+            .setOrigin(0.5, 0.08);
+
+        const torso = this.add.rectangle(0, -7, 30, 34, 0xc7aa73)
+            .setOrigin(0.5);
+
+        const leftArm = this.add.rectangle(-17, -14, 9, 30, 0xb89562)
+            .setOrigin(0.5, 0.12);
         const rightArmRig = this.add.container(17, -14);
-        const rightArm = this.add.rectangle(0, 0, 9, 30, 0x8a6549).setOrigin(0.5, 0.12);
+        const rightArm = this.add.rectangle(0, 0, 9, 30, 0xb89562)
+            .setOrigin(0.5, 0.12);
+
         const machete = this.add.container(7, 21);
-        machete.add([
-            this.add.rectangle(0, 0, 6, 16, 0x5a3e2a).setOrigin(0.5, 0.9),
-            this.add.rectangle(0, -20, 7, 30, 0xc6cec7).setOrigin(0.5, 0.9),
-            this.add.triangle(0, -38, -4, 0, 4, 0, 0, -10, 0xbec8c0).setOrigin(0.5, 1)
-        ]);
-        machete.angle = 18;
+        const macheteHandle = this.add.rectangle(0, 0, 6, 16, 0x3a2a1d)
+            .setOrigin(0.5, 0.9);
+        const macheteBlade = this.add.rectangle(0, -20, 7, 30, 0xb8c0ba)
+            .setOrigin(0.5, 0.9);
+        const macheteTip = this.add.triangle(0, -38, -3.5, 0, 3.5, 0, 0, -8, 0xcbd1cc)
+            .setOrigin(0.5, 1);
+        machete.add([macheteHandle, macheteBlade, macheteTip]);
+        machete.setAngle(18);
+
         rightArmRig.add([rightArm, machete]);
-        const head = this.add.circle(0, -34, 13, 0x9b7254);
-        const hat = this.add.rectangle(0, -47, 34, 7, 0x5a432c);
-        visual.add([leftLeg, rightLeg, torso, leftArm, rightArmRig, head, hat]);
-        visual.parts = { leftLeg, rightLeg, torso, leftArm, rightArmRig, rightArm, machete, head, hat };
-        visual.facing = 1;
-        return visual;
+
+        const head = this.add.circle(0, -34, 11, 0xb98155);
+
+        const hat = this.add.container(0, -47);
+        const hatBrim = this.add.rectangle(0, 0, 34, 5, 0x5a432b).setOrigin(0.5);
+        const hatCrown = this.add.rectangle(0, -5, 21, 10, 0x6a5033).setOrigin(0.5);
+        hat.add([hatBrim, hatCrown]);
+
+        container.add([
+            leftLeg,
+            rightLeg,
+            torso,
+            leftArm,
+            rightArmRig,
+            head,
+            hat
+        ]);
+
+        container.parts = {
+            head,
+            hat,
+            torso,
+            leftArm,
+            rightArmRig,
+            rightArm,
+            machete,
+            leftLeg,
+            rightLeg
+        };
+        container.animationState = 'IDLE';
+        container.facing = 1;
+
+        return container;
     }
 
     syncPlayerVisual ()
@@ -262,37 +301,136 @@ export class Level2Scene extends Scene
 
     animatePlayerVisual (time)
     {
-        const p = this.playerVisual.parts;
-        const vx = this.player.body.velocity.x;
-        const vy = this.player.body.velocity.y;
-        const grounded = this.player.body.blocked.down || this.player.body.touching.down;
-        if (vx > 1) this.playerVisual.facing = 1;
-        if (vx < -1) this.playerVisual.facing = -1;
-        this.playerVisual.setScale(this.playerVisual.facing, 1);
+        const visual = this.playerVisual;
+        const parts = visual.parts;
+        const body = this.player.body;
+        const velocityX = body.velocity.x;
+        const velocityY = body.velocity.y;
+        const grounded = body.blocked.down || body.touching.down;
+        const moving = Math.abs(velocityX) > 1;
 
-        const t = time * 0.001;
-        let left = 5;
-        let right = -5;
-        let torso = 0;
-        if (!grounded) {
-            left = vy < 0 ? -18 : 18;
-            right = vy < 0 ? 24 : 34;
-            torso = vy < 0 ? -3 : 3;
-        } else if (Math.abs(vx) > 5) {
-            const swing = Math.sin(t * 12);
-            left = swing * 24;
-            right = -swing * 20;
-            p.leftLeg.angle = -swing * 24;
-            p.rightLeg.angle = swing * 24;
-        } else {
-            const breathe = Math.sin(t * 2.5);
-            p.head.y = -34 + breathe * 0.8;
+        let state = 'IDLE';
+
+        if (!grounded)
+        {
+            state = velocityY < 0 ? 'JUMP' : 'FALL';
         }
-        p.leftArm.angle += (left - p.leftArm.angle) * 0.2;
-        p.rightArmRig.angle += (right - p.rightArmRig.angle) * 0.2;
-        p.torso.angle += (torso - p.torso.angle) * 0.2;
-        this.playerBaseRightArmAngle = right;
-        this.playerBaseTorsoAngle = torso;
+        else if (moving)
+        {
+            state = 'WALK';
+        }
+
+        visual.animationState = state;
+
+        if (velocityX > 1)
+        {
+            visual.facing = 1;
+        }
+        else if (velocityX < -1)
+        {
+            visual.facing = -1;
+        }
+
+        visual.setScale(visual.facing, 1);
+
+        const seconds = time * 0.001;
+        const lerp = (current, target, amount = 0.2) =>
+            current + (target - current) * amount;
+
+        let bodyOffsetY = 0;
+        let torsoAngle = 0;
+        let torsoY = -7;
+        let headY = -34;
+        let hatY = -47;
+        let hatAngle = 0;
+        let leftArmAngle = 5;
+        let rightArmAngle = -5;
+        let leftLegAngle = 0;
+        let rightLegAngle = 0;
+        let leftLegY = 16;
+        let rightLegY = 16;
+
+        if (state === 'IDLE')
+        {
+            const breath = Math.sin(seconds * 2.2);
+            const armSway = Math.sin(seconds * 1.7) * 2;
+
+            bodyOffsetY = breath * 0.7;
+            torsoY = -7 + breath * 0.7;
+            headY = -34 + breath * 0.45;
+            hatY = -47 + breath * 0.45;
+            hatAngle = Math.sin(seconds * 1.4) * 0.7;
+            leftArmAngle = 5 + armSway;
+            rightArmAngle = -5 - armSway;
+        }
+        else if (state === 'WALK')
+        {
+            const speedRatio = Math.min(Math.abs(velocityX) / 260, 1);
+            const phase = seconds * (7 + speedRatio * 4);
+            const swing = Math.sin(phase);
+            const bounce = Math.abs(Math.sin(phase * 2)) * 1.5;
+
+            bodyOffsetY = -bounce;
+            torsoY = -7 - bounce * 0.45;
+            headY = -34 - bounce * 0.35;
+            hatY = -47 - bounce * 0.3;
+            hatAngle = Math.sin(phase) * 1.5;
+
+            leftLegAngle = swing * 24;
+            rightLegAngle = -swing * 24;
+            leftArmAngle = -swing * 20;
+            rightArmAngle = swing * 20;
+        }
+        else if (state === 'JUMP')
+        {
+            bodyOffsetY = -1;
+            torsoY = -8;
+            torsoAngle = -3;
+            headY = -35;
+            hatY = -48;
+            hatAngle = -2;
+            leftArmAngle = -24;
+            rightArmAngle = 24;
+            leftLegAngle = 12;
+            rightLegAngle = -12;
+            leftLegY = 13;
+            rightLegY = 13;
+        }
+        else if (state === 'FALL')
+        {
+            bodyOffsetY = 1;
+            torsoY = -6;
+            torsoAngle = 2;
+            headY = -33;
+            hatY = -46;
+            hatAngle = 2;
+            leftArmAngle = -34;
+            rightArmAngle = 34;
+            leftLegAngle = -15;
+            rightLegAngle = 15;
+            leftLegY = 17;
+            rightLegY = 17;
+        }
+
+        visual.y = this.player.y + bodyOffsetY;
+
+        parts.torso.y = lerp(parts.torso.y, torsoY);
+        parts.torso.angle = lerp(parts.torso.angle, torsoAngle);
+
+        parts.head.y = lerp(parts.head.y, headY);
+        parts.hat.y = lerp(parts.hat.y, hatY);
+        parts.hat.angle = lerp(parts.hat.angle, hatAngle);
+
+        parts.leftArm.angle = lerp(parts.leftArm.angle, leftArmAngle);
+        parts.rightArmRig.angle = lerp(parts.rightArmRig.angle, rightArmAngle);
+
+        this.playerBaseRightArmAngle = rightArmAngle;
+        this.playerBaseTorsoAngle = torsoAngle;
+
+        parts.leftLeg.angle = lerp(parts.leftLeg.angle, leftLegAngle);
+        parts.rightLeg.angle = lerp(parts.rightLeg.angle, rightLegAngle);
+        parts.leftLeg.y = lerp(parts.leftLeg.y, leftLegY);
+        parts.rightLeg.y = lerp(parts.rightLeg.y, rightLegY);
     }
 
     createAttackHitbox ()
@@ -349,98 +487,460 @@ export class Level2Scene extends Scene
 
     createSnake ()
     {
+        this.snakePatrol = {
+            minX: 1060,
+            maxX: 1280,
+            speed: 70
+        };
+
         this.snake = this.add.rectangle(1180, 620, 72, 24, 0x000000, 0);
         this.physics.add.existing(this.snake);
+
         this.snake.body.setSize(72, 24);
         this.snake.body.setCollideWorldBounds(true);
-        this.snake.body.setVelocityX(70);
+        this.snake.body.setVelocityX(this.snakePatrol.speed);
+
         this.physics.add.collider(this.snake, this.platforms);
-        this.snakeHealth = 50;
-        this.snakeAlive = true;
+        this.physics.add.overlap(this.player, this.snake, () => {
+            this.handleSnakeContact();
+        });
+
         this.snakeVisual = this.add.container(this.snake.x, this.snake.y).setDepth(19);
         this.snakeVisual.facing = 1;
-        const body = this.add.ellipse(0, 0, 64, 16, 0x638342);
-        const head = this.add.ellipse(30, -2, 22, 18, 0x72924c);
-        this.snakeVisual.add([body, head]);
-        this.physics.add.overlap(this.player, this.snake, () => this.handleSnakeContact());
+        this.snakeMaxHealth = 50;
+        this.snakeHealth = 50;
+        this.snakeAlive = true;
+
+        const tail = this.add.ellipse(-30, 2, 22, 8, 0x49652f).setOrigin(0.5);
+        const bodyBack = this.add.ellipse(-15, 0, 28, 13, 0x58773a).setOrigin(0.5);
+        const bodyFront = this.add.ellipse(7, 0, 34, 15, 0x638342).setOrigin(0.5);
+        const head = this.add.ellipse(29, -2, 23, 18, 0x72924c).setOrigin(0.5);
+        const eyeTop = this.add.circle(34, -6, 2.2, 0xe3d7a5);
+        const eyeBottom = this.add.circle(34, 2, 2.2, 0xe3d7a5);
+        const pupilTop = this.add.circle(35, -6, 1, 0x11170d);
+        const pupilBottom = this.add.circle(35, 2, 1, 0x11170d);
+
+        this.snakeVisual.add([
+            tail,
+            bodyBack,
+            bodyFront,
+            head,
+            eyeTop,
+            eyeBottom,
+            pupilTop,
+            pupilBottom
+        ]);
+
+        this.snakeVisual.parts = {
+            tail,
+            bodyBack,
+            bodyFront,
+            head
+        };
     }
 
-    updateSnake ()
+    updateSnake (time)
     {
-        if (!this.snakeAlive || this.phaseCompleted) return;
-        if (this.snake.x >= 1280) { this.snake.body.setVelocityX(-70); this.snakeVisual.facing = -1; }
-        else if (this.snake.x <= 1060) { this.snake.body.setVelocityX(70); this.snakeVisual.facing = 1; }
-        this.snakeVisual.setPosition(this.snake.x, this.snake.y);
+        if (this.phaseCompleted || !this.snake || !this.snake.body || !this.snakeAlive)
+        {
+            return;
+        }
+
+        const patrol = this.snakePatrol;
+
+        if (this.snake.x >= patrol.maxX)
+        {
+            this.snake.body.setVelocityX(-patrol.speed);
+            this.snakeVisual.facing = -1;
+        }
+        else if (this.snake.x <= patrol.minX)
+        {
+            this.snake.body.setVelocityX(patrol.speed);
+            this.snakeVisual.facing = 1;
+        }
+
+        const seconds = time * 0.001;
+        const wave = Math.sin(seconds * 8);
+        const waveBack = Math.sin(seconds * 8 - 0.8);
+        const waveTail = Math.sin(seconds * 8 - 1.5);
+
+        this.snakeVisual.setPosition(this.snake.x, this.snake.y - 2 + wave * 1.2);
         this.snakeVisual.setScale(this.snakeVisual.facing, 1);
+
+        this.snakeVisual.parts.bodyFront.y = wave * 1.4;
+        this.snakeVisual.parts.bodyBack.y = waveBack * 1.8;
+        this.snakeVisual.parts.tail.y = waveTail * 2.2;
+        this.snakeVisual.parts.head.y = wave * 1.1;
+        this.snakeVisual.parts.head.angle = wave * 2.5;
     }
 
     handleSnakeContact ()
     {
-        if (!this.snakeAlive || this.phaseCompleted) return;
-        this.damagePlayer(25, this.player.x < this.snake.x ? -220 : 220, -260);
+        if (this.phaseCompleted || !this.snakeAlive || this.isPlayerDead || this.time.now < this.invulnerableUntil)
+        {
+            return;
+        }
+
+        this.health = Math.max(0, this.health - 25);
+        this.invulnerableUntil = this.time.now + 1000;
+        this.knockbackUntil = this.time.now + 180;
+
+        const direction = this.player.x < this.snake.x ? -1 : 1;
+        this.player.body.setVelocityX(220 * direction);
+        this.player.body.setVelocityY(-260);
+
+        this.updateHealthHud();
+        this.flashPlayerDamage();
+
+        if (this.health <= 0)
+        {
+            this.handlePlayerDeath();
+        }
     }
 
     tryHitSnake ()
     {
-        if (!this.isAttacking || !this.attackHitbox.body.enable || this.attackHitSnakeRegistered || !this.snakeAlive) return;
-        this.attackHitSnakeRegistered = true;
-        this.snakeHealth = Math.max(0, this.snakeHealth - 25);
-        if (this.snakeHealth <= 0) {
-            this.snakeAlive = false;
-            this.snake.body.enable = false;
-            this.tweens.add({ targets: this.snakeVisual, alpha: 0, duration: 450, onComplete: () => this.snakeVisual.setVisible(false) });
+        if (
+            !this.isAttacking ||
+            !this.attackHitbox.body.enable ||
+            this.attackHitSnakeRegistered ||
+            !this.snakeAlive
+        )
+        {
+            return;
         }
+
+        this.attackHitSnakeRegistered = true;
+        this.damageSnake(25);
+    }
+
+    damageSnake (amount)
+    {
+        if (!this.snakeAlive)
+        {
+            return;
+        }
+
+        this.snakeHealth = Math.max(0, this.snakeHealth - amount);
+
+        this.tweens.killTweensOf(this.snakeVisual);
+        this.snakeVisual.setAlpha(1);
+
+        this.tweens.add({
+            targets: this.snakeVisual,
+            alpha: 0.35,
+            scaleY: 1.12,
+            duration: 70,
+            yoyo: true,
+            repeat: 1,
+            onComplete: () => {
+                if (this.snakeAlive)
+                {
+                    this.snakeVisual.setAlpha(1);
+                    this.snakeVisual.scaleY = 1;
+                }
+            }
+        });
+
+        if (this.snakeHealth <= 0)
+        {
+            this.defeatSnake();
+        }
+    }
+
+    defeatSnake ()
+    {
+        if (!this.snakeAlive)
+        {
+            return;
+        }
+
+        this.snakeAlive = false;
+        this.snake.body.setVelocity(0, 0);
+        this.snake.body.enable = false;
+
+        this.tweens.killTweensOf(this.snakeVisual);
+
+        this.tweens.add({
+            targets: this.snakeVisual,
+            angle: 18,
+            scaleY: 0.55,
+            alpha: 0,
+            duration: 450,
+            delay: 180,
+            onComplete: () => {
+                this.snakeVisual.setVisible(false);
+            }
+        });
     }
 
     createCarapana ()
     {
-        this.carapana = this.add.rectangle(1740, 430, 38, 24, 0x000000, 0);
+        this.carapanaPatrol = {
+            minX: 1630,
+            maxX: 1850,
+            baseX: 1740,
+            baseY: 430,
+            patrolSpeed: 55,
+            chaseSpeed: 105,
+            returnSpeed: 80,
+            detectionRadius: 300
+        };
+
+        this.carapana = this.add.rectangle(
+            this.carapanaPatrol.baseX,
+            this.carapanaPatrol.baseY,
+            38,
+            24,
+            0x000000,
+            0
+        );
         this.physics.add.existing(this.carapana);
+
+        this.carapana.body.setSize(38, 24);
         this.carapana.body.setAllowGravity(false);
         this.carapana.body.setCollideWorldBounds(true);
+        this.carapana.body.setVelocityX(this.carapanaPatrol.patrolSpeed);
+
+        this.carapanaMaxHealth = 25;
         this.carapanaHealth = 25;
         this.carapanaAlive = true;
-        this.carapanaVisual = this.add.container(this.carapana.x, this.carapana.y).setDepth(19);
+        this.carapanaFacing = 1;
+        this.carapanaReturning = false;
+
+        this.physics.add.overlap(this.player, this.carapana, () => {
+            this.handleCarapanaContact();
+        });
+
+        this.carapanaVisual = this.add.container(
+            this.carapana.x,
+            this.carapana.y
+        ).setDepth(19);
+
+        const abdomen = this.add.ellipse(-8, 0, 22, 8, 0x4b3d2d);
+        const thorax = this.add.ellipse(5, 0, 13, 11, 0x5d4b35);
+        const head = this.add.circle(13, -1, 5, 0x6b5940);
+
+        const wingTop = this.add.ellipse(-1, -8, 22, 8, 0xcbd8cf, 0.42)
+            .setAngle(-18);
+        const wingBottom = this.add.ellipse(-1, 8, 22, 8, 0xcbd8cf, 0.42)
+            .setAngle(18);
+
+        const proboscis = this.add.rectangle(21, -1, 12, 2, 0x3a3026)
+            .setOrigin(0, 0.5);
+
+        const leg1 = this.add.rectangle(1, 7, 2, 17, 0x3b3228)
+            .setOrigin(0.5, 0)
+            .setAngle(28);
+        const leg2 = this.add.rectangle(-5, 7, 2, 18, 0x3b3228)
+            .setOrigin(0.5, 0)
+            .setAngle(-24);
+        const leg3 = this.add.rectangle(7, 6, 2, 16, 0x3b3228)
+            .setOrigin(0.5, 0)
+            .setAngle(48);
+
         this.carapanaVisual.add([
-            this.add.ellipse(-6, 0, 24, 8, 0x4b3d2d),
-            this.add.circle(10, -1, 5, 0x6b5940),
-            this.add.ellipse(0, -8, 22, 8, 0xcbd8cf, 0.42),
-            this.add.ellipse(0, 8, 22, 8, 0xcbd8cf, 0.42)
+            wingTop,
+            wingBottom,
+            leg1,
+            leg2,
+            leg3,
+            abdomen,
+            thorax,
+            head,
+            proboscis
         ]);
-        this.physics.add.overlap(this.player, this.carapana, () => this.handleCarapanaContact());
+
+        this.carapanaVisual.parts = {
+            abdomen,
+            thorax,
+            head,
+            wingTop,
+            wingBottom,
+            proboscis
+        };
     }
 
     updateCarapana (time)
     {
-        if (!this.carapanaAlive || this.phaseCompleted) return;
+        if (this.phaseCompleted || !this.carapana || !this.carapana.body || !this.carapanaAlive)
+        {
+            return;
+        }
+
+        const patrol = this.carapanaPatrol;
         const dx = this.player.x - this.carapana.x;
         const dy = this.player.y - this.carapana.y;
-        const d = Math.hypot(dx, dy);
-        if (d <= 300) {
-            this.carapana.body.setVelocity(dx / d * 105, dy / d * 105);
-        } else {
-            const targetX = 1740 + Math.sin(time * 0.0012) * 110;
-            const targetY = 430 + Math.sin(time * 0.004) * 20;
-            this.carapana.body.setVelocity((targetX - this.carapana.x) * 0.9, (targetY - this.carapana.y) * 0.9);
+        const distance = Math.hypot(dx, dy);
+
+        if (distance <= patrol.detectionRadius)
+        {
+            this.carapanaReturning = true;
+
+            if (distance > 1)
+            {
+                this.carapana.body.setVelocity(
+                    (dx / distance) * patrol.chaseSpeed,
+                    (dy / distance) * patrol.chaseSpeed
+                );
+            }
         }
-        this.carapanaVisual.setPosition(this.carapana.x, this.carapana.y + Math.sin(time * 0.006) * 4);
-        this.carapanaVisual.angle = Math.sin(time * 0.004) * 5;
+        else
+        {
+            const outsidePatrol =
+                this.carapana.x < patrol.minX ||
+                this.carapana.x > patrol.maxX ||
+                Math.abs(this.carapana.y - patrol.baseY) > 24;
+
+            if (this.carapanaReturning || outsidePatrol)
+            {
+                const returnDx = patrol.baseX - this.carapana.x;
+                const returnDy = patrol.baseY - this.carapana.y;
+                const returnDistance = Math.hypot(returnDx, returnDy);
+
+                if (returnDistance > 18)
+                {
+                    this.carapana.body.setVelocity(
+                        (returnDx / returnDistance) * patrol.returnSpeed,
+                        (returnDy / returnDistance) * patrol.returnSpeed
+                    );
+                }
+                else
+                {
+                    this.carapanaReturning = false;
+                    this.carapana.setPosition(
+                        Math.min(patrol.maxX, Math.max(patrol.minX, this.carapana.x)),
+                        patrol.baseY
+                    );
+                    this.carapana.body.setVelocity(patrol.patrolSpeed, 0);
+                    this.carapanaFacing = 1;
+                }
+            }
+            else
+            {
+                this.carapana.body.setVelocityY(0);
+
+                if (this.carapana.x >= patrol.maxX)
+                {
+                    this.carapana.body.setVelocityX(-patrol.patrolSpeed);
+                    this.carapanaFacing = -1;
+                }
+                else if (this.carapana.x <= patrol.minX)
+                {
+                    this.carapana.body.setVelocityX(patrol.patrolSpeed);
+                    this.carapanaFacing = 1;
+                }
+            }
+        }
+
+        if (this.carapana.body.velocity.x > 1)
+        {
+            this.carapanaFacing = 1;
+        }
+        else if (this.carapana.body.velocity.x < -1)
+        {
+            this.carapanaFacing = -1;
+        }
+
+        const seconds = time * 0.001;
+        const hover = Math.sin(seconds * 5.5) * 4;
+        const wingBeat = Math.sin(seconds * 34) * 18;
+        const tilt = Math.max(-8, Math.min(8, this.carapana.body.velocity.y * 0.05));
+
+        this.carapanaVisual.setPosition(
+            this.carapana.x,
+            this.carapana.y + hover
+        );
+        this.carapanaVisual.setScale(this.carapanaFacing, 1);
+        this.carapanaVisual.setAngle(tilt);
+
+        this.carapanaVisual.parts.wingTop.angle = -18 + wingBeat;
+        this.carapanaVisual.parts.wingBottom.angle = 18 - wingBeat;
+        this.carapanaVisual.parts.abdomen.y = Math.sin(seconds * 7) * 1.2;
+        this.carapanaVisual.parts.head.y = -1 + Math.sin(seconds * 7 + 0.7) * 0.8;
     }
 
     handleCarapanaContact ()
     {
-        if (!this.carapanaAlive || this.phaseCompleted) return;
-        this.damagePlayer(10, this.player.x < this.carapana.x ? -120 : 120, 0);
+        if (
+            this.phaseCompleted ||
+            !this.carapanaAlive ||
+            this.isPlayerDead ||
+            this.time.now < this.invulnerableUntil
+        )
+        {
+            return;
+        }
+
+        this.health = Math.max(0, this.health - 10);
+        this.invulnerableUntil = this.time.now + 1000;
+        this.knockbackUntil = this.time.now + 120;
+
+        const direction = this.player.x < this.carapana.x ? -1 : 1;
+        this.player.body.setVelocityX(120 * direction);
+
+        this.updateHealthHud();
+        this.flashPlayerDamage();
+
+        if (this.health <= 0)
+        {
+            this.handlePlayerDeath();
+        }
     }
 
     tryHitCarapana ()
     {
-        if (!this.isAttacking || !this.attackHitbox.body.enable || this.attackHitCarapanaRegistered || !this.carapanaAlive) return;
+        if (
+            !this.isAttacking ||
+            !this.attackHitbox.body.enable ||
+            this.attackHitCarapanaRegistered ||
+            !this.carapanaAlive
+        )
+        {
+            return;
+        }
+
         this.attackHitCarapanaRegistered = true;
-        this.carapanaHealth = 0;
+        this.damageCarapana(25);
+    }
+
+    damageCarapana (amount)
+    {
+        if (!this.carapanaAlive)
+        {
+            return;
+        }
+
+        this.carapanaHealth = Math.max(0, this.carapanaHealth - amount);
+
+        if (this.carapanaHealth <= 0)
+        {
+            this.defeatCarapana();
+        }
+    }
+
+    defeatCarapana ()
+    {
+        if (!this.carapanaAlive)
+        {
+            return;
+        }
+
         this.carapanaAlive = false;
+        this.carapana.body.setVelocity(0, 0);
         this.carapana.body.enable = false;
-        this.tweens.add({ targets: this.carapanaVisual, y: this.carapanaVisual.y + 70, angle: 70, alpha: 0, duration: 500 });
+
+        this.tweens.add({
+            targets: this.carapanaVisual,
+            y: this.carapanaVisual.y + 70,
+            angle: 75,
+            alpha: 0,
+            duration: 520,
+            ease: 'Quad.In',
+            onComplete: () => {
+                this.carapanaVisual.setVisible(false);
+            }
+        });
     }
 
     damagePlayer (amount, vx = 0, vy = 0)
@@ -484,388 +984,17 @@ export class Level2Scene extends Scene
     createFruits ()
     {
         this.fruits = [];
-        [
-            [380, 620, 0xc94432], [880, 495, 0xe0b843], [1450, 620, 0xd77a2f], [2030, 545, 0xc94432], [2390, 620, 0xe0b843]
-        ].forEach(([x,y,color]) => {
-            const sensor = this.add.rectangle(x, y, 26, 30, 0x000000, 0);
-            this.physics.add.existing(sensor);
-            sensor.body.setAllowGravity(false);
-            sensor.body.setImmovable(true);
-            const visual = this.add.circle(x, y, 9, color).setDepth(18);
-            const fruit = { sensor, visual, baseY: y, collected: false };
-            this.physics.add.overlap(this.player, sensor, () => this.collectFruit(fruit));
-            this.fruits.push(fruit);
-        });
-    }
 
-    collectFruit (fruit)
-    {
-        if (fruit.collected) return;
-        fruit.collected = true;
-        fruit.sensor.body.enable = false;
-        this.hunger = Math.min(100, this.hunger + 25);
-        this.health = Math.min(100, this.health + 10);
-        this.updateHealthHud();
-        this.updateHungerHud();
-        this.tweens.add({ targets: fruit.visual, y: fruit.visual.y - 30, alpha: 0, scale: 1.5, duration: 280, onComplete: () => fruit.visual.setVisible(false) });
-        const feedback = this.add.text(this.player.x, this.player.y - 65, '+25 FOME\n+10 VIDA', { fontFamily: 'Arial Black', fontSize: '15px', color: '#f1e1ae', align: 'center' }).setOrigin(0.5).setDepth(50);
-        this.tweens.add({ targets: feedback, y: feedback.y - 24, alpha: 0, duration: 700, onComplete: () => feedback.destroy() });
-    }
+        const fruitData = [
+            { x: 380, y: 620, color: 0xc94432 },
+            { x: 880, y: 495, color: 0xe0b843 },
+            { x: 1450, y: 620, color: 0xd77a2f },
+            { x: 2030, y: 545, color: 0xc94432 },
+            { x: 2390, y: 620, color: 0xe0b843 }
+        ];
 
-    updateFruits (time)
-    {
-        this.fruits.forEach((fruit, i) => {
-            if (!fruit.collected) fruit.visual.y = fruit.baseY + Math.sin(time * 0.003 + i) * 3;
-        });
-    }
+        fruitData.forEach((data, index) => {
+            const visual = this.add.container(data.x, data.y).setDepth(18);
 
-    createArena ()
-    {
-        this.arenaStarted = false;
-        this.arenaCleared = false;
-        this.arenaMinX = 2450;
-        this.arenaMaxX = 2860;
-
-        this.arenaTrigger = this.add.rectangle(2520, 570, 120, 150, 0x000000, 0);
-        this.physics.add.existing(this.arenaTrigger);
-        this.arenaTrigger.body.setAllowGravity(false);
-        this.arenaTrigger.body.setImmovable(true);
-        this.physics.add.overlap(this.player, this.arenaTrigger, () => this.startCurupiraEncounter());
-
-        this.arenaBarrier = this.add.rectangle(2420, 560, 26, 190, 0x203c28, 0.9).setDepth(16).setVisible(false);
-        this.physics.add.existing(this.arenaBarrier, true);
-        this.arenaBarrier.body.enable = false;
-    }
-
-    createCurupira ()
-    {
-        this.curupira = this.add.rectangle(2730, 590, 44, 74, 0x000000, 0);
-        this.physics.add.existing(this.curupira);
-        this.curupira.body.setSize(44, 74);
-        this.curupira.body.setCollideWorldBounds(true);
-        this.physics.add.collider(this.curupira, this.platforms);
-        this.physics.add.overlap(this.player, this.curupira, () => this.handleCurupiraContact());
-
-        this.curupiraHealth = 100;
-        this.curupiraState = 'INTRO';
-        this.curupiraNextActionAt = 0;
-        this.curupiraAttackPattern = 0;
-        this.curupiraLandingDangerUntil = 0;
-        this.curupiraVisual = this.add.container(this.curupira.x, this.curupira.y).setDepth(21).setVisible(false);
-        const leftFoot = this.add.rectangle(-9, 26, 12, 22, 0x5c3b28).setAngle(18);
-        const rightFoot = this.add.rectangle(9, 26, 12, 22, 0x5c3b28).setAngle(-18);
-        const body = this.add.rectangle(0, 0, 30, 42, 0x355a35);
-        const head = this.add.circle(0, -31, 13, 0x996247);
-        const hair = this.add.ellipse(0, -43, 35, 20, 0xb74427);
-        this.curupiraVisual.add([leftFoot, rightFoot, body, head, hair]);
-
-        this.curupiraBossHud = this.add.container(512, 28).setScrollFactor(0).setDepth(160).setVisible(false);
-        const bg = this.add.rectangle(0, 0, 430, 54, 0x06100d, 0.88).setOrigin(0.5, 0);
-        this.curupiraBossBarBack = this.add.rectangle(-170, 28, 340, 14, 0x301a17, 1).setOrigin(0, 0.5);
-        this.curupiraBossBar = this.add.rectangle(-170, 28, 340, 14, 0xb64a32, 1).setOrigin(0, 0.5);
-        this.curupiraBossText = this.add.text(0, 8, 'CURUPIRA 100/100', { fontFamily: 'Arial Black', fontSize: '16px', color: '#f1e1ae' }).setOrigin(0.5, 0);
-        this.curupiraBossHud.add([bg, this.curupiraBossBarBack, this.curupiraBossBar, this.curupiraBossText]);
-    }
-
-    startCurupiraEncounter ()
-    {
-        if (this.arenaStarted || this.arenaCleared) return;
-        this.arenaStarted = true;
-        this.arenaBarrier.setVisible(true);
-        this.arenaBarrier.body.enable = true;
-        this.curupiraVisual.setVisible(true);
-        this.curupiraBossHud.setVisible(true);
-        this.curupira.body.setVelocity(0, 0);
-        this.curupiraState = 'INTRO';
-
-        const panel = this.add.rectangle(512, 360, 580, 100, 0x06100d, 0.9).setScrollFactor(0).setDepth(180);
-        const text = this.add.text(512, 360, '“A mata não permite sua passagem.”', { fontFamily: 'Arial', fontSize: '25px', color: '#f1e1ae' }).setOrigin(0.5).setScrollFactor(0).setDepth(181);
-        this.time.delayedCall(1500, () => {
-            panel.destroy(); text.destroy();
-            this.curupiraState = 'ATTACK';
-            this.curupiraNextActionAt = this.time.now + 500;
-        });
-    }
-
-    updateCurupira (time)
-    {
-        this.curupiraVisual.setPosition(this.curupira.x, this.curupira.y);
-        if (!this.arenaStarted || this.arenaCleared || this.curupiraState === 'INTRO' || this.curupiraState === 'DEFEATED') return;
-
-        if (this.curupiraState === 'VULNERABLE') {
-            this.curupira.body.setVelocityX(0);
-            if (time >= this.curupiraNextActionAt) {
-                this.curupiraState = 'ATTACK';
-                this.curupiraNextActionAt = time + 400;
-            }
-            return;
-        }
-
-        if (this.curupiraAttackPattern === 1 && this.curupira.body.blocked.down && this.curupiraLandingDangerUntil > 0) {
-            if (time <= this.curupiraLandingDangerUntil) {
-                if (Math.abs(this.player.x - this.curupira.x) < 90 && Math.abs(this.player.y - this.curupira.y) < 80) this.damagePlayer(20, this.player.x < this.curupira.x ? -150 : 150, -120);
-            } else {
-                this.curupiraLandingDangerUntil = 0;
-                this.enterCurupiraVulnerable(time);
-            }
-        }
-
-        if (time < this.curupiraNextActionAt) return;
-
-        this.curupiraAttackPattern = (this.curupiraAttackPattern + 1) % 3;
-        if (this.curupiraAttackPattern === 0) this.curupiraDash(time);
-        else if (this.curupiraAttackPattern === 1) this.curupiraJump(time);
-        else this.curupiraFeint(time);
-    }
-
-    curupiraDash (time)
-    {
-        const fromLeft = this.curupira.x < (this.arenaMinX + this.arenaMaxX) / 2;
-        this.curupira.setPosition(fromLeft ? this.arenaMinX + 40 : this.arenaMaxX - 40, 590);
-        this.curupira.body.setVelocityX(fromLeft ? 330 : -330);
-        this.curupiraNextActionAt = time + 800;
-        this.time.delayedCall(760, () => {
-            if (!this.arenaCleared && this.curupiraState === 'ATTACK') this.enterCurupiraVulnerable(this.time.now);
-        });
-    }
-
-    curupiraJump (time)
-    {
-        const direction = this.player.x < this.curupira.x ? -1 : 1;
-        this.curupira.body.setVelocity(direction * 150, -520);
-        this.curupiraLandingDangerUntil = time + 1250;
-        this.curupiraNextActionAt = time + 1300;
-    }
-
-    curupiraFeint (time)
-    {
-        const direction = this.player.x < this.curupira.x ? -1 : 1;
-        this.curupira.body.setVelocityX(-direction * 210);
-        this.time.delayedCall(260, () => {
-            if (!this.arenaCleared && this.curupiraState === 'ATTACK') this.curupira.body.setVelocityX(direction * 280);
-        });
-        this.time.delayedCall(720, () => {
-            if (!this.arenaCleared && this.curupiraState === 'ATTACK') this.enterCurupiraVulnerable(this.time.now);
-        });
-        this.curupiraNextActionAt = time + 760;
-    }
-
-    enterCurupiraVulnerable (time)
-    {
-        this.curupira.body.setVelocity(0, 0);
-        this.curupiraState = 'VULNERABLE';
-        this.curupiraNextActionAt = time + 850;
-        this.curupiraVisual.setAlpha(0.72);
-    }
-
-    handleCurupiraContact ()
-    {
-        if (!this.arenaStarted || this.arenaCleared || this.curupiraState !== 'ATTACK') return;
-        this.damagePlayer(15, this.player.x < this.curupira.x ? -180 : 180, -80);
-    }
-
-    tryHitCurupira ()
-    {
-        if (!this.isAttacking || !this.attackHitbox.body.enable || this.attackHitCurupiraRegistered || this.arenaCleared) return;
-        this.attackHitCurupiraRegistered = true;
-        if (this.curupiraState !== 'VULNERABLE') {
-            this.curupiraVisual.setAlpha(0.45);
-            this.time.delayedCall(110, () => { if (!this.arenaCleared) this.curupiraVisual.setAlpha(1); });
-            return;
-        }
-        this.curupiraHealth = Math.max(0, this.curupiraHealth - 25);
-        this.curupiraBossBar.width = 340 * (this.curupiraHealth / 100);
-        this.curupiraBossText.setText(`CURUPIRA ${this.curupiraHealth}/100`);
-        this.curupiraVisual.setAlpha(1);
-        if (this.curupiraHealth <= 0) this.defeatCurupira();
-        else {
-            this.curupiraState = 'ATTACK';
-            this.curupiraNextActionAt = this.time.now + 650;
-        }
-    }
-
-    defeatCurupira ()
-    {
-        this.arenaCleared = true;
-        this.curupiraState = 'DEFEATED';
-        this.curupira.body.setVelocity(0, 0);
-        this.curupiraBossHud.setVisible(false);
-        this.curupiraVisual.setAlpha(1);
-        this.arenaBarrier.setVisible(false);
-        this.arenaBarrier.body.enable = false;
-
-        const panel = this.add.rectangle(512, 350, 620, 190, 0x06100d, 0.92).setScrollFactor(0).setDepth(190);
-        const text = this.add.text(512, 320, 'A floresta testou seus passos.', { fontFamily: 'Arial', fontSize: '23px', color: '#c8d8cc' }).setOrigin(0.5).setScrollFactor(0).setDepth(191);
-        const skill = this.add.text(512, 380, 'HABILIDADE DESBLOQUEADA\nSALTO DUPLO', { fontFamily: 'Arial Black', fontSize: '29px', color: '#f1e1ae', align: 'center' }).setOrigin(0.5).setScrollFactor(0).setDepth(191);
-
-        this.time.delayedCall(1600, () => {
-            this.doubleJumpUnlocked = true;
-            this.registry.set('doubleJumpUnlocked', true);
-            panel.destroy(); text.destroy(); skill.destroy();
-            this.showDoubleJumpTutorial();
-        });
-    }
-
-    showDoubleJumpTutorial ()
-    {
-        const tutorial = this.add.text(512, 220, 'SALTO DUPLO\nNo ar, pressione novamente W / ↑ / Espaço.', { fontFamily: 'Arial Black', fontSize: '21px', color: '#f1e1ae', align: 'center', backgroundColor: '#06100dcc', padding: { x: 18, y: 12 } }).setOrigin(0.5).setScrollFactor(0).setDepth(180);
-        this.time.delayedCall(3000, () => tutorial.destroy());
-    }
-
-    performJump (isGrounded)
-    {
-        if (isGrounded) {
-            this.jumpsUsed = 0;
-        }
-
-        if (this.jumpsUsed === 0 && isGrounded) {
-            this.player.body.setVelocityY(-520);
-            this.jumpsUsed = 1;
-            return;
-        }
-
-        if (this.doubleJumpUnlocked && this.jumpsUsed === 1 && !isGrounded) {
-            this.player.body.setVelocityY(-500);
-            this.jumpsUsed = 2;
-            this.showDoubleJumpBurst();
-        }
-    }
-
-    showDoubleJumpBurst ()
-    {
-        const burst = this.add.circle(this.player.x, this.player.y + 24, 12, 0xc8d59b, 0.35).setDepth(18);
-        this.tweens.add({ targets: burst, scale: 2.5, alpha: 0, duration: 260, onComplete: () => burst.destroy() });
-    }
-
-    createFinalZone ()
-    {
-        this.finalZone = this.add.rectangle(3200, 320, 150, 190, 0x000000, 0);
-        this.physics.add.existing(this.finalZone);
-        this.finalZone.body.setAllowGravity(false);
-        this.finalZone.body.setImmovable(true);
-        this.physics.add.overlap(this.player, this.finalZone, () => this.completeLevel2());
-    }
-
-    completeLevel2 ()
-    {
-        if (this.phaseCompleted || !this.doubleJumpUnlocked) return;
-        this.phaseCompleted = true;
-        this.player.body.setVelocity(0, 0);
-        this.isAttacking = false;
-        this.attackHitbox.body.enable = false;
-
-        const overlay = this.add.rectangle(512, 384, 1024, 768, 0x020705, 0.94).setScrollFactor(0).setDepth(300);
-        this.add.text(512, 220, 'FASE 2 CONCLUÍDA', { fontFamily: 'Arial Black', fontSize: '44px', color: '#f1e1ae' }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
-        this.add.text(512, 315, 'SALTO DUPLO ADQUIRIDO', { fontFamily: 'Arial Black', fontSize: '25px', color: '#d6b56c' }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
-        this.add.text(512, 390, 'Os rastros seguem para onde antes\nele não poderia alcançar.', { fontFamily: 'Arial', fontSize: '22px', color: '#c8d8cc', align: 'center' }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
-        const button = this.add.rectangle(512, 530, 280, 64, 0x8b5a2b).setStrokeStyle(3, 0xd6b56c).setScrollFactor(0).setDepth(301).setInteractive({ useHandCursor: true });
-        this.add.text(512, 530, 'CONTINUAR', { fontFamily: 'Arial Black', fontSize: '23px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(302);
-        button.on('pointerdown', () => this.scene.start('MainMenu'));
-    }
-
-    createHud ()
-    {
-        const panel = this.add.rectangle(15, 15, 365, 124, 0x06100d, 0.72).setOrigin(0).setScrollFactor(0).setDepth(100);
-        panel.setStrokeStyle(1, 0x78917c, 0.35);
-        this.add.text(30, 27, 'SOLDADOS DA BORRACHA - FASE 2', { fontFamily: 'Arial', fontSize: '18px', color: '#f1e1ae' }).setScrollFactor(0).setDepth(101);
-        this.add.text(30, 56, 'Controles:\nA/D ou ←/→ = mover\nW / ↑ / Espaço = pular\nJ / X = atacar', { fontFamily: 'Arial', fontSize: '15px', color: '#c7d6ca', lineSpacing: 3 }).setScrollFactor(0).setDepth(101);
-    }
-
-    createHealthHud ()
-    {
-        this.healthHud = this.add.container(395, 18).setScrollFactor(0).setDepth(102);
-        const bg = this.add.rectangle(0, 0, 235, 58, 0x06100d, 0.78).setOrigin(0);
-        this.add.text(12, 7, 'VIDA', { fontFamily: 'Arial', fontSize: '14px', color: '#f1e1ae' });
-        this.add.rectangle(12, 29, 150, 16, 0x351b18, 0.95).setOrigin(0);
-        this.healthBar = this.add.rectangle(12, 29, 150, 16, 0x8fb35b, 1).setOrigin(0);
-        this.healthText = this.add.text(172, 27, '100/100', { fontFamily: 'Arial', fontSize: '14px', color: '#ffffff' });
-        this.healthHud.add([bg, this.healthBar, this.healthText]);
-        this.updateHealthHud();
-    }
-
-    createHungerHud ()
-    {
-        this.hungerHud = this.add.container(395, 78).setScrollFactor(0).setDepth(102);
-        const bg = this.add.rectangle(0, 0, 235, 58, 0x06100d, 0.78).setOrigin(0);
-        this.hungerLabel = this.add.text(12, 7, 'FOME', { fontFamily: 'Arial', fontSize: '14px', color: '#f1e1ae' });
-        this.add.rectangle(12, 29, 150, 16, 0x3d2b16, 0.95).setOrigin(0);
-        this.hungerBar = this.add.rectangle(12, 29, 150, 16, 0xd49a3a, 1).setOrigin(0);
-        this.hungerText = this.add.text(172, 27, '100/100', { fontFamily: 'Arial', fontSize: '14px', color: '#ffffff' });
-        this.hungerHud.add([bg, this.hungerLabel, this.hungerBar, this.hungerText]);
-        this.updateHungerHud();
-    }
-
-    updateHealthHud ()
-    {
-        this.healthBar.width = 150 * Math.max(0, this.health / 100);
-        this.healthText.setText(`${this.health}/100`);
-    }
-
-    updateHungerHud ()
-    {
-        this.hungerBar.width = 150 * Math.max(0, this.hunger / 100);
-        this.hungerText.setText(`${this.hunger}/100`);
-        this.hungerBar.setFillStyle(this.hunger < 30 ? 0xe8782f : 0xd49a3a, 1);
-    }
-
-    updateHunger (time)
-    {
-        if (this.phaseCompleted || this.isPlayerDead) return;
-        if (time >= this.nextHungerDrainAt) {
-            const steps = Math.floor((time - this.nextHungerDrainAt) / 2000) + 1;
-            this.hunger = Math.max(0, this.hunger - steps);
-            this.nextHungerDrainAt += steps * 2000;
-            this.updateHungerHud();
-        }
-        if (this.hunger <= 0 && time >= this.nextStarvationDamageAt) {
-            this.nextStarvationDamageAt = time + 2000;
-            this.health = Math.max(0, this.health - 5);
-            this.updateHealthHud();
-            if (this.health <= 0) this.handlePlayerDeath();
-        }
-    }
-
-    showLevelTitle ()
-    {
-        const title = this.add.text(512, 280, 'FASE 2\nRASTROS DO GUARDIÃO', { fontFamily: 'Arial Black', fontSize: '34px', color: '#f1e1ae', align: 'center', backgroundColor: '#06100dcc', padding: { x: 24, y: 16 } }).setOrigin(0.5).setScrollFactor(0).setDepth(170);
-        this.tweens.add({ targets: title, alpha: 0, delay: 1800, duration: 800, onComplete: () => title.destroy() });
-    }
-
-    update ()
-    {
-        const moveSpeed = 260;
-        const grounded = this.player.body.blocked.down || this.player.body.touching.down;
-        if (grounded) this.jumpsUsed = 0;
-
-        if (!this.isPlayerDead && !this.phaseCompleted) {
-            if (this.time.now >= this.knockbackUntil) {
-                const left = this.cursors.left.isDown || this.keyA.isDown;
-                const right = this.cursors.right.isDown || this.keyD.isDown;
-                this.player.body.setVelocityX(left ? -moveSpeed : right ? moveSpeed : 0);
-            }
-
-            const jumpDown = this.keyW.isDown || this.cursors.up.isDown || this.spaceKey.isDown;
-            if (jumpDown && !this.jumpWasDown) this.performJump(grounded);
-            this.jumpWasDown = jumpDown;
-        }
-
-        if (this.arenaStarted && !this.arenaCleared) {
-            if (this.player.x < this.arenaMinX) this.player.x = this.arenaMinX;
-            if (this.player.x > this.arenaMaxX) this.player.x = this.arenaMaxX;
-        }
-
-        if (this.player.y > 760) {
-            this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
-            this.player.body.setVelocity(0, 0);
-        }
-
-        this.syncPlayerVisual();
-        this.animatePlayerVisual(this.time.now);
-        this.updateAttack(this.time.now);
-        this.updateSnake();
-        this.updateCarapana(this.time.now);
-        this.updateFruits(this.time.now);
-        this.updateCurupira(this.time.now);
-        this.updateHunger(this.time.now);
-    }
-}
+            const body = this.add.circle(0, 0, 9, data.color);
+            const shine = this.add.circle(-3, -3, 2.5, 0xffffff, 0.42);
