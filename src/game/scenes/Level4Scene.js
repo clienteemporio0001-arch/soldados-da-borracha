@@ -1711,7 +1711,7 @@ export class Level4Scene extends Scene
         const b=this.add.rectangle(512,545,280,64,0x8b5a2b).setStrokeStyle(3,0xd6b56c).setScrollFactor(0).setDepth(301).setInteractive({useHandCursor:true}).setAlpha(0);
         const bt=this.add.text(512,545,'CONTINUAR',{fontFamily:'Arial Black',fontSize:'23px',color:'#fff'}).setOrigin(.5).setScrollFactor(0).setDepth(302).setAlpha(0);
         this.tweens.add({targets:[b,bt],alpha:1,duration:350,delay:1900});
-        b.on('pointerdown',()=>this.scene.start('MainMenu'));
+        b.on('pointerdown',()=>this.scene.start('Level5Scene'));
     }
 
     createHud ()
