@@ -43,6 +43,8 @@ export class Game extends Scene
         this.createTerrainVisuals();
         this.createRubberTrees();
         this.createForegroundVegetation();
+        this.createLevelStartDetails();
+        this.createLevelEnd();
 
         // Corpo físico do personagem preservado com o mesmo tamanho da versão validada.
         this.player = this.add.rectangle(150, 560, 45, 70, 0x000000, 0);
@@ -66,6 +68,8 @@ export class Game extends Scene
         this.invulnerableUntil = 0;
         this.knockbackUntil = 0;
         this.isPlayerDead = false;
+        this.phaseCompleted = false;
+        this.phaseCompleteScreenShown = false;
 
         this.isAttacking = false;
         this.attackStartedAt = 0;
@@ -78,6 +82,7 @@ export class Game extends Scene
         this.createCarapana();
         this.createAttackHitbox();
         this.createFruits();
+        this.createCompletionZone();
 
         // Controles preservados.
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -383,6 +388,302 @@ export class Game extends Scene
                 foreground.lineTo(x - 12 + i * 8, 625 - (i % 2) * 15 - index % 3 * 4);
                 foreground.strokePath();
             }
+        });
+    }
+
+
+    createLevelStartDetails ()
+    {
+        const start = this.add.container(185, 618).setDepth(12);
+
+        const crate = this.add.rectangle(-48, 8, 34, 30, 0x6a482b);
+        crate.setStrokeStyle(2, 0x3d2a1b, 0.9);
+        const crateLineA = this.add.rectangle(-48, 1, 28, 3, 0x3d2a1b, 0.9);
+        const crateLineB = this.add.rectangle(-48, 14, 28, 3, 0x3d2a1b, 0.9);
+
+        const stump = this.add.rectangle(8, 12, 28, 25, 0x5b3d27);
+        const stumpTop = this.add.ellipse(8, 0, 28, 9, 0x806044);
+        const log = this.add.rectangle(48, 14, 56, 16, 0x4a3322)
+            .setAngle(-7);
+        const logEnd = this.add.circle(73, 11, 8, 0x76563a);
+
+        const postLeft = this.add.rectangle(-84, -6, 7, 56, 0x4c3524)
+            .setOrigin(0.5, 1);
+        const postRight = this.add.rectangle(-16, -6, 7, 48, 0x4c3524)
+            .setOrigin(0.5, 1);
+        const crossBeam = this.add.rectangle(-50, -57, 78, 7, 0x5c4028)
+            .setAngle(3);
+
+        start.add([
+            crate,
+            crateLineA,
+            crateLineB,
+            stump,
+            stumpTop,
+            log,
+            logEnd,
+            postLeft,
+            postRight,
+            crossBeam
+        ]);
+    }
+
+    createLevelEnd ()
+    {
+        const tapiri = this.add.container(2845, 650).setDepth(11);
+
+        const floor = this.add.rectangle(0, -14, 190, 16, 0x5a3d27);
+        const leftPost = this.add.rectangle(-72, -82, 12, 140, 0x4a3221);
+        const rightPost = this.add.rectangle(72, -82, 12, 140, 0x4a3221);
+
+        const wallLeft = this.add.rectangle(-42, -77, 48, 112, 0x6a4a2e);
+        const wallRight = this.add.rectangle(42, -77, 48, 112, 0x6a4a2e);
+        const doorway = this.add.rectangle(0, -62, 38, 82, 0x141b16);
+
+        const roof = this.add.triangle(
+            0,
+            -160,
+            -112, 42,
+            0, -25,
+            112, 42,
+            0x4b3422
+        );
+        const roofEdge = this.add.rectangle(0, -126, 220, 8, 0x2d2118)
+            .setAngle(1);
+
+        const doorGlow = this.add.ellipse(0, -42, 52, 28, 0xd7a85d, 0.09);
+
+        tapiri.add([
+            floor,
+            leftPost,
+            rightPost,
+            wallLeft,
+            wallRight,
+            doorway,
+            roof,
+            roofEdge,
+            doorGlow
+        ]);
+
+        const clearing = this.add.ellipse(2810, 635, 390, 54, 0xc2c79a, 0.055)
+            .setDepth(6);
+
+        this.tweens.add({
+            targets: doorGlow,
+            alpha: { from: 0.05, to: 0.14 },
+            duration: 1600,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.InOut'
+        });
+    }
+
+    createCompletionZone ()
+    {
+        this.completionZone = this.add.rectangle(2830, 585, 180, 135, 0x000000, 0);
+        this.physics.add.existing(this.completionZone);
+
+        this.completionZone.body.setAllowGravity(false);
+        this.completionZone.body.setImmovable(true);
+
+        this.physics.add.overlap(this.player, this.completionZone, () => {
+            this.completePhase();
+        });
+    }
+
+    completePhase ()
+    {
+        if (this.phaseCompleted)
+        {
+            return;
+        }
+
+        this.phaseCompleted = true;
+        this.isAttacking = false;
+        this.attackHitbox.body.enable = false;
+        this.player.body.setVelocity(0, 0);
+
+        if (this.snake?.body && this.snakeAlive)
+        {
+            this.snake.body.setVelocity(0, 0);
+        }
+
+        if (this.carapana?.body && this.carapanaAlive)
+        {
+            this.carapana.body.setVelocity(0, 0);
+        }
+
+        this.phaseCompleteStats = {
+            health: this.health,
+            hunger: this.hunger,
+            snakeDefeated: !this.snakeAlive,
+            carapanaDefeated: !this.carapanaAlive
+        };
+
+        const messagePanel = this.add.rectangle(
+            512,
+            350,
+            560,
+            190,
+            0x06100d,
+            0.9
+        )
+            .setScrollFactor(0)
+            .setDepth(210);
+        messagePanel.setStrokeStyle(2, 0xd6b56c, 0.65);
+
+        const title = this.add.text(
+            512,
+            305,
+            'RASTROS NA FLORESTA',
+            {
+                fontFamily: 'Arial Black',
+                fontSize: '30px',
+                color: '#f1e1ae'
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(211);
+
+        const clue = this.add.text(
+            512,
+            350,
+            'Ele esteve aqui.',
+            {
+                fontFamily: 'Arial',
+                fontSize: '22px',
+                color: '#c8d8cc'
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(211);
+
+        const complete = this.add.text(
+            512,
+            397,
+            'FASE 1 CONCLUÍDA',
+            {
+                fontFamily: 'Arial Black',
+                fontSize: '24px',
+                color: '#d6b56c'
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(211);
+
+        this.phaseCompleteMessage = [
+            messagePanel,
+            title,
+            clue,
+            complete
+        ];
+
+        this.time.delayedCall(2500, () => {
+            this.showPhaseCompleteScreen();
+        });
+    }
+
+    showPhaseCompleteScreen ()
+    {
+        if (this.phaseCompleteScreenShown)
+        {
+            return;
+        }
+
+        this.phaseCompleteScreenShown = true;
+
+        this.phaseCompleteMessage?.forEach((item) => item.destroy());
+
+        const stats = this.phaseCompleteStats;
+
+        const overlay = this.add.rectangle(
+            512,
+            384,
+            1024,
+            768,
+            0x020705,
+            0.94
+        )
+            .setScrollFactor(0)
+            .setDepth(300);
+
+        const title = this.add.text(
+            512,
+            180,
+            'FASE 1 CONCLUÍDA',
+            {
+                fontFamily: 'Arial Black',
+                fontSize: '46px',
+                color: '#f1e1ae',
+                stroke: '#291b0d',
+                strokeThickness: 6
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(301);
+
+        const statsText = this.add.text(
+            512,
+            345,
+            [
+                `VIDA: ${stats.health}/100`,
+                `FOME: ${stats.hunger}/100`,
+                '',
+                `COBRA: ${stats.snakeDefeated ? 'DERROTADA' : 'NÃO DERROTADA'}`,
+                `CARAPANÃ: ${stats.carapanaDefeated ? 'DERROTADO' : 'NÃO DERROTADO'}`
+            ].join('\n'),
+            {
+                fontFamily: 'Arial',
+                fontSize: '23px',
+                color: '#c8d8cc',
+                align: 'center',
+                lineSpacing: 8
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(301);
+
+        const button = this.add.rectangle(
+            512,
+            545,
+            280,
+            64,
+            0x8b5a2b
+        )
+            .setStrokeStyle(3, 0xd6b56c)
+            .setScrollFactor(0)
+            .setDepth(301)
+            .setInteractive({ useHandCursor: true });
+
+        const buttonText = this.add.text(
+            512,
+            545,
+            'CONTINUAR',
+            {
+                fontFamily: 'Arial Black',
+                fontSize: '23px',
+                color: '#ffffff'
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(302);
+
+        button.on('pointerover', () => {
+            button.setFillStyle(0xb37638);
+        });
+
+        button.on('pointerout', () => {
+            button.setFillStyle(0x8b5a2b);
+        });
+
+        button.on('pointerdown', () => {
+            this.scene.start('MainMenu');
         });
     }
 
@@ -734,7 +1035,7 @@ export class Game extends Scene
     {
         const now = this.time.now;
 
-        if (this.isPlayerDead || this.isAttacking || now < this.nextAttackAt)
+        if (this.phaseCompleted || this.isPlayerDead || this.isAttacking || now < this.nextAttackAt)
         {
             return;
         }
@@ -958,7 +1259,7 @@ export class Game extends Scene
 
     updateCarapana (time)
     {
-        if (!this.carapana || !this.carapana.body || !this.carapanaAlive)
+        if (this.phaseCompleted || !this.carapana || !this.carapana.body || !this.carapanaAlive)
         {
             return;
         }
@@ -1058,6 +1359,7 @@ export class Game extends Scene
     handleCarapanaContact ()
     {
         if (
+            this.phaseCompleted ||
             !this.carapanaAlive ||
             this.isPlayerDead ||
             this.time.now < this.invulnerableUntil
@@ -1193,7 +1495,7 @@ export class Game extends Scene
 
     updateSnake (time)
     {
-        if (!this.snake || !this.snake.body || !this.snakeAlive)
+        if (this.phaseCompleted || !this.snake || !this.snake.body || !this.snakeAlive)
         {
             return;
         }
@@ -1228,7 +1530,7 @@ export class Game extends Scene
 
     handleSnakeContact ()
     {
-        if (!this.snakeAlive || this.isPlayerDead || this.time.now < this.invulnerableUntil)
+        if (this.phaseCompleted || !this.snakeAlive || this.isPlayerDead || this.time.now < this.invulnerableUntil)
         {
             return;
         }
@@ -1268,7 +1570,7 @@ export class Game extends Scene
 
     handlePlayerDeath ()
     {
-        if (this.isPlayerDead)
+        if (this.phaseCompleted || this.isPlayerDead)
         {
             return;
         }
@@ -1484,7 +1786,7 @@ export class Game extends Scene
         const moveSpeed = 260;
         const jumpSpeed = 520;
 
-        if (!this.isPlayerDead)
+        if (!this.isPlayerDead && !this.phaseCompleted)
         {
             if (this.time.now >= this.knockbackUntil)
             {
