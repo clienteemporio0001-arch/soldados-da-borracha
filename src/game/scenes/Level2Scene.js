@@ -85,55 +85,183 @@ export class Level2Scene extends Scene
 
     createDeepForest ()
     {
+        // Mesmo vocabulário visual da Fase 1, porém mais fechado e úmido.
         const sky = this.add.graphics().setDepth(-50).setScrollFactor(0);
         sky.fillStyle(0x04110e, 1);
         sky.fillRect(0, 0, 1024, 768);
-        sky.fillStyle(0x071b16, 0.85);
-        sky.fillRect(0, 250, 1024, 518);
+        sky.fillStyle(0x08201b, 0.62);
+        sky.fillRect(0, 185, 1024, 300);
+        sky.fillStyle(0x0d2a23, 0.25);
+        sky.fillRect(0, 455, 1024, 313);
 
-        const distant = this.add.graphics().setDepth(-35).setScrollFactor(0.18);
-        distant.fillStyle(0x071a14, 1);
-        distant.fillRect(-400, 480, this.worldWidth + 1000, 300);
+        // Lua parcialmente encoberta para comunicar mata mais profunda.
+        this.add.circle(810, 126, 86, 0xc9d7c9, 0.055)
+            .setDepth(-49)
+            .setScrollFactor(0.035);
+        this.add.circle(810, 126, 50, 0xdce4d5, 0.52)
+            .setDepth(-48)
+            .setScrollFactor(0.035);
+        this.add.ellipse(790, 124, 125, 48, 0x0b261d, 0.42)
+            .setDepth(-47)
+            .setScrollFactor(0.04);
 
-        for (let x = 20; x < this.worldWidth; x += 220)
-        {
-            const offset = (x / 220) % 2 === 0 ? 0 : 35;
-            distant.fillStyle(0x0b271d, 0.95);
-            distant.fillRect(x, 265 + offset, 38, 390 - offset);
-            distant.fillStyle(0x103522, 0.98);
-            distant.fillCircle(x + 19, 245 + offset, 100);
-            distant.fillCircle(x - 52, 285 + offset, 72);
-            distant.fillCircle(x + 80, 285 + offset, 78);
-        }
+        // FUNDO: silhuetas irregulares, sem formar uma parede contínua.
+        const distant = this.add.graphics().setDepth(-40).setScrollFactor(0.12);
+        distant.fillStyle(0x071a14, 0.96);
+        distant.fillRect(-350, 510, this.worldWidth + 900, 280);
 
+        const distantTrees = [
+            [20, 420, 22, 205, 72], [145, 462, 17, 165, 58],
+            [305, 390, 27, 235, 88], [515, 438, 20, 188, 65],
+            [735, 365, 31, 260, 102], [990, 445, 19, 180, 62],
+            [1190, 405, 25, 220, 84], [1400, 455, 18, 170, 58],
+            [1575, 372, 33, 255, 104], [1840, 430, 23, 195, 75],
+            [2060, 395, 29, 230, 90], [2305, 448, 18, 178, 60],
+            [2490, 360, 34, 265, 108], [2760, 425, 23, 200, 78],
+            [3000, 382, 30, 245, 94], [3240, 450, 18, 175, 58]
+        ];
+
+        distantTrees.forEach(([x, y, trunkW, trunkH, crown], index) => {
+            distant.fillStyle(index % 3 === 0 ? 0x0d2a20 : 0x10271f, 0.88);
+            distant.fillRect(x, y, trunkW, trunkH);
+            distant.fillStyle(index % 2 === 0 ? 0x0a241b : 0x0d2b20, 0.92);
+            distant.fillCircle(x + trunkW / 2, y - 4, crown);
+            distant.fillCircle(x - crown * 0.45, y + 18, crown * 0.58);
+            distant.fillCircle(x + crown * 0.52, y + 26, crown * 0.64);
+        });
+
+        // MEIO: árvores maiores, troncos bem visíveis, copas com alturas variadas.
+        const middle = this.add.graphics().setDepth(-24).setScrollFactor(0.45);
+        const middleTrees = [
+            [85, 320, 40, 335, 0.92, true], [360, 260, 52, 395, 1.08, false],
+            [690, 350, 34, 305, 0.84, true], [1010, 285, 48, 370, 1.02, false],
+            [1320, 335, 38, 320, 0.9, true], [1600, 245, 56, 410, 1.12, false],
+            [1940, 325, 40, 330, 0.94, true], [2240, 275, 50, 380, 1.05, false],
+            [2550, 342, 36, 313, 0.86, true], [2845, 252, 54, 403, 1.1, false],
+            [3160, 330, 38, 325, 0.9, true]
+        ];
+        middleTrees.forEach(([x, y, w, h, scale, left]) => this.drawDeepTree(middle, x, y, w, h, scale, left));
+
+        // Cipós em uma camada intermediária separada.
+        const vines = this.add.graphics().setDepth(-13).setScrollFactor(0.58);
+        vines.lineStyle(5, 0x173f29, 0.72);
+        [[280,30,365],[760,55,430],[1210,25,390],[1710,40,455],[2150,25,390],[2670,55,440],[3090,35,400]].forEach(([x, top, bottom], i) => {
+            vines.beginPath();
+            vines.moveTo(x, top);
+            vines.lineTo(x + (i % 2 === 0 ? -12 : 10), bottom * 0.58);
+            vines.lineTo(x + (i % 2 === 0 ? 7 : -9), bottom);
+            vines.strokePath();
+        });
+
+        // Seringueiras pontuais preservam a identidade do projeto.
+        const rubber = this.add.graphics().setDepth(7).setScrollFactor(0.96);
+        [
+            [520, 390, 42, 265], [1465, 375, 44, 280],
+            [2160, 392, 40, 263], [3020, 365, 46, 290]
+        ].forEach(([x, y, trunkW, trunkH], index) => {
+            rubber.fillStyle(0x4b3424, 0.96);
+            rubber.fillRect(x, y, trunkW, trunkH);
+            rubber.fillStyle(0x61452e, 0.5);
+            rubber.fillRect(x + 7, y, 8, trunkH);
+
+            rubber.lineStyle(4, 0xc3a477, 0.9);
+            rubber.beginPath();
+            rubber.moveTo(x + 7, y + 144);
+            rubber.lineTo(x + trunkW - 7, y + 127);
+            rubber.strokePath();
+
+            rubber.lineStyle(2, 0xd8d3c3, 0.66);
+            rubber.beginPath();
+            rubber.moveTo(x + trunkW - 8, y + 130);
+            rubber.lineTo(x + trunkW * 0.56, y + 170);
+            rubber.strokePath();
+
+            rubber.fillStyle(0x8c7558, 0.95);
+            rubber.fillEllipse(x + trunkW * 0.55, y + 184, 28, 12);
+            rubber.fillStyle(0xe7e1cf, 0.66);
+            rubber.fillEllipse(x + trunkW * 0.55, y + 181, 20, 5);
+
+            const crownY = y - 14;
+            rubber.fillStyle(index % 2 === 0 ? 0x15432b : 0x123b27, 0.95);
+            rubber.fillCircle(x + trunkW / 2, crownY, 68);
+            rubber.fillCircle(x - 40, crownY + 18, 46);
+            rubber.fillCircle(x + 68, crownY + 22, 51);
+        });
+
+        // Raízes visuais no plano de gameplay, sem física adicional.
         const roots = this.add.graphics().setDepth(4);
-        roots.lineStyle(14, 0x3b2a1d, 0.9);
-        [[420, 650, 530, 610], [890, 650, 1000, 600], [1490, 650, 1610, 590], [2180, 650, 2300, 600], [2850, 650, 2970, 585]].forEach(([x1,y1,x2,y2]) => {
+        roots.lineStyle(13, 0x3b2a1d, 0.88);
+        [[410,650,525,610],[865,650,990,603],[1480,650,1605,592],[2160,650,2290,602],[2570,650,2690,606],[2890,650,3000,588]].forEach(([x1,y1,x2,y2]) => {
             roots.beginPath();
             roots.moveTo(x1, y1);
             roots.lineTo(x2, y2);
             roots.strokePath();
         });
 
-        const vines = this.add.graphics().setDepth(-10).setScrollFactor(0.55);
-        vines.lineStyle(5, 0x17452c, 0.75);
-        [360, 780, 1260, 1740, 2360, 2920].forEach((x, i) => {
-            vines.beginPath();
-            vines.moveTo(x, 40);
-            vines.lineTo(x - 10 + (i % 2) * 20, 360 + (i % 3) * 60);
-            vines.strokePath();
+        // Névoa: mais presente que na Fase 1, porém atrás do gameplay.
+        this.add.rectangle(640, 490, 1650, 126, 0xa7c2b3, 0.065)
+            .setDepth(-18)
+            .setScrollFactor(0.18);
+        this.add.rectangle(1930, 548, 2450, 100, 0xd5e0d7, 0.045)
+            .setDepth(-16)
+            .setScrollFactor(0.38);
+        this.add.rectangle(2520, 520, 820, 150, 0xc8d8ce, 0.07)
+            .setDepth(-11)
+            .setScrollFactor(0.68);
+
+        // Pequenas manchas de luar ajudam a quebrar o escuro contínuo.
+        this.add.ellipse(790, 572, 330, 78, 0xb9cab7, 0.025)
+            .setDepth(-9)
+            .setScrollFactor(0.72);
+        this.add.ellipse(2140, 548, 410, 92, 0xb9cab7, 0.024)
+            .setDepth(-9)
+            .setScrollFactor(0.72);
+
+        // FRENTE: arbustos, capim e folhas com transparência para manter leitura do jogador.
+        const foreground = this.add.graphics().setDepth(30).setScrollFactor(1.08).setAlpha(0.74);
+        const shrubs = [
+            [30,646,42],[160,648,31],[370,646,38],[650,647,34],[830,646,42],
+            [1110,647,30],[1300,646,40],[1530,647,33],[1760,646,44],[2010,648,31],
+            [2260,646,39],[2475,647,35],[2710,646,42],[2960,647,32],[3210,646,40]
+        ];
+        shrubs.forEach(([x, y, size], index) => {
+            foreground.fillStyle(index % 2 === 0 ? 0x0b2518 : 0x12351f, 0.94);
+            foreground.fillCircle(x, y, size);
+            foreground.fillCircle(x + size * 0.72, y + 5, size * 0.7);
         });
 
-        this.add.rectangle(1200, 520, 2100, 145, 0xc5d5c9, 0.06).setDepth(-14).setScrollFactor(0.25);
-        this.add.rectangle(2500, 570, 1900, 105, 0xffffff, 0.045).setDepth(-13).setScrollFactor(0.45);
-
-        const foreground = this.add.graphics().setDepth(30).setScrollFactor(1.08).setAlpha(0.72);
-        foreground.fillStyle(0x0a2517, 0.98);
-        [70, 300, 620, 980, 1280, 1640, 2000, 2380, 2760, 3140].forEach((x, i) => {
-            const size = 34 + (i % 3) * 8;
-            foreground.fillCircle(x, 650, size);
-            foreground.fillCircle(x + size * 0.7, 655, size * 0.72);
+        foreground.lineStyle(4, 0x183e24, 0.9);
+        [90, 470, 910, 1370, 1870, 2320, 2780, 3170].forEach((x, index) => {
+            for (let i = 0; i < 4; i += 1) {
+                foreground.beginPath();
+                foreground.moveTo(x + i * 10, 658);
+                foreground.lineTo(x - 10 + i * 8, 625 - (i % 2) * 14 - (index % 3) * 3);
+                foreground.strokePath();
+            }
         });
+    }
+
+    drawDeepTree (graphics, x, y, trunkWidth, trunkHeight, crownScale, branchLeft)
+    {
+        graphics.fillStyle(0x3b2b1f, 0.94);
+        graphics.fillRect(x, y, trunkWidth, trunkHeight);
+        graphics.fillStyle(0x4c3726, 0.5);
+        graphics.fillRect(x + trunkWidth * 0.18, y, trunkWidth * 0.18, trunkHeight);
+
+        graphics.lineStyle(9, 0x38291d, 0.82);
+        graphics.beginPath();
+        graphics.moveTo(x + trunkWidth * 0.5, y + 76);
+        graphics.lineTo(x + (branchLeft ? -58 : 88), y + 8);
+        graphics.strokePath();
+
+        const cx = x + trunkWidth / 2;
+        const cy = y - 6;
+        graphics.fillStyle(0x0f3423, 0.96);
+        graphics.fillCircle(cx, cy, 72 * crownScale);
+        graphics.fillCircle(cx - 62 * crownScale, cy + 24, 50 * crownScale);
+        graphics.fillCircle(cx + 64 * crownScale, cy + 18, 54 * crownScale);
+        graphics.fillStyle(0x17472d, 0.62);
+        graphics.fillCircle(cx - 12, cy - 24, 43 * crownScale);
     }
 
     createPlatforms ()
@@ -146,6 +274,7 @@ export class Level2Scene extends Scene
             return p;
         };
 
+        // Colisões preservadas exatamente.
         add(400, 710, 800, 116);
         add(1160, 710, 600, 116);
         add(1900, 710, 760, 116);
@@ -158,7 +287,6 @@ export class Level2Scene extends Scene
         add(2050, 585, 150, 30);
         add(2290, 535, 160, 28);
 
-        // Trecho de teste do salto duplo. A primeira plataforma elevada não é alcançável com o salto normal.
         add(2860, 505, 180, 28);
         add(3110, 390, 190, 28);
 
@@ -166,19 +294,75 @@ export class Level2Scene extends Scene
         const ground = [
             [0, 652, 800, 116], [860, 652, 600, 116], [1520, 652, 760, 116], [2340, 652, 960, 116]
         ];
-        ground.forEach(([x,y,w,h], i) => {
-            terrain.fillStyle(i % 2 === 0 ? 0x443020 : 0x4d3522, 1);
-            terrain.fillRect(x, y, w, h);
-            terrain.fillStyle(0x24492b, 1);
-            terrain.fillRect(x, y, w, 13);
+
+        ground.forEach(([x, y, w, h], i) => {
+            terrain.fillStyle(i % 2 === 0 ? 0x4b3423 : 0x513824, 1);
+            terrain.fillRect(x, y, w, h);            terrain.fillStyle(0x284f2d, 1);
+            terrain.fillRect(x, y, w, 12);
+            terrain.fillStyle(0x173823, 0.92);
+            terrain.fillRect(x, y + 12, w, 9);
         });
 
-        [[485,576,150,28],[815,521,170,28],[1285,585,130,30],[1525,526,190,28],[1975,570,150,30],[2210,521,160,28],[2770,491,180,28],[3015,376,190,28]].forEach(([x,y,w,h], i) => {
-            terrain.fillStyle(i % 3 === 0 ? 0x4c3421 : 0x596051, 1);
-            terrain.fillRoundedRect(x, y, w, h, 10);
-            terrain.fillStyle(0x2f5b35, 0.9);
-            terrain.fillRect(x + 8, y - 4, w - 16, 6);
+        // Barro, manchas, pedras e raízes: detalhe puramente visual.
+        terrain.fillStyle(0x6a4a2d, 0.52);
+        [[125,692,88],[390,726,116],[905,694,96],[1190,728,110],[1580,700,104],[1910,726,132],[2410,700,95],[2760,728,118],[3130,692,90]].forEach(([x,y,w]) => {
+            terrain.fillEllipse(x, y, w, 18);
         });
+
+        terrain.fillStyle(0x3d3024, 0.62);
+        [[250,682,20,8],[705,706,28,10],[1090,684,24,9],[1735,708,30,11],[2220,686,22,9],[2630,711,30,10],[3040,687,24,9]].forEach(([x,y,w,h]) => {
+            terrain.fillEllipse(x, y, w, h);
+        });
+
+        terrain.lineStyle(6, 0x2c2118, 0.76);
+        [[180,656,265,710],[510,658,600,716],[960,657,1045,712],[1505,658,1590,716],[1840,658,1925,720],[2410,657,2505,714],[2940,657,3030,715]].forEach(([x1,y1,x2,y2]) => {
+            terrain.beginPath();
+            terrain.moveTo(x1, y1);
+            terrain.lineTo(x2, y2);
+            terrain.strokePath();
+        });
+
+        // Aparência natural sobre os corpos físicos já existentes.
+        this.drawLevel2NaturalPlatform(terrain, 485, 576, 150, 28, 'log');
+        this.drawLevel2NaturalPlatform(terrain, 815, 521, 170, 28, 'bank');
+        this.drawLevel2NaturalPlatform(terrain, 1285, 585, 130, 30, 'root');
+        this.drawLevel2NaturalPlatform(terrain, 1525, 526, 190, 28, 'log');
+        this.drawLevel2NaturalPlatform(terrain, 1975, 570, 150, 30, 'bank');
+        this.drawLevel2NaturalPlatform(terrain, 2210, 521, 160, 28, 'root');
+        this.drawLevel2NaturalPlatform(terrain, 2770, 491, 180, 28, 'log');
+        this.drawLevel2NaturalPlatform(terrain, 3015, 376, 190, 28, 'bank');
+    }
+
+    drawLevel2NaturalPlatform (graphics, x, y, width, height, type)
+    {
+        if (type === 'log') {
+            graphics.fillStyle(0x49311f, 1);
+            graphics.fillRoundedRect(x, y, width, height, 12);
+            graphics.fillStyle(0x6b4a2b, 0.72);
+            graphics.fillRect(x + 10, y + 5, width - 20, 5);
+            graphics.fillStyle(0x2d5932, 0.92);
+            graphics.fillRect(x + 8, y - 4, width - 16, 6);
+            graphics.fillStyle(0x7b5a3d, 0.45);
+            graphics.fillCircle(x + width - 12, y + height / 2, Math.min(10, height * 0.32));
+        } else if (type === 'root') {
+            graphics.fillStyle(0x4b3422, 1);
+            graphics.fillRoundedRect(x, y + 7, width, Math.max(18, height - 7), 10);
+            graphics.lineStyle(7, 0x5e4229, 0.95);
+            graphics.beginPath();
+            graphics.moveTo(x + 5, y + height - 3);
+            graphics.lineTo(x + width * 0.42, y + 3);
+            graphics.lineTo(x + width - 4, y + height - 5);
+            graphics.strokePath();
+            graphics.fillStyle(0x2b5530, 0.88);
+            graphics.fillRect(x + 10, y, width - 20, 6);
+        } else {
+            graphics.fillStyle(0x5a3c25, 1);
+            graphics.fillRoundedRect(x, y, width, height, 8);
+            graphics.fillStyle(0x315d34, 0.96);
+            graphics.fillRect(x, y, width, 7);
+            graphics.fillStyle(0x714d2e, 0.48);
+            graphics.fillEllipse(x + width * 0.56, y + height * 0.68, width * 0.46, height * 0.32);
+        }
     }
 
     createCurupiraSigns ()
@@ -413,7 +597,6 @@ export class Level2Scene extends Scene
         }
 
         visual.y = this.player.y + bodyOffsetY;
-
         parts.torso.y = lerp(parts.torso.y, torsoY);
         parts.torso.angle = lerp(parts.torso.angle, torsoAngle);
 
@@ -712,8 +895,7 @@ export class Level2Scene extends Scene
             this.handleCarapanaContact();
         });
 
-        this.carapanaVisual = this.add.container(
-            this.carapana.x,
+        this.carapanaVisual = this.add.container(            this.carapana.x,
             this.carapana.y
         ).setDepth(19);
 
@@ -998,3 +1180,562 @@ export class Level2Scene extends Scene
 
             const body = this.add.circle(0, 0, 9, data.color);
             const shine = this.add.circle(-3, -3, 2.5, 0xffffff, 0.42);
+            const stem = this.add.rectangle(0, -11, 3, 7, 0x5b4324).setOrigin(0.5, 1);
+            const leaf = this.add.ellipse(6, -13, 10, 5, 0x4f7a38)
+                .setAngle(-24);
+
+            visual.add([body, shine, stem, leaf]);
+
+            const sensor = this.add.rectangle(data.x, data.y, 26, 30, 0x000000, 0);
+            this.physics.add.existing(sensor);
+
+            sensor.body.setAllowGravity(false);
+            sensor.body.setImmovable(true);
+
+            const fruit = {
+                visual,
+                sensor,                baseY: data.y,
+                phase: index * 0.85,
+                collected: false
+            };
+
+            this.fruits.push(fruit);
+
+            this.physics.add.overlap(this.player, sensor, () => {
+                this.collectFruit(fruit);
+            });
+        });
+    }
+
+    collectFruit (fruit)
+    {
+        if (fruit.collected)
+        {
+            return;
+        }
+
+        fruit.collected = true;
+        fruit.sensor.body.enable = false;
+
+        this.hunger = Math.min(this.maxHunger, this.hunger + 25);
+        this.health = Math.min(this.maxHealth, this.health + 10);
+        this.updateHungerHud();
+        this.updateHealthHud();
+
+        const feedback = this.add.text(
+            fruit.visual.x,
+            fruit.visual.y - 18,
+            '+25 FOME\n+10 VIDA',
+            {
+                fontFamily: 'Arial',
+                fontSize: '18px',
+                fontStyle: 'bold',
+                color: '#dff2a2',
+                stroke: '#17301d',
+                strokeThickness: 3
+            }
+        )
+            .setOrigin(0.5)
+            .setDepth(40);
+
+        this.tweens.add({
+            targets: fruit.visual,
+            y: fruit.visual.y - 12,
+            scaleX: 1.25,
+            scaleY: 1.25,
+            alpha: 0,
+            duration: 220,
+            ease: 'Quad.Out',
+            onComplete: () => {
+                fruit.visual.setVisible(false);
+            }
+        });
+
+        this.tweens.add({
+            targets: feedback,
+            y: feedback.y - 24,
+            alpha: 0,
+            duration: 500,
+            ease: 'Quad.Out',
+            onComplete: () => {
+                feedback.destroy();
+            }
+        });
+    }
+
+    updateFruits (time)
+    {
+        const seconds = time * 0.001;
+
+        this.fruits.forEach((fruit) => {
+            if (fruit.collected)
+            {
+                return;
+            }
+
+            const wave = Math.sin(seconds * 2.4 + fruit.phase);
+            const pulse = 1 + Math.sin(seconds * 2.8 + fruit.phase) * 0.035;
+
+            fruit.visual.y = fruit.baseY + wave * 3;
+            fruit.visual.setScale(pulse);
+        });
+    }
+
+    createArena ()
+    {
+        this.arenaStarted = false;
+        this.arenaCleared = false;
+        this.arenaMinX = 2450;
+        this.arenaMaxX = 2860;
+
+        // Clareira do guardião: decoração estática, sem alterar física ou limites.
+        const arenaVisual = this.add.graphics().setDepth(6);
+        arenaVisual.fillStyle(0x13291d, 0.34);
+        arenaVisual.fillEllipse(2655, 635, 450, 62);
+        arenaVisual.lineStyle(15, 0x3a281c, 0.82);
+        [[2460,650,2515,600],[2825,650,2770,596]].forEach(([x1,y1,x2,y2]) => {
+            arenaVisual.beginPath();
+            arenaVisual.moveTo(x1, y1);
+            arenaVisual.lineTo(x2, y2);
+            arenaVisual.strokePath();
+        });
+        arenaVisual.fillStyle(0x315a37, 0.64);
+        [[2495,626,26],[2530,634,18],[2795,628,24],[2762,636,17]].forEach(([x,y,r]) => arenaVisual.fillCircle(x, y, r));
+
+        this.add.rectangle(2650, 520, 520, 138, 0xc8d8ce, 0.045)
+            .setDepth(-8)
+            .setScrollFactor(0.72);
+
+        this.arenaTrigger = this.add.rectangle(2520, 570, 120, 150, 0x000000, 0);
+        this.physics.add.existing(this.arenaTrigger);
+        this.arenaTrigger.body.setAllowGravity(false);
+        this.arenaTrigger.body.setImmovable(true);
+        this.physics.add.overlap(this.player, this.arenaTrigger, () => this.startCurupiraEncounter());
+
+        this.arenaBarrier = this.add.rectangle(2420, 560, 26, 190, 0x203c28, 0.9).setDepth(16).setVisible(false);
+        this.physics.add.existing(this.arenaBarrier, true);
+        this.arenaBarrier.body.enable = false;
+    }
+
+    createCurupira ()
+    {
+        this.curupira = this.add.rectangle(2730, 590, 44, 74, 0x000000, 0);
+        this.physics.add.existing(this.curupira);
+        this.curupira.body.setSize(44, 74);
+        this.curupira.body.setCollideWorldBounds(true);
+        this.physics.add.collider(this.curupira, this.platforms);
+        this.physics.add.overlap(this.player, this.curupira, () => this.handleCurupiraContact());
+
+        this.curupiraHealth = 100;
+        this.curupiraState = 'INTRO';
+        this.curupiraNextActionAt = 0;
+        this.curupiraAttackPattern = 0;
+        this.curupiraLandingDangerUntil = 0;
+        this.curupiraVisual = this.add.container(this.curupira.x, this.curupira.y).setDepth(21).setVisible(false);
+        const leftFoot = this.add.rectangle(-9, 26, 12, 22, 0x5c3b28).setAngle(18);
+        const rightFoot = this.add.rectangle(9, 26, 12, 22, 0x5c3b28).setAngle(-18);
+        const body = this.add.rectangle(0, 0, 30, 42, 0x355a35);
+        const head = this.add.circle(0, -31, 13, 0x996247);
+        const hair = this.add.ellipse(0, -43, 35, 20, 0xb74427);
+        this.curupiraVisual.add([leftFoot, rightFoot, body, head, hair]);
+
+        this.curupiraBossHud = this.add.container(512, 155).setScrollFactor(0).setDepth(160).setVisible(false);
+        const bg = this.add.rectangle(0, 0, 430, 54, 0x06100d, 0.88).setOrigin(0.5, 0);
+        this.curupiraBossBarBack = this.add.rectangle(-170, 28, 340, 14, 0x301a17, 1).setOrigin(0, 0.5);
+        this.curupiraBossBar = this.add.rectangle(-170, 28, 340, 14, 0xb64a32, 1).setOrigin(0, 0.5);
+        this.curupiraBossText = this.add.text(0, 8, 'CURUPIRA 100/100', { fontFamily: 'Arial Black', fontSize: '16px', color: '#f1e1ae' }).setOrigin(0.5, 0);
+        this.curupiraBossHud.add([bg, this.curupiraBossBarBack, this.curupiraBossBar, this.curupiraBossText]);
+    }
+
+    startCurupiraEncounter ()
+    {
+        if (this.arenaStarted || this.arenaCleared) return;
+        this.arenaStarted = true;
+        this.arenaBarrier.setVisible(true);
+        this.arenaBarrier.body.enable = true;
+        this.curupiraVisual.setVisible(true);
+        this.curupiraBossHud.setVisible(true);
+        this.curupira.body.setVelocity(0, 0);
+        this.curupiraState = 'INTRO';
+
+        const panel = this.add.rectangle(512, 360, 580, 100, 0x06100d, 0.9).setScrollFactor(0).setDepth(180);
+        const text = this.add.text(512, 360, '“A mata não permite sua passagem.”', { fontFamily: 'Arial', fontSize: '25px', color: '#f1e1ae' }).setOrigin(0.5).setScrollFactor(0).setDepth(181);
+        this.time.delayedCall(1500, () => {
+            panel.destroy(); text.destroy();
+            this.curupiraState = 'ATTACK';
+            this.curupiraNextActionAt = this.time.now + 500;
+        });
+    }
+
+    updateCurupira (time)
+    {
+        this.curupiraVisual.setPosition(this.curupira.x, this.curupira.y);
+        if (!this.arenaStarted || this.arenaCleared || this.curupiraState === 'INTRO' || this.curupiraState === 'DEFEATED') return;
+
+        if (this.curupiraState === 'VULNERABLE') {
+            this.curupira.body.setVelocityX(0);
+            if (time >= this.curupiraNextActionAt) {
+                this.curupiraVisual.setAlpha(1);
+                this.curupiraVisual.setAngle(0);
+                this.curupiraVisual.setScale(1, 1);
+                this.curupiraState = 'ATTACK';
+                this.curupiraNextActionAt = time + 400;
+            }
+            return;
+        }
+
+        if (this.curupiraAttackPattern === 1 && this.curupira.body.blocked.down && this.curupiraLandingDangerUntil > 0) {
+            if (time <= this.curupiraLandingDangerUntil) {
+                if (Math.abs(this.player.x - this.curupira.x) < 90 && Math.abs(this.player.y - this.curupira.y) < 80) this.damagePlayer(20, this.player.x < this.curupira.x ? -150 : 150, -120);
+            } else {
+                this.curupiraLandingDangerUntil = 0;
+                this.enterCurupiraVulnerable(time);
+            }
+        }
+
+        if (time < this.curupiraNextActionAt) return;
+
+        this.curupiraAttackPattern = (this.curupiraAttackPattern + 1) % 3;
+        if (this.curupiraAttackPattern === 0) this.curupiraDash(time);
+        else if (this.curupiraAttackPattern === 1) this.curupiraJump(time);
+        else this.curupiraFeint(time);
+    }
+
+    curupiraDash (time)
+    {
+        const fromLeft = this.curupira.x < (this.arenaMinX + this.arenaMaxX) / 2;
+        this.curupira.setPosition(fromLeft ? this.arenaMinX + 40 : this.arenaMaxX - 40, 590);
+        this.curupira.body.setVelocityX(fromLeft ? 330 : -330);
+        this.curupiraNextActionAt = time + 800;
+        this.time.delayedCall(760, () => {
+            if (!this.arenaCleared && this.curupiraState === 'ATTACK') this.enterCurupiraVulnerable(this.time.now);
+        });
+    }
+
+    curupiraJump (time)
+    {
+        const direction = this.player.x < this.curupira.x ? -1 : 1;
+        this.curupira.body.setVelocity(direction * 150, -520);
+        this.curupiraLandingDangerUntil = time + 1250;
+        this.curupiraNextActionAt = time + 1300;
+    }
+
+    curupiraFeint (time)
+    {
+        const direction = this.player.x < this.curupira.x ? -1 : 1;
+        this.curupira.body.setVelocityX(-direction * 210);
+        this.time.delayedCall(260, () => {
+            if (!this.arenaCleared && this.curupiraState === 'ATTACK') this.curupira.body.setVelocityX(direction * 280);
+        });
+        this.time.delayedCall(720, () => {
+            if (!this.arenaCleared && this.curupiraState === 'ATTACK') this.enterCurupiraVulnerable(this.time.now);
+        });
+        this.curupiraNextActionAt = time + 760;
+    }
+
+    enterCurupiraVulnerable (time)
+    {
+        this.curupira.body.setVelocity(0, 0);
+        this.curupiraState = 'VULNERABLE';
+        this.curupiraNextActionAt = time + 1200;
+        this.curupiraVisual.setAlpha(0.5);
+        this.curupiraVisual.setAngle(8);
+        this.curupiraVisual.setScale(1, 0.92);
+    }
+
+    handleCurupiraContact ()
+    {
+        if (!this.arenaStarted || this.arenaCleared || this.curupiraState !== 'ATTACK') return;
+        this.damagePlayer(15, this.player.x < this.curupira.x ? -180 : 180, -80);
+    }
+
+    tryHitCurupira ()
+    {
+        if (!this.isAttacking || !this.attackHitbox.body.enable || this.arenaCleared) return;
+
+        if (this.curupiraState !== 'VULNERABLE') {
+            this.curupiraVisual.setAlpha(0.3);
+            this.time.delayedCall(110, () => {
+                if (!this.arenaCleared && this.curupiraState !== 'VULNERABLE') {
+                    this.curupiraVisual.setAlpha(1);
+                }
+            });
+            return;
+        }
+
+        if (this.attackHitCurupiraRegistered) return;
+        this.attackHitCurupiraRegistered = true;
+
+        this.curupiraHealth = Math.max(0, this.curupiraHealth - 25);
+        this.curupiraBossBar.width = 340 * (this.curupiraHealth / 100);
+        this.curupiraBossText.setText(`CURUPIRA ${this.curupiraHealth}/100`);
+        this.curupiraVisual.setAlpha(1);
+        this.curupiraVisual.setAngle(0);
+        this.curupiraVisual.setScale(1, 1);
+
+        if (this.curupiraHealth <= 0) this.defeatCurupira();
+        else {
+            this.curupiraState = 'ATTACK';
+            this.curupiraNextActionAt = this.time.now + 650;
+        }
+    }
+
+    defeatCurupira ()
+    {
+        this.arenaCleared = true;
+        this.curupiraState = 'DEFEATED';
+        this.curupira.body.setVelocity(0, 0);
+        this.curupiraBossHud.setVisible(false);
+        this.curupiraVisual.setAlpha(1);
+        this.arenaBarrier.setVisible(false);
+        this.arenaBarrier.body.enable = false;
+
+        const panel = this.add.rectangle(512, 350, 620, 190, 0x06100d, 0.92).setScrollFactor(0).setDepth(190);
+        const text = this.add.text(512, 320, 'A floresta testou seus passos.', { fontFamily: 'Arial', fontSize: '23px', color: '#c8d8cc' }).setOrigin(0.5).setScrollFactor(0).setDepth(191);
+        const skill = this.add.text(512, 380, 'HABILIDADE DESBLOQUEADA\nSALTO DUPLO', { fontFamily: 'Arial Black', fontSize: '29px', color: '#f1e1ae', align: 'center' }).setOrigin(0.5).setScrollFactor(0).setDepth(191);
+        this.time.delayedCall(1600, () => {
+            this.doubleJumpUnlocked = true;
+            this.registry.set('doubleJumpUnlocked', true);
+            panel.destroy(); text.destroy(); skill.destroy();
+            this.showDoubleJumpTutorial();
+        });
+    }
+
+    showDoubleJumpTutorial ()
+    {
+        const tutorial = this.add.text(512, 220, 'SALTO DUPLO\nNo ar, pressione novamente W / ↑ / Espaço.', { fontFamily: 'Arial Black', fontSize: '21px', color: '#f1e1ae', align: 'center', backgroundColor: '#06100dcc', padding: { x: 18, y: 12 } }).setOrigin(0.5).setScrollFactor(0).setDepth(180);
+        this.time.delayedCall(3000, () => tutorial.destroy());
+    }
+
+    performJump (isGrounded)
+    {
+        if (isGrounded) {
+            this.jumpsUsed = 0;
+        }
+
+        if (this.jumpsUsed === 0 && isGrounded) {
+            this.player.body.setVelocityY(-520);
+            this.jumpsUsed = 1;
+            return;
+        }
+
+        if (this.doubleJumpUnlocked && this.jumpsUsed === 1 && !isGrounded) {
+            this.player.body.setVelocityY(-500);
+            this.jumpsUsed = 2;
+            this.showDoubleJumpBurst();
+        }
+    }
+
+    showDoubleJumpBurst ()
+    {
+        const burst = this.add.circle(this.player.x, this.player.y + 24, 12, 0xc8d59b, 0.35).setDepth(18);
+        this.tweens.add({ targets: burst, scale: 2.5, alpha: 0, duration: 260, onComplete: () => burst.destroy() });
+    }
+
+    createFinalZone ()
+    {
+        this.finalZone = this.add.rectangle(3200, 320, 150, 190, 0x000000, 0);
+        this.physics.add.existing(this.finalZone);
+        this.finalZone.body.setAllowGravity(false);
+        this.finalZone.body.setImmovable(true);
+        this.physics.add.overlap(this.player, this.finalZone, () => this.completeLevel2());
+    }
+
+    completeLevel2 ()
+    {
+        if (this.phaseCompleted || !this.doubleJumpUnlocked) return;
+        this.phaseCompleted = true;
+        this.player.body.setVelocity(0, 0);
+        this.isAttacking = false;
+        this.attackHitbox.body.enable = false;
+
+        const overlay = this.add.rectangle(512, 384, 1024, 768, 0x020705, 0.94).setScrollFactor(0).setDepth(300);
+        this.add.text(512, 220, 'FASE 2 CONCLUÍDA', { fontFamily: 'Arial Black', fontSize: '44px', color: '#f1e1ae' }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
+        this.add.text(512, 315, 'SALTO DUPLO ADQUIRIDO', { fontFamily: 'Arial Black', fontSize: '25px', color: '#d6b56c' }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
+        this.add.text(512, 390, 'Os rastros seguem para onde antes\nele não poderia alcançar.', { fontFamily: 'Arial', fontSize: '22px', color: '#c8d8cc', align: 'center' }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
+        const button = this.add.rectangle(512, 530, 280, 64, 0x8b5a2b).setStrokeStyle(3, 0xd6b56c).setScrollFactor(0).setDepth(301).setInteractive({ useHandCursor: true });
+        this.add.text(512, 530, 'CONTINUAR', { fontFamily: 'Arial Black', fontSize: '23px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(302);
+        button.on('pointerdown', () => this.scene.start('MainMenu'));
+    }
+
+    createHud ()
+    {
+        const panel = this.add.rectangle(15, 15, 365, 124, 0x06100d, 0.72).setOrigin(0).setScrollFactor(0).setDepth(100);
+        panel.setStrokeStyle(1, 0x78917c, 0.35);
+        this.add.text(30, 27, 'SOLDADOS DA BORRACHA - FASE 2', { fontFamily: 'Arial', fontSize: '18px', color: '#f1e1ae' }).setScrollFactor(0).setDepth(101);
+        this.add.text(30, 56, 'Controles:\nA/D ou ←/→ = mover\nW / ↑ / Espaço = pular\nJ / X = atacar', { fontFamily: 'Arial', fontSize: '15px', color: '#c7d6ca', lineSpacing: 3 }).setScrollFactor(0).setDepth(101);
+    }
+
+    createHealthHud ()
+    {
+        this.healthHud = this.add.container(395, 18)
+            .setScrollFactor(0)
+            .setDepth(102);
+
+        const background = this.add.rectangle(0, 0, 235, 58, 0x06100d, 0.78)
+            .setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.35);
+
+        const label = this.add.text(12, 7, 'VIDA', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#f1e1ae'
+        });
+
+        const barBack = this.add.rectangle(12, 29, 150, 16, 0x351b18, 0.95)
+            .setOrigin(0);
+        barBack.setStrokeStyle(1, 0x8e6f62, 0.65);
+
+        this.healthBar = this.add.rectangle(12, 29, 150, 16, 0x8fb35b, 1)
+            .setOrigin(0);
+
+        this.healthText = this.add.text(172, 27, '100/100', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#ffffff'
+        });
+
+        this.healthHud.add([
+            background,
+            label,
+            barBack,
+            this.healthBar,
+            this.healthText
+        ]);
+
+        this.updateHealthHud();
+    }
+
+    createHungerHud ()
+    {
+        this.hungerHud = this.add.container(395, 78)
+            .setScrollFactor(0)
+            .setDepth(102);
+
+        const background = this.add.rectangle(0, 0, 235, 58, 0x06100d, 0.78)
+            .setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.35);
+
+        this.hungerLabel = this.add.text(12, 7, 'FOME', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#f1e1ae'
+        });
+
+        const barBack = this.add.rectangle(12, 29, 150, 16, 0x3d2b16, 0.95)
+            .setOrigin(0);
+        barBack.setStrokeStyle(1, 0x9b7b45, 0.65);
+
+        this.hungerBar = this.add.rectangle(12, 29, 150, 16, 0xd49a3a, 1)
+            .setOrigin(0);
+
+        this.hungerText = this.add.text(172, 27, '100/100', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#ffffff'
+        });
+
+        this.hungerHud.add([
+            background,
+            this.hungerLabel,
+            barBack,
+            this.hungerBar,
+            this.hungerText
+        ]);
+
+        this.updateHungerHud();
+    }
+
+    updateHealthHud ()
+    {
+        const ratio = Math.max(0, this.health / this.maxHealth);
+
+        this.healthBar.width = 150 * ratio;
+        this.healthText.setText(`${this.health}/${this.maxHealth}`);
+    }
+
+    updateHungerHud ()
+    {
+        const ratio = Math.max(0, this.hunger / this.maxHunger);
+
+        this.hungerBar.width = 150 * ratio;
+        this.hungerText.setText(`${this.hunger}/${this.maxHunger}`);
+
+        if (this.hunger <= 0)
+        {
+            this.hungerBar.setFillStyle(0xd85c32, 1);
+            this.hungerLabel.setColor('#ffb08a');
+        }
+        else if (this.hunger < 30)
+        {
+            this.hungerBar.setFillStyle(0xe8782f, 1);
+            this.hungerLabel.setColor('#ffd08a');
+        }
+        else
+        {
+            this.hungerBar.setFillStyle(0xd49a3a, 1);
+            this.hungerLabel.setColor('#f1e1ae');
+        }
+    }
+
+    updateHunger (time)
+    {
+        if (this.phaseCompleted || this.isPlayerDead) return;
+        if (time >= this.nextHungerDrainAt) {
+            const steps = Math.floor((time - this.nextHungerDrainAt) / 2000) + 1;
+            this.hunger = Math.max(0, this.hunger - steps);
+            this.nextHungerDrainAt += steps * 2000;
+            this.updateHungerHud();
+        }
+        if (this.hunger <= 0 && time >= this.nextStarvationDamageAt) {
+            this.nextStarvationDamageAt = time + 2000;
+            this.health = Math.max(0, this.health - 5);
+            this.updateHealthHud();
+            if (this.health <= 0) this.handlePlayerDeath();
+        }
+    }
+
+    showLevelTitle ()
+    {
+        const title = this.add.text(512, 280, 'FASE 2\nRASTROS DO GUARDIÃO', { fontFamily: 'Arial Black', fontSize: '34px', color: '#f1e1ae', align: 'center', backgroundColor: '#06100dcc', padding: { x: 24, y: 16 } }).setOrigin(0.5).setScrollFactor(0).setDepth(170);
+        this.tweens.add({ targets: title, alpha: 0, delay: 1800, duration: 800, onComplete: () => title.destroy() });
+    }
+
+    update ()
+    {
+        const moveSpeed = 260;
+        const grounded = this.player.body.blocked.down || this.player.body.touching.down;
+        if (grounded) this.jumpsUsed = 0;
+
+        if (!this.isPlayerDead && !this.phaseCompleted) {
+            if (this.time.now >= this.knockbackUntil) {
+                const left = this.cursors.left.isDown || this.keyA.isDown;
+                const right = this.cursors.right.isDown || this.keyD.isDown;
+                this.player.body.setVelocityX(left ? -moveSpeed : right ? moveSpeed : 0);
+            }
+
+            const jumpDown = this.keyW.isDown || this.cursors.up.isDown || this.spaceKey.isDown;
+            if (jumpDown && !this.jumpWasDown) this.performJump(grounded);
+            this.jumpWasDown = jumpDown;
+        }
+
+        if (this.arenaStarted && !this.arenaCleared) {
+            if (this.player.x < this.arenaMinX) this.player.x = this.arenaMinX;
+            if (this.player.x > this.arenaMaxX) this.player.x = this.arenaMaxX;
+        }
+
+        if (this.player.y > 760) {
+            this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
+            this.player.body.setVelocity(0, 0);
+        }
+
+        this.syncPlayerVisual();
+        this.animatePlayerVisual(this.time.now);
+        this.updateAttack(this.time.now);
+        this.updateSnake(this.time.now);
+        this.updateCarapana(this.time.now);
+        this.updateFruits(this.time.now);
+        this.updateCurupira(this.time.now);
+        this.updateHunger(this.time.now);
+    }
+}
