@@ -2052,21 +2052,15 @@ export class Level4Scene extends Scene
         p.setStrokeStyle(1,0x78917c,.35);
         this.add.text(30,27,'SOLDADOS DA BORRACHA - FASE 4',{fontFamily:'Arial',fontSize:'18px',color:'#f1e1ae'}).setScrollFactor(0).setDepth(101);
         this.controlsText=this.add.text(30,56,'Controles:\\nA/D ou ←/→ = mover\\nW / ↑ / Espaço = pular\\nJ / X = atacar\\nSHIFT = dash',{fontFamily:'Arial',fontSize:'15px',color:'#c7d6ca',lineSpacing:3}).setScrollFactor(0).setDepth(101);
-        const playerName = String(this.registry.get('playerName') || 'SERINGUEIRO').slice(0, 16);
-        this.add.text(995, 18, `SERINGUEIRO: ${playerName}`, {
-            fontFamily: 'Arial',
-            fontSize: '13px',
-            color: '#9fba9f',
-            backgroundColor: '#06100dcc',
-            padding: { x: 10, y: 6 }
-        }).setOrigin(1, 0).setScrollFactor(0).setDepth(103);
 
     }
 
     showLevelTitle ()
     {
+        const playerName=String(this.registry.get('playerName')||'SERINGUEIRO').slice(0,16);
         const t=this.add.text(512,275,'FASE 4\\nRASTROS NA MATA FERIDA',{fontFamily:'Arial Black',fontSize:'34px',color:'#f1e1ae',align:'center',backgroundColor:'#06100dcc',padding:{x:24,y:16}}).setOrigin(.5).setScrollFactor(0).setDepth(170);
-        this.tweens.add({targets:t,alpha:0,delay:1900,duration:800,onComplete:()=>t.destroy()});
+        const n=this.add.text(512,360,`SERINGUEIRO: ${playerName}`,{fontFamily:'Arial',fontSize:'15px',color:'#9fba9f',backgroundColor:'#06100dcc',padding:{x:10,y:5}}).setOrigin(.5).setScrollFactor(0).setDepth(170);
+        this.tweens.add({targets:[t,n],alpha:0,delay:1900,duration:800,onComplete:()=>{t.destroy();n.destroy();}});
     }
 
     update ()

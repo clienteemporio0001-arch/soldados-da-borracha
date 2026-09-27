@@ -34,6 +34,20 @@ export class LevelSelectScene extends Scene
         this.add.circle(850, 108, 54, 0xd8e0d5, 0.16);
         this.add.rectangle(512, 620, 1024, 155, 0xc7d5cd, 0.035);
 
+        const roots = this.add.graphics().setDepth(0);
+        roots.lineStyle(3, 0x34281c, 0.42);
+        [
+            [30, 650, 220, 570],
+            [150, 700, 360, 600],
+            [330, 705, 505, 590],
+            [540, 700, 690, 590],
+            [760, 705, 975, 610]
+        ].forEach(([x1, y1, x2, y2], index) => {
+            roots.lineBetween(x1, y1, x2, y2);
+            roots.lineStyle(1 + (index % 2), 0x4a3926, 0.28);
+            roots.lineBetween(x1 + 35, y1 - 8, x2 - 25, y2 + 18);
+        });
+
         this.add.text(512, 66, 'MAPA DA JORNADA', {
             fontFamily: 'Arial Black',
             fontSize: '38px',
@@ -42,7 +56,7 @@ export class LevelSelectScene extends Scene
             strokeThickness: 5
         }).setOrigin(0.5);
 
-        this.add.text(512, 112, 'SELECIONE UMA FASE • TODAS DISPONÍVEIS PARA TESTE', {
+        this.add.text(512, 112, 'SELECIONE UMA FASE', {
             fontFamily: 'Arial',
             fontSize: '15px',
             color: '#9fba9f',
@@ -123,6 +137,8 @@ export class LevelSelectScene extends Scene
             1
         ).setDepth(6);
 
+        this.createPhaseMarker(phase);
+
         this.add.text(phase.x, phase.y, String(phase.number), {
             fontFamily: 'Arial Black',
             fontSize: '20px',
@@ -160,6 +176,48 @@ export class LevelSelectScene extends Scene
         });
 
         hitArea.on('pointerdown', () => this.startSelectedLevel(phase));
+    }
+
+    createPhaseMarker (phase)
+    {
+        const marker = this.add.container(phase.x, phase.y - 58).setDepth(4);
+
+        if (phase.number === 1)
+        {
+            const trunk = this.add.rectangle(0, 3, 7, 30, 0x5b432b).setOrigin(0.5, 1);
+            const canopy = this.add.circle(0, -22, 17, 0x365b3b, 0.92);
+            const hut = this.add.rectangle(23, 4, 20, 14, 0x6a4a2c).setOrigin(0.5, 1);
+            const roof = this.add.triangle(23, -10, -14, 10, 14, 10, 0, -3, 0x8b6237);
+            marker.add([trunk, canopy, hut, roof]);
+        }
+        else if (phase.number === 2)
+        {
+            const footA = this.add.ellipse(-8, -5, 13, 22, 0x8c7558, 0.7).setAngle(-18);
+            const footB = this.add.ellipse(10, 7, 13, 22, 0x8c7558, 0.52).setAngle(18);
+            marker.add([footA, footB]);
+        }
+        else if (phase.number === 3)
+        {
+            const trunk = this.add.rectangle(0, 4, 9, 36, 0x59462f).setOrigin(0.5, 1);
+            const crown = this.add.circle(0, -25, 18, 0x2f5438, 0.9);
+            const rootA = this.add.rectangle(-11, 5, 24, 3, 0x72583a).setAngle(-18);
+            const rootB = this.add.rectangle(11, 5, 24, 3, 0x72583a).setAngle(18);
+            marker.add([rootA, rootB, trunk, crown]);
+        }
+        else if (phase.number === 4)
+        {
+            const trunkA = this.add.rectangle(-8, 0, 10, 36, 0x60462f).setOrigin(0.5, 1).setAngle(-18);
+            const trunkB = this.add.rectangle(11, -7, 9, 28, 0x60462f).setOrigin(0.5, 1).setAngle(24);
+            const scar = this.add.rectangle(1, -6, 25, 3, 0xc6a36b, 0.7).setAngle(-12);
+            marker.add([trunkA, trunkB, scar]);
+        }
+        else
+        {
+            const footprint = this.add.ellipse(0, 0, 28, 42, 0x4f3d2d, 0.82).setAngle(-8);
+            const eyeL = this.add.circle(-13, -31, 3, 0xd6b768, 0.72);
+            const eyeR = this.add.circle(13, -31, 3, 0xd6b768, 0.72);
+            marker.add([footprint, eyeL, eyeR]);
+        }
     }
 
     startSelectedLevel (phase)

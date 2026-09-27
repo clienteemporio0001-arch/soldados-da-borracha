@@ -142,7 +142,7 @@ export class MainMenu extends Scene
             .setDepth(202)
             .setInteractive({ useHandCursor: true });
 
-        this.add.text(512, 470, 'CONFIRMAR', {
+        this.add.text(512, 470, 'INICIAR JORNADA', {
             fontFamily: 'Arial Black',
             fontSize: '21px',
             color: '#ffffff'

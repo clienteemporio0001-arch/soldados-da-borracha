@@ -121,6 +121,7 @@ export class Game extends Scene
         this.createHud();
         this.createHealthHud();
         this.createHungerHud();
+        this.showPlayerNameIntro();
 
         this.spawnPoint = { x: 150, y: 560 };
     }
@@ -2004,16 +2005,28 @@ export class Game extends Scene
             }
         ).setScrollFactor(0).setDepth(101);
 
-        const playerName = String(this.registry.get('playerName') || 'SERINGUEIRO').slice(0, 16);
-        this.add.text(995, 18, `SERINGUEIRO: ${playerName}`, {
-            fontFamily: 'Arial',
-            fontSize: '13px',
-            color: '#9fba9f',
-            backgroundColor: '#06100dcc',
-            padding: { x: 10, y: 6 }
-        }).setOrigin(1, 0).setScrollFactor(0).setDepth(103);
     }
 
+
+    showPlayerNameIntro ()
+    {
+        const playerName = String(this.registry.get('playerName') || 'SERINGUEIRO').slice(0, 16);
+        const tag = this.add.text(512, 270, `SERINGUEIRO: ${playerName}`, {
+            fontFamily: 'Arial',
+            fontSize: '16px',
+            color: '#9fba9f',
+            backgroundColor: '#06100dcc',
+            padding: { x: 12, y: 7 }
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(169);
+
+        this.tweens.add({
+            targets: tag,
+            alpha: 0,
+            delay: 1800,
+            duration: 800,
+            onComplete: () => tag.destroy()
+        });
+    }
 
     queueJumpInput (time)
     {
