@@ -72,8 +72,10 @@ export class Game extends Scene
         this.nextAttackAt = 0;
         this.attackDirection = 1;
         this.attackHitRegistered = false;
+        this.attackHitCarapanaRegistered = false;
 
         this.createSnake();
+        this.createCarapana();
         this.createAttackHitbox();
         this.createFruits();
 
@@ -722,6 +724,10 @@ export class Game extends Scene
         this.physics.add.overlap(this.attackHitbox, this.snake, () => {
             this.tryHitSnake();
         });
+
+        this.physics.add.overlap(this.attackHitbox, this.carapana, () => {
+            this.tryHitCarapana();
+        });
     }
 
     startAttack ()
@@ -738,6 +744,7 @@ export class Game extends Scene
         this.nextAttackAt = now + 400;
         this.attackDirection = this.playerVisual.facing || 1;
         this.attackHitRegistered = false;
+        this.attackHitCarapanaRegistered = false;
     }
 
     updateAttack (time)
@@ -857,6 +864,275 @@ export class Game extends Scene
             delay: 180,
             onComplete: () => {
                 this.snakeVisual.setVisible(false);
+            }
+        });
+    }
+
+
+    createCarapana ()
+    {
+        this.carapanaPatrol = {
+            minX: 1830,
+            maxX: 2070,
+            baseX: 1950,
+            baseY: 430,
+            patrolSpeed: 55,
+            chaseSpeed: 105,
+            returnSpeed: 80,
+            detectionRadius: 300
+        };
+
+        this.carapana = this.add.rectangle(
+            this.carapanaPatrol.baseX,
+            this.carapanaPatrol.baseY,
+            38,
+            24,
+            0x000000,
+            0
+        );
+        this.physics.add.existing(this.carapana);
+
+        this.carapana.body.setSize(38, 24);
+        this.carapana.body.setAllowGravity(false);
+        this.carapana.body.setCollideWorldBounds(true);
+        this.carapana.body.setVelocityX(this.carapanaPatrol.patrolSpeed);
+
+        this.carapanaMaxHealth = 25;
+        this.carapanaHealth = 25;
+        this.carapanaAlive = true;
+        this.carapanaFacing = 1;
+        this.carapanaReturning = false;
+
+        this.physics.add.overlap(this.player, this.carapana, () => {
+            this.handleCarapanaContact();
+        });
+
+        this.carapanaVisual = this.add.container(
+            this.carapana.x,
+            this.carapana.y
+        ).setDepth(19);
+
+        const abdomen = this.add.ellipse(-8, 0, 22, 8, 0x4b3d2d);
+        const thorax = this.add.ellipse(5, 0, 13, 11, 0x5d4b35);
+        const head = this.add.circle(13, -1, 5, 0x6b5940);
+
+        const wingTop = this.add.ellipse(-1, -8, 22, 8, 0xcbd8cf, 0.42)
+            .setAngle(-18);
+        const wingBottom = this.add.ellipse(-1, 8, 22, 8, 0xcbd8cf, 0.42)
+            .setAngle(18);
+
+        const proboscis = this.add.rectangle(21, -1, 12, 2, 0x3a3026)
+            .setOrigin(0, 0.5);
+
+        const leg1 = this.add.rectangle(1, 7, 2, 17, 0x3b3228)
+            .setOrigin(0.5, 0)
+            .setAngle(28);
+        const leg2 = this.add.rectangle(-5, 7, 2, 18, 0x3b3228)
+            .setOrigin(0.5, 0)
+            .setAngle(-24);
+        const leg3 = this.add.rectangle(7, 6, 2, 16, 0x3b3228)
+            .setOrigin(0.5, 0)
+            .setAngle(48);
+
+        this.carapanaVisual.add([
+            wingTop,
+            wingBottom,
+            leg1,
+            leg2,
+            leg3,
+            abdomen,
+            thorax,
+            head,
+            proboscis
+        ]);
+
+        this.carapanaVisual.parts = {
+            abdomen,
+            thorax,
+            head,
+            wingTop,
+            wingBottom,
+            proboscis
+        };
+    }
+
+    updateCarapana (time)
+    {
+        if (!this.carapana || !this.carapana.body || !this.carapanaAlive)
+        {
+            return;
+        }
+
+        const patrol = this.carapanaPatrol;
+        const dx = this.player.x - this.carapana.x;
+        const dy = this.player.y - this.carapana.y;
+        const distance = Math.hypot(dx, dy);
+
+        if (distance <= patrol.detectionRadius)
+        {
+            this.carapanaReturning = true;
+
+            if (distance > 1)
+            {
+                this.carapana.body.setVelocity(
+                    (dx / distance) * patrol.chaseSpeed,
+                    (dy / distance) * patrol.chaseSpeed
+                );
+            }
+        }
+        else
+        {
+            const outsidePatrol =
+                this.carapana.x < patrol.minX ||
+                this.carapana.x > patrol.maxX ||
+                Math.abs(this.carapana.y - patrol.baseY) > 24;
+
+            if (this.carapanaReturning || outsidePatrol)
+            {
+                const returnDx = patrol.baseX - this.carapana.x;
+                const returnDy = patrol.baseY - this.carapana.y;
+                const returnDistance = Math.hypot(returnDx, returnDy);
+
+                if (returnDistance > 18)
+                {
+                    this.carapana.body.setVelocity(
+                        (returnDx / returnDistance) * patrol.returnSpeed,
+                        (returnDy / returnDistance) * patrol.returnSpeed
+                    );
+                }
+                else
+                {
+                    this.carapanaReturning = false;
+                    this.carapana.setPosition(
+                        Math.min(patrol.maxX, Math.max(patrol.minX, this.carapana.x)),
+                        patrol.baseY
+                    );
+                    this.carapana.body.setVelocity(patrol.patrolSpeed, 0);
+                    this.carapanaFacing = 1;
+                }
+            }
+            else
+            {
+                this.carapana.body.setVelocityY(0);
+
+                if (this.carapana.x >= patrol.maxX)
+                {
+                    this.carapana.body.setVelocityX(-patrol.patrolSpeed);
+                    this.carapanaFacing = -1;
+                }
+                else if (this.carapana.x <= patrol.minX)
+                {
+                    this.carapana.body.setVelocityX(patrol.patrolSpeed);
+                    this.carapanaFacing = 1;
+                }
+            }
+        }
+
+        if (this.carapana.body.velocity.x > 1)
+        {
+            this.carapanaFacing = 1;
+        }
+        else if (this.carapana.body.velocity.x < -1)
+        {
+            this.carapanaFacing = -1;
+        }
+
+        const seconds = time * 0.001;
+        const hover = Math.sin(seconds * 5.5) * 4;
+        const wingBeat = Math.sin(seconds * 34) * 18;
+        const tilt = Math.max(-8, Math.min(8, this.carapana.body.velocity.y * 0.05));
+
+        this.carapanaVisual.setPosition(
+            this.carapana.x,
+            this.carapana.y + hover
+        );
+        this.carapanaVisual.setScale(this.carapanaFacing, 1);
+        this.carapanaVisual.setAngle(tilt);
+
+        this.carapanaVisual.parts.wingTop.angle = -18 + wingBeat;
+        this.carapanaVisual.parts.wingBottom.angle = 18 - wingBeat;
+        this.carapanaVisual.parts.abdomen.y = Math.sin(seconds * 7) * 1.2;
+        this.carapanaVisual.parts.head.y = -1 + Math.sin(seconds * 7 + 0.7) * 0.8;
+    }
+
+    handleCarapanaContact ()
+    {
+        if (
+            !this.carapanaAlive ||
+            this.isPlayerDead ||
+            this.time.now < this.invulnerableUntil
+        )
+        {
+            return;
+        }
+
+        this.health = Math.max(0, this.health - 10);
+        this.invulnerableUntil = this.time.now + 1000;
+        this.knockbackUntil = this.time.now + 120;
+
+        const direction = this.player.x < this.carapana.x ? -1 : 1;
+        this.player.body.setVelocityX(120 * direction);
+
+        this.updateHealthHud();
+        this.flashPlayerDamage();
+
+        if (this.health <= 0)
+        {
+            this.handlePlayerDeath();
+        }
+    }
+
+    tryHitCarapana ()
+    {
+        if (
+            !this.isAttacking ||
+            !this.attackHitbox.body.enable ||
+            this.attackHitCarapanaRegistered ||
+            !this.carapanaAlive
+        )
+        {
+            return;
+        }
+
+        this.attackHitCarapanaRegistered = true;
+        this.damageCarapana(25);
+    }
+
+    damageCarapana (amount)
+    {
+        if (!this.carapanaAlive)
+        {
+            return;
+        }
+
+        this.carapanaHealth = Math.max(0, this.carapanaHealth - amount);
+
+        if (this.carapanaHealth <= 0)
+        {
+            this.defeatCarapana();
+        }
+    }
+
+    defeatCarapana ()
+    {
+        if (!this.carapanaAlive)
+        {
+            return;
+        }
+
+        this.carapanaAlive = false;
+        this.carapana.body.setVelocity(0, 0);
+        this.carapana.body.enable = false;
+
+        this.tweens.add({
+            targets: this.carapanaVisual,
+            y: this.carapanaVisual.y + 70,
+            angle: 75,
+            alpha: 0,
+            duration: 520,
+            ease: 'Quad.In',
+            onComplete: () => {
+                this.carapanaVisual.setVisible(false);
             }
         });
     }
@@ -1254,6 +1530,7 @@ export class Game extends Scene
         this.animatePlayerVisual(this.time.now);
         this.updateAttack(this.time.now);
         this.updateSnake(this.time.now);
+        this.updateCarapana(this.time.now);
         this.updateFruits(this.time.now);
         this.updateHunger(this.time.now);
     }
