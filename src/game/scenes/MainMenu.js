@@ -82,7 +82,7 @@ export class MainMenu extends Scene
         });
 
         button.on('pointerdown', () => {
-            this.scene.start('Game');
+            this.scene.start('IntroScene');
         });
 
         // Rodapé
