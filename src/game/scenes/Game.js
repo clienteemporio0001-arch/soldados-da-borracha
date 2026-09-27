@@ -1823,41 +1823,31 @@ export class Game extends Scene
 
     createHungerHud ()
     {
-        this.hungerHud = this.add.container(395, 78)
+        this.hungerHud = this.add.container(320, 54)
             .setScrollFactor(0)
             .setDepth(102);
 
-        const background = this.add.rectangle(0, 0, 235, 58, 0x06100d, 0.78)
-            .setOrigin(0);
-        background.setStrokeStyle(1, 0x78917c, 0.35);
+        const background = this.add.rectangle(0, 0, 220, 30, 0x06100d, 0.64).setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.28);
 
-        this.hungerLabel = this.add.text(12, 7, 'FOME', {
-            fontFamily: 'Arial',
-            fontSize: '14px',
+        this.hungerLabel = this.add.text(10, 7, 'FOME', {
+            fontFamily: 'Arial Black',
+            fontSize: '11px',
             color: '#f1e1ae'
         });
 
-        const barBack = this.add.rectangle(12, 29, 150, 16, 0x3d2b16, 0.95)
-            .setOrigin(0);
-        barBack.setStrokeStyle(1, 0x9b7b45, 0.65);
+        const barBack = this.add.rectangle(62, 9, 90, 12, 0x3d2b16, 0.95).setOrigin(0);
+        barBack.setStrokeStyle(1, 0x9b7b45, 0.55);
 
-        this.hungerBar = this.add.rectangle(12, 29, 150, 16, 0xd49a3a, 1)
-            .setOrigin(0);
+        this.hungerBar = this.add.rectangle(62, 9, 90, 12, 0xd49a3a, 1).setOrigin(0);
 
-        this.hungerText = this.add.text(172, 27, '100/100', {
+        this.hungerText = this.add.text(162, 7, '100/100', {
             fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '11px',
             color: '#ffffff'
         });
 
-        this.hungerHud.add([
-            background,
-            this.hungerLabel,
-            barBack,
-            this.hungerBar,
-            this.hungerText
-        ]);
-
+        this.hungerHud.add([background, this.hungerLabel, barBack, this.hungerBar, this.hungerText]);
         this.updateHungerHud();
     }
 
@@ -1865,7 +1855,7 @@ export class Game extends Scene
     {
         const ratio = Math.max(0, this.hunger / this.maxHunger);
 
-        this.hungerBar.width = 150 * ratio;
+        this.hungerBar.width = 90 * ratio;
         this.hungerText.setText(`${this.hunger}/${this.maxHunger}`);
 
         if (this.hunger <= 0)
@@ -1928,41 +1918,31 @@ export class Game extends Scene
 
     createHealthHud ()
     {
-        this.healthHud = this.add.container(395, 18)
+        this.healthHud = this.add.container(320, 18)
             .setScrollFactor(0)
             .setDepth(102);
 
-        const background = this.add.rectangle(0, 0, 235, 58, 0x06100d, 0.78)
-            .setOrigin(0);
-        background.setStrokeStyle(1, 0x78917c, 0.35);
+        const background = this.add.rectangle(0, 0, 220, 30, 0x06100d, 0.64).setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.28);
 
-        const label = this.add.text(12, 7, 'VIDA', {
-            fontFamily: 'Arial',
-            fontSize: '14px',
+        const label = this.add.text(10, 7, 'VIDA', {
+            fontFamily: 'Arial Black',
+            fontSize: '11px',
             color: '#f1e1ae'
         });
 
-        const barBack = this.add.rectangle(12, 29, 150, 16, 0x351b18, 0.95)
-            .setOrigin(0);
-        barBack.setStrokeStyle(1, 0x8e6f62, 0.65);
+        const barBack = this.add.rectangle(62, 9, 90, 12, 0x351b18, 0.95).setOrigin(0);
+        barBack.setStrokeStyle(1, 0x8e6f62, 0.55);
 
-        this.healthBar = this.add.rectangle(12, 29, 150, 16, 0x8fb35b, 1)
-            .setOrigin(0);
+        this.healthBar = this.add.rectangle(62, 9, 90, 12, 0x8fb35b, 1).setOrigin(0);
 
-        this.healthText = this.add.text(172, 27, '100/100', {
+        this.healthText = this.add.text(162, 7, '100/100', {
             fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '11px',
             color: '#ffffff'
         });
 
-        this.healthHud.add([
-            background,
-            label,
-            barBack,
-            this.healthBar,
-            this.healthText
-        ]);
-
+        this.healthHud.add([background, label, barBack, this.healthBar, this.healthText]);
         this.updateHealthHud();
     }
 
@@ -1970,61 +1950,91 @@ export class Game extends Scene
     {
         const ratio = Math.max(0, this.health / this.maxHealth);
 
-        this.healthBar.width = 150 * ratio;
+        this.healthBar.width = 90 * ratio;
         this.healthText.setText(`${this.health}/${this.maxHealth}`);
     }
 
     createHud ()
     {
-        const panel = this.add.rectangle(15, 15, 365, 124, 0x06100d, 0.72)
+        const panel = this.add.rectangle(15, 15, 286, 112, 0x06100d, 0.58)
             .setOrigin(0)
             .setScrollFactor(0)
             .setDepth(100);
-        panel.setStrokeStyle(1, 0x78917c, 0.35);
+        panel.setStrokeStyle(1, 0x78917c, 0.3);
 
-        this.add.text(
-            30,
-            27,
-            'SOLDADOS DA BORRACHA - PROTÓTIPO',
-            {
-                fontFamily: 'Arial',
-                fontSize: '18px',
-                color: '#f1e1ae'
-            }
-        ).setScrollFactor(0).setDepth(101);
+        this.add.text(26, 24, 'CONTROLES', {
+            fontFamily: 'Arial Black',
+            fontSize: '12px',
+            color: '#f1e1ae'
+        }).setScrollFactor(0).setDepth(101);
 
-        this.add.text(
-            30,
-            56,
-            'Controles:\nA/D ou ←/→ = mover\nW / ↑ / Espaço = pular\nS / ↓ = queda rápida\nJ / X = atacar',
-            {
-                fontFamily: 'Arial',
-                fontSize: '15px',
-                color: '#c7d6ca',
-                lineSpacing: 3
-            }
-        ).setScrollFactor(0).setDepth(101);
+        this.controlsText = this.add.text(26, 45, 'A/D ou ←/→  mover\nW / ↑ / Espaço  pular\nS / ↓  queda rápida\nJ / X  atacar', {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: '#c7d6ca',
+            lineSpacing: 1
+        }).setScrollFactor(0).setDepth(101);
 
+        this.createQuickMenuButton();
     }
 
+    createQuickMenuButton ()
+    {
+        const button = this.add.rectangle(965, 27, 82, 34, 0x06100d, 0.68)
+            .setStrokeStyle(1, 0x78917c, 0.55)
+            .setScrollFactor(0)
+            .setDepth(104)
+            .setInteractive({ useHandCursor: true });
+
+        const label = this.add.text(965, 27, 'MENU', {
+            fontFamily: 'Arial Black',
+            fontSize: '12px',
+            color: '#e5e8de'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(105);
+
+        button.on('pointerover', () => {
+            button.setFillStyle(0x1a2c23, 0.82);
+            label.setColor('#f1e1ae');
+        });
+        button.on('pointerout', () => {
+            button.setFillStyle(0x06100d, 0.68);
+            label.setColor('#e5e8de');
+        });
+        button.on('pointerdown', () => this.scene.start('MainMenu'));
+    }
 
     showPlayerNameIntro ()
     {
         const playerName = String(this.registry.get('playerName') || 'SERINGUEIRO').slice(0, 16);
-        const tag = this.add.text(512, 270, `SERINGUEIRO: ${playerName}`, {
+        const intro = this.add.container(512, 286).setScrollFactor(0).setDepth(170);
+        const panel = this.add.rectangle(0, 0, 430, 132, 0x06100d, 0.76)
+            .setStrokeStyle(1, 0x78917c, 0.32);
+        const phaseText = this.add.text(0, -38, 'FASE 1', {
+            fontFamily: 'Arial Black',
+            fontSize: '15px',
+            color: '#d6b56c'
+        }).setOrigin(0.5);
+        const titleText = this.add.text(0, -8, 'INÍCIO DA JORNADA', {
+            fontFamily: 'Arial Black',
+            fontSize: '25px',
+            color: '#f1e1ae',
+            align: 'center'
+        }).setOrigin(0.5);
+        const nameText = this.add.text(0, 35, `SERINGUEIRO: ${playerName}`, {
             fontFamily: 'Arial',
-            fontSize: '16px',
-            color: '#9fba9f',
-            backgroundColor: '#06100dcc',
-            padding: { x: 12, y: 7 }
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(169);
+            fontSize: '14px',
+            color: '#9fba9f'
+        }).setOrigin(0.5);
+
+        intro.add([panel, phaseText, titleText, nameText]);
 
         this.tweens.add({
-            targets: tag,
+            targets: intro,
             alpha: 0,
-            delay: 1800,
+            delay: 1900,
             duration: 800,
-            onComplete: () => tag.destroy()
+            ease: 'Sine.Out',
+            onComplete: () => intro.destroy()
         });
     }
 

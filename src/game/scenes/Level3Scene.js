@@ -1769,11 +1769,94 @@ export class Level3Scene extends Scene
 
     createHud ()
     {
-        const p=this.add.rectangle(15,15,365,124,0x06100d,.72).setOrigin(0).setScrollFactor(0).setDepth(100);p.setStrokeStyle(1,0x78917c,.35);this.add.text(30,27,'SOLDADOS DA BORRACHA - FASE 3',{fontFamily:'Arial',fontSize:'18px',color:'#f1e1ae'}).setScrollFactor(0).setDepth(101);this.controlsText=this.add.text(30,56,'',{fontFamily:'Arial',fontSize:'15px',color:'#c7d6ca',lineSpacing:3}).setScrollFactor(0).setDepth(101);this.updateControlsText();
+        const panel = this.add.rectangle(15, 15, 286, 112, 0x06100d, 0.58)
+            .setOrigin(0)
+            .setScrollFactor(0)
+            .setDepth(100);
+        panel.setStrokeStyle(1, 0x78917c, 0.3);
 
+        this.add.text(26, 24, 'CONTROLES', {
+            fontFamily: 'Arial Black',
+            fontSize: '12px',
+            color: '#f1e1ae'
+        }).setScrollFactor(0).setDepth(101);
+
+        this.controlsText = this.add.text(26, 45, '', {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: '#c7d6ca',
+            lineSpacing: 1
+        }).setScrollFactor(0).setDepth(101);
+        this.updateControlsText();
+
+        this.createQuickMenuButton();
     }
-    updateControlsText () { const d=this.dashUnlocked?'\nSHIFT = dash':'';this.controlsText.setText(`Controles:\nA/D ou ←/→ = mover\nW / ↑ / Espaço = pular\nJ / X = atacar${d}`); }
-    showLevelTitle () { const playerName=String(this.registry.get('playerName')||'SERINGUEIRO').slice(0,16);const t=this.add.text(512,275,'FASE 3\nAS RAÍZES DO ALTO',{fontFamily:'Arial Black',fontSize:'34px',color:'#f1e1ae',align:'center',backgroundColor:'#06100dcc',padding:{x:24,y:16}}).setOrigin(.5).setScrollFactor(0).setDepth(170);const n=this.add.text(512,360,`SERINGUEIRO: ${playerName}`,{fontFamily:'Arial',fontSize:'15px',color:'#9fba9f',backgroundColor:'#06100dcc',padding:{x:10,y:5}}).setOrigin(.5).setScrollFactor(0).setDepth(170);this.tweens.add({targets:[t,n],alpha:0,delay:1800,duration:800,onComplete:()=>{t.destroy();n.destroy();}}); }
+
+    createQuickMenuButton ()
+    {
+        const button = this.add.rectangle(965, 27, 82, 34, 0x06100d, 0.68)
+            .setStrokeStyle(1, 0x78917c, 0.55)
+            .setScrollFactor(0)
+            .setDepth(104)
+            .setInteractive({ useHandCursor: true });
+
+        const label = this.add.text(965, 27, 'MENU', {
+            fontFamily: 'Arial Black',
+            fontSize: '12px',
+            color: '#e5e8de'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(105);
+
+        button.on('pointerover', () => {
+            button.setFillStyle(0x1a2c23, 0.82);
+            label.setColor('#f1e1ae');
+        });
+        button.on('pointerout', () => {
+            button.setFillStyle(0x06100d, 0.68);
+            label.setColor('#e5e8de');
+        });
+        button.on('pointerdown', () => this.scene.start('MainMenu'));
+    }
+
+    updateControlsText ()
+    {
+        const dash = this.dashUnlocked ? '\nSHIFT  dash' : '';
+        this.controlsText.setText(`A/D ou ←/→  mover\nW / ↑ / Espaço  pular\nS / ↓  queda rápida\nJ / X  atacar${dash}`);
+    }
+
+    showLevelTitle ()
+    {
+        const playerName = String(this.registry.get('playerName') || 'SERINGUEIRO').slice(0, 16);
+        const intro = this.add.container(512, 286).setScrollFactor(0).setDepth(170);
+        const panel = this.add.rectangle(0, 0, 430, 132, 0x06100d, 0.76)
+            .setStrokeStyle(1, 0x78917c, 0.32);
+        const phaseText = this.add.text(0, -38, 'FASE 3', {
+            fontFamily: 'Arial Black',
+            fontSize: '15px',
+            color: '#d6b56c'
+        }).setOrigin(0.5);
+        const titleText = this.add.text(0, -8, 'AS RAÍZES DO ALTO', {
+            fontFamily: 'Arial Black',
+            fontSize: '25px',
+            color: '#f1e1ae',
+            align: 'center'
+        }).setOrigin(0.5);
+        const nameText = this.add.text(0, 35, `SERINGUEIRO: ${playerName}`, {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#9fba9f'
+        }).setOrigin(0.5);
+
+        intro.add([panel, phaseText, titleText, nameText]);
+
+        this.tweens.add({
+            targets: intro,
+            alpha: 0,
+            delay: 1900,
+            duration: 800,
+            ease: 'Sine.Out',
+            onComplete: () => intro.destroy()
+        });
+    }
 
     update ()
     {
@@ -1817,30 +1900,27 @@ export class Level3Scene extends Scene
 
     createStaminaHud ()
     {
-        this.staminaHud = this.add.container(395, 138)
+        this.staminaHud = this.add.container(320, 90)
             .setScrollFactor(0)
             .setDepth(102);
 
-        const background = this.add.rectangle(0, 0, 235, 50, 0x06100d, 0.78)
-            .setOrigin(0);
-        background.setStrokeStyle(1, 0x78917c, 0.35);
+        const background = this.add.rectangle(0, 0, 220, 30, 0x06100d, 0.64).setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.28);
 
-        const label = this.add.text(12, 6, 'FÔLEGO', {
-            fontFamily: 'Arial',
-            fontSize: '13px',
+        const label = this.add.text(10, 7, 'FÔLEGO', {
+            fontFamily: 'Arial Black',
+            fontSize: '11px',
             color: '#cfe5d2'
         });
 
-        const barBack = this.add.rectangle(12, 26, 150, 14, 0x1d3025, 0.95)
-            .setOrigin(0);
-        barBack.setStrokeStyle(1, 0x668574, 0.65);
+        const barBack = this.add.rectangle(62, 9, 90, 12, 0x1d3025, 0.95).setOrigin(0);
+        barBack.setStrokeStyle(1, 0x668574, 0.55);
 
-        this.staminaBar = this.add.rectangle(12, 26, 150, 14, 0x72b58a, 1)
-            .setOrigin(0);
+        this.staminaBar = this.add.rectangle(62, 9, 90, 12, 0x72b58a, 1).setOrigin(0);
 
-        this.staminaText = this.add.text(172, 24, '100/100', {
+        this.staminaText = this.add.text(162, 7, '100/100', {
             fontFamily: 'Arial',
-            fontSize: '13px',
+            fontSize: '11px',
             color: '#ffffff'
         });
 
@@ -1852,87 +1932,67 @@ export class Level3Scene extends Scene
     {
         if (!this.staminaBar || !this.staminaText) return;
         const ratio = Math.max(0, Math.min(1, this.stamina / this.maxStamina));
-        this.staminaBar.width = 150 * ratio;
+        this.staminaBar.width = 90 * ratio;
         this.staminaText.setText(Math.round(this.stamina) + '/' + this.maxStamina);
     }
 
     createHealthHud ()
     {
-        this.healthHud = this.add.container(395, 18)
+        this.healthHud = this.add.container(320, 18)
             .setScrollFactor(0)
             .setDepth(102);
 
-        const background = this.add.rectangle(0, 0, 235, 58, 0x06100d, 0.78)
-            .setOrigin(0);
-        background.setStrokeStyle(1, 0x78917c, 0.35);
+        const background = this.add.rectangle(0, 0, 220, 30, 0x06100d, 0.64).setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.28);
 
-        const label = this.add.text(12, 7, 'VIDA', {
-            fontFamily: 'Arial',
-            fontSize: '14px',
+        const label = this.add.text(10, 7, 'VIDA', {
+            fontFamily: 'Arial Black',
+            fontSize: '11px',
             color: '#f1e1ae'
         });
 
-        const barBack = this.add.rectangle(12, 29, 150, 16, 0x351b18, 0.95)
-            .setOrigin(0);
-        barBack.setStrokeStyle(1, 0x8e6f62, 0.65);
+        const barBack = this.add.rectangle(62, 9, 90, 12, 0x351b18, 0.95).setOrigin(0);
+        barBack.setStrokeStyle(1, 0x8e6f62, 0.55);
 
-        this.healthBar = this.add.rectangle(12, 29, 150, 16, 0x8fb35b, 1)
-            .setOrigin(0);
+        this.healthBar = this.add.rectangle(62, 9, 90, 12, 0x8fb35b, 1).setOrigin(0);
 
-        this.healthText = this.add.text(172, 27, '100/100', {
+        this.healthText = this.add.text(162, 7, '100/100', {
             fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '11px',
             color: '#ffffff'
         });
 
-        this.healthHud.add([
-            background,
-            label,
-            barBack,
-            this.healthBar,
-            this.healthText
-        ]);
-
+        this.healthHud.add([background, label, barBack, this.healthBar, this.healthText]);
         this.updateHealthHud();
     }
 
     createHungerHud ()
     {
-        this.hungerHud = this.add.container(395, 78)
+        this.hungerHud = this.add.container(320, 54)
             .setScrollFactor(0)
             .setDepth(102);
 
-        const background = this.add.rectangle(0, 0, 235, 58, 0x06100d, 0.78)
-            .setOrigin(0);
-        background.setStrokeStyle(1, 0x78917c, 0.35);
+        const background = this.add.rectangle(0, 0, 220, 30, 0x06100d, 0.64).setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.28);
 
-        this.hungerLabel = this.add.text(12, 7, 'FOME', {
-            fontFamily: 'Arial',
-            fontSize: '14px',
+        this.hungerLabel = this.add.text(10, 7, 'FOME', {
+            fontFamily: 'Arial Black',
+            fontSize: '11px',
             color: '#f1e1ae'
         });
 
-        const barBack = this.add.rectangle(12, 29, 150, 16, 0x3d2b16, 0.95)
-            .setOrigin(0);
-        barBack.setStrokeStyle(1, 0x9b7b45, 0.65);
+        const barBack = this.add.rectangle(62, 9, 90, 12, 0x3d2b16, 0.95).setOrigin(0);
+        barBack.setStrokeStyle(1, 0x9b7b45, 0.55);
 
-        this.hungerBar = this.add.rectangle(12, 29, 150, 16, 0xd49a3a, 1)
-            .setOrigin(0);
+        this.hungerBar = this.add.rectangle(62, 9, 90, 12, 0xd49a3a, 1).setOrigin(0);
 
-        this.hungerText = this.add.text(172, 27, '100/100', {
+        this.hungerText = this.add.text(162, 7, '100/100', {
             fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '11px',
             color: '#ffffff'
         });
 
-        this.hungerHud.add([
-            background,
-            this.hungerLabel,
-            barBack,
-            this.hungerBar,
-            this.hungerText
-        ]);
-
+        this.hungerHud.add([background, this.hungerLabel, barBack, this.hungerBar, this.hungerText]);
         this.updateHungerHud();
     }
 
@@ -1940,7 +2000,7 @@ export class Level3Scene extends Scene
     {
         const ratio = Math.max(0, this.health / this.maxHealth);
 
-        this.healthBar.width = 150 * ratio;
+        this.healthBar.width = 90 * ratio;
         this.healthText.setText(`${this.health}/${this.maxHealth}`);
     }
 
@@ -1948,7 +2008,7 @@ export class Level3Scene extends Scene
     {
         const ratio = Math.max(0, this.hunger / this.maxHunger);
 
-        this.hungerBar.width = 150 * ratio;
+        this.hungerBar.width = 90 * ratio;
         this.hungerText.setText(`${this.hunger}/${this.maxHunger}`);
 
         if (this.hunger <= 0)
