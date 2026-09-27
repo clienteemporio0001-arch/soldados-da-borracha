@@ -44,6 +44,13 @@ export class Level5Scene extends Scene
         this.wasGrounded = false;
         this.jumpBufferUntil = 0;
         this.jumpBufferMs = 130;
+        this.coyoteTimeMs = 100;
+        this.coyoteUntil = 0;
+        this.lastAirVelocityY = 0;
+        this.fastFallActive = false;
+        this.motionFx = { scaleX: 1, scaleY: 1 };
+        this.directionFx = { lean: 0 };
+        this.lastMoveDirection = 0;
 
         this.doubleJumpStaminaCost = 30;
         this.dashStaminaCost = 25;
@@ -55,6 +62,7 @@ export class Level5Scene extends Scene
         this.nextStaminaFeedbackAt = 0;
 
         this.isDashing = false;
+        this.dashLandingVisual = false;
         this.dashEndsAt = 0;
         this.nextDashAt = 0;
         this.airDashUsed = false;
@@ -95,6 +103,7 @@ export class Level5Scene extends Scene
         this.keyA = this.input.keyboard.addKey('A');
         this.keyD = this.input.keyboard.addKey('D');
         this.keyW = this.input.keyboard.addKey('W');
+        this.keyS = this.input.keyboard.addKey('S');
         this.spaceKey = this.input.keyboard.addKey('SPACE');
         this.keyJ = this.input.keyboard.addKey('J');
         this.keyX = this.input.keyboard.addKey('X');
@@ -749,7 +758,7 @@ export class Level5Scene extends Scene
         this.time.delayedCall(650,()=>{
             if(this.bossStarted&&!this.bossDefeated)this.resetBossFight();
             this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);this.player.body.setVelocity(0,0);
-            this.health=100;this.hunger=100;this.stamina=100;this.jumpsUsed=0;this.jumpBufferUntil=0;this.wasGrounded=false;this.airDashUsed=false;
+            this.health=100;this.hunger=100;this.stamina=100;this.resetMovementPolishState();
             this.staminaRegenBlockedUntil=0;this.nextHungerDrainAt=this.time.now+2000;this.nextStarvationDamageAt=this.time.now+2000;
             this.invulnerableUntil=this.time.now+900;this.isPlayerDead=false;
             this.updateHealthHud();this.updateHungerHud();this.updateStaminaHud();this.playerVisual.setAlpha(1);
@@ -883,12 +892,13 @@ export class Level5Scene extends Scene
     animatePlayerVisual (time)
     {
         const v=this.playerVisual,p=v.parts,b=this.player.body;const vx=b.velocity.x,vy=b.velocity.y;const grounded=b.blocked.down||b.touching.down;
-        if(vx>1)v.facing=1;else if(vx<-1)v.facing=-1;v.setScale(v.facing,1);
+        if(vx>1)v.facing=1;else if(vx<-1)v.facing=-1;v.setScale(v.facing*this.motionFx.scaleX,this.motionFx.scaleY);
         const s=time*.001;let torsoA=0,lA=5,rA=-5,lL=0,rL=0,off=0;
-        if(this.isDashing){torsoA=-12;lA=-34;rA=-42;lL=20;rL=-24;p.machete.angle=8;}
-        else if(!grounded){torsoA=vy<0?-3:2;lA=vy<0?-24:-34;rA=vy<0?24:34;lL=vy<0?12:-15;rL=-lL;p.machete.angle=18;}
+        if(this.isDashing&&!this.dashLandingVisual){torsoA=-12;lA=-34;rA=-42;lL=20;rL=-24;p.machete.angle=8;}
+        else if(!grounded){const falling=vy>=0;torsoA=falling?6:-3;lA=falling?-46:-24;rA=falling?42:24;lL=falling?-24:12;rL=falling?20:-12;p.machete.angle=falling?28:18;}
         else if(Math.abs(vx)>1){const q=Math.sin(s*10);off=-Math.abs(Math.sin(s*20))*1.5;lL=q*24;rL=-q*24;lA=-q*20;rA=q*20;p.machete.angle=18;}
         else {const q=Math.sin(s*2.2);off=q*.6;lA=5+q*2;rA=-5-q*2;p.machete.angle=18;}
+        torsoA+=this.directionFx.lean;
         v.y=this.player.y+off;p.torso.angle+=(torsoA-p.torso.angle)*.2;p.leftArm.angle+=(lA-p.leftArm.angle)*.2;p.rightArmRig.angle+=(rA-p.rightArmRig.angle)*.2;p.leftLeg.angle+=(lL-p.leftLeg.angle)*.2;p.rightLeg.angle+=(rL-p.rightLeg.angle)*.2;
     }
 
@@ -900,8 +910,8 @@ export class Level5Scene extends Scene
         if(this.stamina<this.dashStaminaCost){this.showStaminaBlockedFeedback();return;}
         const left=this.cursors.left.isDown||this.keyA.isDown,right=this.cursors.right.isDown||this.keyD.isDown;
         const direction=left&&!right?-1:right&&!left?1:(this.playerVisual.facing||1);
-        this.spendStamina(this.dashStaminaCost);this.isDashing=true;this.dashDirection=direction;this.dashEndsAt=this.time.now+this.dashDuration;this.nextDashAt=this.time.now+this.dashCooldown;if(!grounded)this.airDashUsed=true;
-        this.player.body.setVelocityX(direction*this.dashSpeed);this.player.body.setVelocityY(this.player.body.velocity.y*.45);this.showDashFeedback(direction);
+        this.spendStamina(this.dashStaminaCost);this.isDashing=true;this.dashLandingVisual=false;this.dashDirection=direction;this.dashEndsAt=this.time.now+this.dashDuration;this.nextDashAt=this.time.now+this.dashCooldown;if(!grounded)this.airDashUsed=true;
+        this.player.body.setVelocityX(direction*this.dashSpeed);this.player.body.setVelocityY(this.player.body.velocity.y*.45);this.setMotionSquash(1.09,.92,125);this.showDashFeedback(direction);
     }
 
     showDashFeedback (direction)
@@ -909,6 +919,7 @@ export class Level5Scene extends Scene
         const ghost=this.add.rectangle(this.player.x-direction*12,this.player.y-5,28,48,0xd4e0cf,.15).setDepth(17);
         this.tweens.add({targets:ghost,x:ghost.x-direction*45,alpha:0,duration:200,onComplete:()=>ghost.destroy()});
         for(let i=0;i<3;i++){const l=this.add.rectangle(this.player.x-direction*(18+i*14),this.player.y-18+i*11,25+i*5,3,0xd6e1cf,.4).setDepth(18);this.tweens.add({targets:l,x:l.x-direction*50,alpha:0,duration:210+i*20,onComplete:()=>l.destroy()});}
+        for(let i=0;i<2;i++){const leaf=this.add.ellipse(this.player.x-direction*8,this.player.y+12+i*7,8,4,0x668d4d,.65).setDepth(19);this.tweens.add({targets:leaf,x:leaf.x-direction*(36+i*10),y:leaf.y-10-i*4,angle:direction*(55+i*20),alpha:0,duration:250+i*30,onComplete:()=>leaf.destroy()});}
     }
 
     showDashUnavailableFeedback ()
@@ -918,13 +929,24 @@ export class Level5Scene extends Scene
 
     updateDash (time,grounded)
     {
-        if(grounded&&this.airDashUsed&&!this.wasGrounded)this.airDashUsed=false;
-        if(this.isDashing&&time>=this.dashEndsAt){this.isDashing=false;this.playerVisual.parts.machete.angle=18;}
+        if(grounded&&!this.wasGrounded){
+            this.airDashUsed=false;
+            if(this.isDashing){this.dashLandingVisual=true;this.playerVisual.parts.machete.angle=18;}
+        }
+        if(this.isDashing&&time>=this.dashEndsAt){this.isDashing=false;this.dashLandingVisual=false;this.playerVisual.parts.machete.angle=18;}
     }
 
     updateGroundedState (grounded)
     {
-        if(grounded&&!this.wasGrounded)this.jumpsUsed=0;
+        const time=this.time.now;
+        if(!grounded)this.lastAirVelocityY=this.player.body.velocity.y;
+        if(grounded)this.coyoteUntil=time+this.coyoteTimeMs;
+        if(grounded&&!this.wasGrounded){
+            this.jumpsUsed=0;
+            this.fastFallActive=false;
+            this.showLandingFeedback(this.lastAirVelocityY);
+            this.lastAirVelocityY=0;
+        }
         this.wasGrounded=grounded;
     }
 
@@ -932,13 +954,79 @@ export class Level5Scene extends Scene
 
     consumeJumpBuffer (grounded)
     {
-        if(this.jumpBufferUntil<this.time.now||this.isDashing)return false;
-        if(this.jumpsUsed===0&&grounded){this.player.body.setVelocityY(-520);this.jumpsUsed=1;this.jumpBufferUntil=0;return true;}
+        if(this.jumpBufferUntil<this.time.now)return false;
+        if(this.isDashing&&!grounded)return false;
+        if(this.isDashing&&grounded){this.isDashing=false;this.dashLandingVisual=false;this.playerVisual.parts.machete.angle=18;}
+        if(this.jumpsUsed===0&&(grounded||this.time.now<=this.coyoteUntil)){this.player.body.setVelocityY(-520);this.jumpsUsed=1;this.coyoteUntil=0;this.jumpBufferUntil=0;this.showJumpTakeoffEffect();this.setMotionSquash(1.07,.93,115);return true;}
         if(this.doubleJumpUnlocked&&this.jumpsUsed===1&&!grounded){
             if(this.stamina<this.doubleJumpStaminaCost){this.showStaminaBlockedFeedback();this.jumpBufferUntil=0;return false;}
-            this.spendStamina(this.doubleJumpStaminaCost);this.player.body.setVelocityY(-500);this.jumpsUsed=2;this.jumpBufferUntil=0;this.showDoubleJumpBurst();return true;
+            this.spendStamina(this.doubleJumpStaminaCost);this.player.body.setVelocityY(-500);this.jumpsUsed=2;this.jumpBufferUntil=0;this.showDoubleJumpBurst();this.setMotionSquash(1.045,.955,95);return true;
         }
         return false;
+    }
+
+
+    applyJumpCut ()
+    {
+        if(this.player.body.velocity.y<-90)this.player.body.setVelocityY(this.player.body.velocity.y*.58);
+    }
+
+    applyFastFall (grounded)
+    {
+        const wantsFastFall=this.keyS.isDown||this.cursors.down.isDown;
+        const body=this.player.body;
+        if(!grounded&&wantsFastFall&&body.velocity.y>35){
+            body.setVelocityY(Math.min(780,body.velocity.y+70));
+            this.fastFallActive=true;
+            return;
+        }
+        this.fastFallActive=false;
+    }
+
+    setMotionSquash (scaleX,scaleY,duration=110)
+    {
+        this.tweens.killTweensOf(this.motionFx);
+        this.motionFx.scaleX=scaleX;this.motionFx.scaleY=scaleY;
+        this.tweens.add({targets:this.motionFx,scaleX:1,scaleY:1,duration,ease:'Quad.Out'});
+    }
+
+    showJumpTakeoffEffect ()
+    {
+        for(let i=0;i<3;i++){
+            const leaf=this.add.ellipse(this.player.x+(i-1)*8,this.player.y+31,7+i,3,i===1?0x8b7650:0x668d4d,.55).setDepth(18);
+            this.tweens.add({targets:leaf,x:leaf.x+(i-1)*12,y:leaf.y+7+i*2,alpha:0,angle:(i-1)*35,duration:180+i*25,onComplete:()=>leaf.destroy()});
+        }
+    }
+
+    showLandingFeedback (impactVelocity)
+    {
+        if(impactVelocity<260)return;
+        const strong=impactVelocity>=650,medium=impactVelocity>=420;
+        this.setMotionSquash(strong?1.1:medium?1.07:1.035,strong?.86:medium?.9:.95,strong?120:95);
+        const particles=strong?4:medium?3:2;
+        for(let i=0;i<particles;i++){
+            const direction=i%2===0?-1:1;
+            const dust=this.add.ellipse(this.player.x+direction*(7+i*2),this.player.y+31,9,4,i%2?0x756346:0x5d7b49,medium?.62:.42).setDepth(18);
+            this.tweens.add({targets:dust,x:dust.x+direction*(16+i*5),y:dust.y-(5+i*2),alpha:0,scaleX:1.35,duration:strong?260:210,onComplete:()=>dust.destroy()});
+        }
+        if(strong)this.cameras.main.shake(70,.0012);
+    }
+
+    showDirectionChangeFeedback (direction)
+    {
+        this.tweens.killTweensOf(this.directionFx);
+        this.directionFx.lean=direction*-5;
+        this.tweens.add({targets:this.directionFx,lean:0,duration:120,ease:'Quad.Out'});
+    }
+
+    resetMovementPolishState ()
+    {
+        this.jumpsUsed=0;this.jumpWasDown=false;this.jumpBufferUntil=0;this.coyoteUntil=0;this.wasGrounded=false;this.lastAirVelocityY=0;this.fastFallActive=false;this.lastMoveDirection=0;
+        this.isDashing=false;this.dashLandingVisual=false;this.dashEndsAt=0;this.nextDashAt=0;this.airDashUsed=false;
+        this.tweens.killTweensOf(this.motionFx);this.tweens.killTweensOf(this.directionFx);
+        this.motionFx.scaleX=1;this.motionFx.scaleY=1;this.directionFx.lean=0;
+        this.playerVisual.parts.machete.angle=18;
+        this.playerVisual.setScale(this.playerVisual.facing||1,1);
     }
 
     showDoubleJumpBurst ()
@@ -1006,18 +1094,25 @@ export class Level5Scene extends Scene
     {
         const time=this.time.now;const moveSpeed=260;const grounded=this.player.body.blocked.down||this.player.body.touching.down;
         this.updateDash(time,grounded);this.updateStamina(time,grounded);
-        const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown;if(jumpDown&&!this.jumpWasDown)this.queueJumpInput(time);this.jumpWasDown=jumpDown;
+        const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown;
+        if(jumpDown&&!this.jumpWasDown)this.queueJumpInput(time);else if(!jumpDown&&this.jumpWasDown)this.applyJumpCut();this.jumpWasDown=jumpDown;
 
         if(!this.isPlayerDead&&!this.phaseCompleted){
-            if(!this.isDashing&&time>=this.knockbackUntil){const left=this.cursors.left.isDown||this.keyA.isDown,right=this.cursors.right.isDown||this.keyD.isDown;this.player.body.setVelocityX(left?-moveSpeed:right?moveSpeed:0);}
-            this.updateGroundedState(grounded);this.consumeJumpBuffer(grounded);
-        } else this.updateGroundedState(grounded);
+            if(!this.isDashing&&time>=this.knockbackUntil){
+                const left=this.cursors.left.isDown||this.keyA.isDown,right=this.cursors.right.isDown||this.keyD.isDown;
+                const direction=left&&!right?-1:right&&!left?1:0;
+                if(direction!==0&&this.lastMoveDirection!==0&&direction!==this.lastMoveDirection)this.showDirectionChangeFeedback(direction);
+                if(direction!==0)this.lastMoveDirection=direction;
+                this.player.body.setVelocityX(direction*moveSpeed);
+            }
+            this.updateGroundedState(grounded);this.consumeJumpBuffer(grounded);this.applyFastFall(grounded);
+        } else {this.updateGroundedState(grounded);this.fastFallActive=false;}
 
         if(this.player.y>760){
             if(this.bossStarted&&!this.bossDefeated)this.resetBossFight();
-            this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);this.player.body.setVelocity(0,0);this.isDashing=false;
+            this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);this.player.body.setVelocity(0,0);
             if(this.bossStarted&&!this.bossDefeated){this.health=100;this.hunger=100;this.updateHealthHud();this.updateHungerHud();}
-            this.stamina=100;this.jumpsUsed=0;this.jumpBufferUntil=0;this.wasGrounded=false;this.airDashUsed=false;this.staminaRegenBlockedUntil=0;this.resetTraversalHazards();this.updateStaminaHud();
+            this.stamina=100;this.staminaRegenBlockedUntil=0;this.resetMovementPolishState();this.resetTraversalHazards();this.updateStaminaHud();
         }
 
         this.syncPlayerVisual();this.animatePlayerVisual(time);this.updateAttack(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);

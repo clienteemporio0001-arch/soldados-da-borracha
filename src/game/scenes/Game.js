@@ -71,6 +71,19 @@ export class Game extends Scene
         this.phaseCompleted = false;
         this.phaseCompleteScreenShown = false;
 
+        this.jumpWasDown = false;
+        this.jumpBufferUntil = 0;
+        this.jumpBufferMs = 130;
+        this.coyoteTimeMs = 100;
+        this.coyoteUntil = 0;
+        this.firstJumpConsumed = false;
+        this.wasGrounded = false;
+        this.lastAirVelocityY = 0;
+        this.fastFallActive = false;
+        this.motionFx = { scaleX: 1, scaleY: 1 };
+        this.directionFx = { lean: 0 };
+        this.lastMoveDirection = 0;
+
         this.isAttacking = false;
         this.attackStartedAt = 0;
         this.nextAttackAt = 0;
@@ -89,6 +102,7 @@ export class Game extends Scene
         this.keyA = this.input.keyboard.addKey('A');
         this.keyD = this.input.keyboard.addKey('D');
         this.keyW = this.input.keyboard.addKey('W');
+        this.keyS = this.input.keyboard.addKey('S');
         this.spaceKey = this.input.keyboard.addKey('SPACE');
         this.keyJ = this.input.keyboard.addKey('J');
         this.keyX = this.input.keyboard.addKey('X');
@@ -788,7 +802,10 @@ export class Game extends Scene
             visual.facing = -1;
         }
 
-        visual.setScale(visual.facing, 1);
+        visual.setScale(
+            visual.facing * this.motionFx.scaleX,
+            this.motionFx.scaleY
+        );
 
         const seconds = time * 0.001;
         const lerp = (current, target, amount = 0.2) =>
@@ -855,20 +872,22 @@ export class Game extends Scene
         }
         else if (state === 'FALL')
         {
-            bodyOffsetY = 1;
-            torsoY = -6;
-            torsoAngle = 2;
-            headY = -33;
-            hatY = -46;
-            hatAngle = 2;
-            leftArmAngle = -34;
-            rightArmAngle = 34;
-            leftLegAngle = -15;
-            rightLegAngle = 15;
-            leftLegY = 17;
+            bodyOffsetY = 1.5;
+            torsoY = -5;
+            torsoAngle = 6;
+            headY = -32;
+            hatY = -45;
+            hatAngle = 4;
+            leftArmAngle = -46;
+            rightArmAngle = 42;
+            leftLegAngle = -24;
+            rightLegAngle = 20;
+            leftLegY = 18;
             rightLegY = 17;
         }
 
+        torsoAngle += this.directionFx.lean;
+        parts.machete.angle = state === 'FALL' ? 28 : 18;
         visual.y = this.player.y + bodyOffsetY;
 
         parts.torso.y = lerp(parts.torso.y, torsoY);
@@ -1581,6 +1600,7 @@ export class Game extends Scene
         this.time.delayedCall(650, () => {
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
             this.player.body.setVelocity(0, 0);
+            this.resetMovementPolishState();
 
             this.health = this.maxHealth;
             this.hunger = this.maxHunger;
@@ -1771,7 +1791,7 @@ export class Game extends Scene
         this.add.text(
             30,
             56,
-            'Controles:\nA/D ou ←/→ = mover\nW / ↑ / Espaço = pular\nJ / X = atacar',
+            'Controles:\nA/D ou ←/→ = mover\nW / ↑ / Espaço = pular\nS / ↓ = queda rápida\nJ / X = atacar',
             {
                 fontFamily: 'Arial',
                 fontSize: '15px',
@@ -1781,59 +1801,229 @@ export class Game extends Scene
         ).setScrollFactor(0).setDepth(101);
     }
 
+
+    queueJumpInput (time)
+    {
+        this.jumpBufferUntil = time + this.jumpBufferMs;
+    }
+
+    updateGroundedState (grounded)
+    {
+        const time = this.time.now;
+        if (!grounded) this.lastAirVelocityY = this.player.body.velocity.y;
+        if (grounded) this.coyoteUntil = time + this.coyoteTimeMs;
+
+        if (grounded && !this.wasGrounded)
+        {
+            this.firstJumpConsumed = false;
+            this.fastFallActive = false;
+            this.showLandingFeedback(this.lastAirVelocityY);
+            this.lastAirVelocityY = 0;
+        }
+
+        this.wasGrounded = grounded;
+    }
+
+    consumeJumpBuffer (grounded)
+    {
+        if (this.jumpBufferUntil < this.time.now) return false;
+        const canUseFirstJump = !this.firstJumpConsumed && (grounded || this.time.now <= this.coyoteUntil);
+        if (!canUseFirstJump) return false;
+
+        this.player.body.setVelocityY(-520);
+        this.firstJumpConsumed = true;
+        this.coyoteUntil = 0;
+        this.jumpBufferUntil = 0;
+        this.showJumpTakeoffEffect();
+        this.setMotionSquash(1.07, 0.93, 115);
+        return true;
+    }
+
+
+    applyJumpCut ()
+    {
+        if (this.player.body.velocity.y < -90)
+        {
+            this.player.body.setVelocityY(this.player.body.velocity.y * 0.58);
+        }
+    }
+
+    applyFastFall (grounded)
+    {
+        const wantsFastFall = this.keyS.isDown || this.cursors.down.isDown;
+        const body = this.player.body;
+
+        if (!grounded && wantsFastFall && body.velocity.y > 35)
+        {
+            body.setVelocityY(Math.min(780, body.velocity.y + 70));
+            this.fastFallActive = true;
+            return;
+        }
+
+        this.fastFallActive = false;
+    }
+
+    setMotionSquash (scaleX, scaleY, duration = 110)
+    {
+        this.tweens.killTweensOf(this.motionFx);
+        this.motionFx.scaleX = scaleX;
+        this.motionFx.scaleY = scaleY;
+        this.tweens.add({
+            targets: this.motionFx,
+            scaleX: 1,
+            scaleY: 1,
+            duration,
+            ease: 'Quad.Out'
+        });
+    }
+
+    showJumpTakeoffEffect ()
+    {
+        for (let i = 0; i < 3; i += 1)
+        {
+            const leaf = this.add.ellipse(
+                this.player.x + (i - 1) * 8,
+                this.player.y + 31,
+                7 + i,
+                3,
+                i === 1 ? 0x8b7650 : 0x668d4d,
+                0.55
+            ).setDepth(18);
+
+            this.tweens.add({
+                targets: leaf,
+                x: leaf.x + (i - 1) * 12,
+                y: leaf.y + 7 + i * 2,
+                alpha: 0,
+                angle: (i - 1) * 35,
+                duration: 180 + i * 25,
+                onComplete: () => leaf.destroy()
+            });
+        }
+    }
+
+    showLandingFeedback (impactVelocity)
+    {
+        if (impactVelocity < 260)
+        {
+            return;
+        }
+
+        const strong = impactVelocity >= 650;
+        const medium = impactVelocity >= 420;
+        this.setMotionSquash(
+            strong ? 1.1 : medium ? 1.07 : 1.035,
+            strong ? 0.86 : medium ? 0.9 : 0.95,
+            strong ? 120 : 95
+        );
+
+        const particles = strong ? 4 : medium ? 3 : 2;
+        for (let i = 0; i < particles; i += 1)
+        {
+            const direction = i % 2 === 0 ? -1 : 1;
+            const dust = this.add.ellipse(
+                this.player.x + direction * (7 + i * 2),
+                this.player.y + 31,
+                9,
+                4,
+                i % 2 ? 0x756346 : 0x5d7b49,
+                medium ? 0.62 : 0.42
+            ).setDepth(18);
+
+            this.tweens.add({
+                targets: dust,
+                x: dust.x + direction * (16 + i * 5),
+                y: dust.y - (5 + i * 2),
+                alpha: 0,
+                scaleX: 1.35,
+                duration: strong ? 260 : 210,
+                onComplete: () => dust.destroy()
+            });
+        }
+
+        if (strong)
+        {
+            this.cameras.main.shake(70, 0.0012);
+        }
+    }
+
+    showDirectionChangeFeedback (direction)
+    {
+        this.tweens.killTweensOf(this.directionFx);
+        this.directionFx.lean = direction * -5;
+        this.tweens.add({
+            targets: this.directionFx,
+            lean: 0,
+            duration: 120,
+            ease: 'Quad.Out'
+        });
+    }
+
+
+    resetMovementPolishState ()
+    {
+        this.jumpWasDown = false;
+        this.jumpBufferUntil = 0;
+        this.coyoteUntil = 0;
+        this.firstJumpConsumed = false;
+        this.wasGrounded = false;
+        this.lastAirVelocityY = 0;
+        this.fastFallActive = false;
+        this.lastMoveDirection = 0;
+        this.tweens.killTweensOf(this.motionFx);
+        this.tweens.killTweensOf(this.directionFx);
+        this.motionFx.scaleX = 1;
+        this.motionFx.scaleY = 1;
+        this.directionFx.lean = 0;
+        this.playerVisual.setScale(this.playerVisual.facing || 1, 1);
+    }
+
     update ()
     {
+        const time = this.time.now;
         const moveSpeed = 260;
-        const jumpSpeed = 520;
+        const grounded = this.player.body.blocked.down || this.player.body.touching.down;
+        const jumpDown = this.keyW.isDown || this.cursors.up.isDown || this.spaceKey.isDown;
+
+        if (jumpDown && !this.jumpWasDown) this.queueJumpInput(time);
+        else if (!jumpDown && this.jumpWasDown) this.applyJumpCut();
+        this.jumpWasDown = jumpDown;
 
         if (!this.isPlayerDead && !this.phaseCompleted)
         {
-            if (this.time.now >= this.knockbackUntil)
+            if (time >= this.knockbackUntil)
             {
                 const moveLeft = this.cursors.left.isDown || this.keyA.isDown;
                 const moveRight = this.cursors.right.isDown || this.keyD.isDown;
-
-                if (moveLeft)
-                {
-                    this.player.body.setVelocityX(-moveSpeed);
-                }
-                else if (moveRight)
-                {
-                    this.player.body.setVelocityX(moveSpeed);
-                }
-                else
-                {
-                    this.player.body.setVelocityX(0);
-                }
+                const direction = moveLeft && !moveRight ? -1 : moveRight && !moveLeft ? 1 : 0;
+                if (direction !== 0 && this.lastMoveDirection !== 0 && direction !== this.lastMoveDirection) this.showDirectionChangeFeedback(direction);
+                if (direction !== 0) this.lastMoveDirection = direction;
+                this.player.body.setVelocityX(direction * moveSpeed);
             }
 
-            const wantsToJump =
-                this.keyW.isDown ||
-                this.cursors.up.isDown ||
-                this.spaceKey.isDown;
-
-            const isGrounded =
-                this.player.body.blocked.down ||
-                this.player.body.touching.down;
-
-            if (wantsToJump && isGrounded)
-            {
-                this.player.body.setVelocityY(-jumpSpeed);
-            }
+            this.updateGroundedState(grounded);
+            this.consumeJumpBuffer(grounded);
+            this.applyFastFall(grounded);
+        }
+        else
+        {
+            this.updateGroundedState(grounded);
+            this.fastFallActive = false;
         }
 
         if (this.player.y > 760)
         {
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
             this.player.body.setVelocity(0, 0);
+            this.resetMovementPolishState();
         }
 
         this.syncPlayerVisual();
-        this.animatePlayerVisual(this.time.now);
-        this.updateAttack(this.time.now);
-        this.updateSnake(this.time.now);
-        this.updateCarapana(this.time.now);
-        this.updateFruits(this.time.now);
-        this.updateHunger(this.time.now);
+        this.animatePlayerVisual(time);
+        this.updateAttack(time);
+        this.updateSnake(time);
+        this.updateCarapana(time);
+        this.updateFruits(time);
+        this.updateHunger(time);
     }
 }

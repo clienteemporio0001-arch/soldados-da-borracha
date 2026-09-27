@@ -16,12 +16,12 @@ export class Level3Scene extends Scene
         this.playerVisual=this.createPlayerVisual(); this.syncPlayerVisual();
         this.maxHealth=100; this.health=100; this.maxHunger=100; this.hunger=100; this.nextHungerDrainAt=this.time.now+2000; this.nextStarvationDamageAt=this.time.now+2000; this.invulnerableUntil=0; this.knockbackUntil=0; this.isPlayerDead=false; this.phaseCompleted=false;
         this.doubleJumpUnlocked=this.registry.get('doubleJumpUnlocked')===true;
-        this.jumpsUsed=0; this.jumpWasDown=false; this.wasGrounded=false; this.jumpBufferUntil=0; this.jumpBufferMs=130;
+        this.jumpsUsed=0; this.jumpWasDown=false; this.wasGrounded=false; this.jumpBufferUntil=0; this.jumpBufferMs=130; this.coyoteTimeMs=100; this.coyoteUntil=0; this.lastAirVelocityY=0; this.fastFallActive=false; this.motionFx={scaleX:1,scaleY:1}; this.directionFx={lean:0}; this.lastMoveDirection=0;
         this.maxStamina=100; this.stamina=100; this.doubleJumpStaminaCost=30; this.dashStaminaCost=25; this.staminaRegenDelay=350; this.staminaGroundRegen=40; this.staminaAirRegen=12; this.staminaRegenBlockedUntil=0; this.lastStaminaUpdateAt=this.time.now; this.nextStaminaFeedbackAt=0;
-        this.dashUnlocked=this.registry.get('dashUnlocked')===true; this.isDashing=false; this.dashEndsAt=0; this.nextDashAt=0; this.airDashUsed=false; this.nextDashDeniedFeedbackAt=0; this.dashDirection=1; this.dashSpeed=520; this.dashDuration=190; this.dashCooldown=380;
+        this.dashUnlocked=this.registry.get('dashUnlocked')===true; this.isDashing=false; this.dashLandingVisual=false; this.dashEndsAt=0; this.nextDashAt=0; this.airDashUsed=false; this.nextDashDeniedFeedbackAt=0; this.dashDirection=1; this.dashSpeed=520; this.dashDuration=190; this.dashCooldown=380;
         this.isAttacking=false; this.attackStartedAt=0; this.nextAttackAt=0; this.attackDirection=1; this.attackHitSnakeRegistered=false; this.attackHitCarapanaRegistered=false;
         this.createSnake(); this.createCarapana(); this.createAttackHitbox(); this.createFruits(); this.createCaboclinhoTrial(); this.createFinalZone();
-        this.cursors=this.input.keyboard.createCursorKeys(); this.keyA=this.input.keyboard.addKey('A'); this.keyD=this.input.keyboard.addKey('D'); this.keyW=this.input.keyboard.addKey('W'); this.spaceKey=this.input.keyboard.addKey('SPACE'); this.keyJ=this.input.keyboard.addKey('J'); this.keyX=this.input.keyboard.addKey('X'); this.keyShift=this.input.keyboard.addKey('SHIFT');
+        this.cursors=this.input.keyboard.createCursorKeys(); this.keyA=this.input.keyboard.addKey('A'); this.keyD=this.input.keyboard.addKey('D'); this.keyW=this.input.keyboard.addKey('W'); this.keyS=this.input.keyboard.addKey('S'); this.spaceKey=this.input.keyboard.addKey('SPACE'); this.keyJ=this.input.keyboard.addKey('J'); this.keyX=this.input.keyboard.addKey('X'); this.keyShift=this.input.keyboard.addKey('SHIFT');
         this.keyJ.on('down',()=>this.startAttack()); this.keyX.on('down',()=>this.startAttack()); this.keyShift.on('down',()=>this.tryDash());
         this.cameras.main.startFollow(this.player,true,0.08,0.08); this.cameras.main.setDeadzone(220,160);
         this.createHud(); this.createHealthHud(); this.createHungerHud(); this.createStaminaHud(); this.showLevelTitle(); this.spawnPoint={x:150,y:560};
@@ -157,7 +157,7 @@ export class Level3Scene extends Scene
 
         let state = 'IDLE';
 
-        if (this.isDashing)
+        if (this.isDashing && !this.dashLandingVisual)
         {
             state = 'DASH';
         }
@@ -181,7 +181,10 @@ export class Level3Scene extends Scene
             visual.facing = -1;
         }
 
-        visual.setScale(visual.facing, 1);
+        visual.setScale(
+            visual.facing * this.motionFx.scaleX,
+            this.motionFx.scaleY
+        );
 
         const seconds = time * 0.001;
         const lerp = (current, target, amount = 0.2) =>
@@ -199,6 +202,8 @@ export class Level3Scene extends Scene
         let rightLegAngle = 0;
         let leftLegY = 16;
         let rightLegY = 16;
+
+        parts.machete.angle = 18;
 
         if (state === 'IDLE')
         {
@@ -248,18 +253,19 @@ export class Level3Scene extends Scene
         }
         else if (state === 'FALL')
         {
-            bodyOffsetY = 1;
-            torsoY = -6;
-            torsoAngle = 2;
-            headY = -33;
-            hatY = -46;
-            hatAngle = 2;
-            leftArmAngle = -34;
-            rightArmAngle = 34;
-            leftLegAngle = -15;
-            rightLegAngle = 15;
-            leftLegY = 17;
+            bodyOffsetY = 1.5;
+            torsoY = -5;
+            torsoAngle = 6;
+            headY = -32;
+            hatY = -45;
+            hatAngle = 4;
+            leftArmAngle = -46;
+            rightArmAngle = 42;
+            leftLegAngle = -24;
+            rightLegAngle = 20;
+            leftLegY = 18;
             rightLegY = 17;
+            parts.machete.angle = 28;
         }
         else if (state === 'DASH')
         {
@@ -278,6 +284,7 @@ export class Level3Scene extends Scene
             parts.machete.angle = 8;
         }
 
+        torsoAngle += this.directionFx.lean;
         visual.y = this.player.y + bodyOffsetY;
 
         parts.torso.y = lerp(parts.torso.y, torsoY);
@@ -813,11 +820,7 @@ export class Level3Scene extends Scene
             this.hunger = 100;
             this.stamina = this.maxStamina;
             this.staminaRegenBlockedUntil = 0;
-            this.jumpsUsed = 0;
-            this.wasGrounded = false;
-            this.jumpBufferUntil = 0;
-            this.isDashing = false;
-            this.airDashUsed = false;
+            this.resetMovementPolishState();
             this.nextHungerDrainAt = this.time.now + 2000;
             this.nextStarvationDamageAt = this.time.now + 2000;
             this.invulnerableUntil = this.time.now + 1000;
@@ -1245,6 +1248,7 @@ export class Level3Scene extends Scene
 
         this.spendStamina(this.dashStaminaCost);
         this.isDashing = true;
+        this.dashLandingVisual = false;
         this.dashDirection = direction;
         this.dashEndsAt = this.time.now + this.dashDuration;
         this.nextDashAt = this.time.now + this.dashCooldown;
@@ -1252,6 +1256,7 @@ export class Level3Scene extends Scene
 
         this.player.body.setVelocityX(direction * this.dashSpeed);
         this.player.body.setVelocityY(this.player.body.velocity.y * 0.45);
+        this.setMotionSquash(1.09, 0.92, 125);
         this.showDashFeedback(direction);
     }
 
@@ -1316,21 +1321,34 @@ export class Level3Scene extends Scene
 
     updateDash (time, grounded)
     {
-        if (grounded && this.airDashUsed && !this.wasGrounded) {
-            this.airDashUsed = false;
-            this.showAirDashRechargeFeedback();
+        if (grounded && !this.wasGrounded) {
+            if (this.airDashUsed) {
+                this.airDashUsed = false;
+                this.showAirDashRechargeFeedback();
+            }
+            if (this.isDashing) {
+                this.dashLandingVisual = true;
+                this.playerVisual.parts.machete.angle = 18;
+            }
         }
 
         if (this.isDashing && time >= this.dashEndsAt) {
             this.isDashing = false;
+            this.dashLandingVisual = false;
             this.playerVisual.parts.machete.angle = 18;
         }
     }
 
     updateGroundedState (grounded)
     {
+        const time = this.time.now;
+        if (!grounded) this.lastAirVelocityY = this.player.body.velocity.y;
+        if (grounded) this.coyoteUntil = time + this.coyoteTimeMs;
         if (grounded && !this.wasGrounded) {
             this.jumpsUsed = 0;
+            this.fastFallActive = false;
+            this.showLandingFeedback(this.lastAirVelocityY);
+            this.lastAirVelocityY = 0;
         }
         this.wasGrounded = grounded;
     }
@@ -1342,12 +1360,21 @@ export class Level3Scene extends Scene
 
     consumeJumpBuffer (grounded)
     {
-        if (this.jumpBufferUntil < this.time.now || this.isDashing) return false;
+        if (this.jumpBufferUntil < this.time.now) return false;
+        if (this.isDashing && !grounded) return false;
+        if (this.isDashing && grounded) {
+            this.isDashing = false;
+            this.dashLandingVisual = false;
+            this.playerVisual.parts.machete.angle = 18;
+        }
 
-        if (this.jumpsUsed === 0 && grounded) {
+        if (this.jumpsUsed === 0 && (grounded || this.time.now <= this.coyoteUntil)) {
             this.player.body.setVelocityY(-520);
             this.jumpsUsed = 1;
+            this.coyoteUntil = 0;
             this.jumpBufferUntil = 0;
+            this.showJumpTakeoffEffect();
+            this.setMotionSquash(1.07, 0.93, 115);
             return true;
         }
 
@@ -1362,10 +1389,75 @@ export class Level3Scene extends Scene
             this.jumpsUsed = 2;
             this.jumpBufferUntil = 0;
             this.showDoubleJumpBurst(false);
+            this.setMotionSquash(1.045, 0.955, 95);
             return true;
         }
 
         return false;
+    }
+
+
+    applyJumpCut ()
+    {
+        if(this.player.body.velocity.y<-90)this.player.body.setVelocityY(this.player.body.velocity.y*.58);
+    }
+
+    applyFastFall (grounded)
+    {
+        const wantsFastFall=this.keyS.isDown||this.cursors.down.isDown;
+        const body=this.player.body;
+        if(!grounded&&wantsFastFall&&body.velocity.y>35){
+            body.setVelocityY(Math.min(780,body.velocity.y+70));
+            this.fastFallActive=true;
+            return;
+        }
+        this.fastFallActive=false;
+    }
+
+    setMotionSquash (scaleX,scaleY,duration=110)
+    {
+        this.tweens.killTweensOf(this.motionFx);
+        this.motionFx.scaleX=scaleX;this.motionFx.scaleY=scaleY;
+        this.tweens.add({targets:this.motionFx,scaleX:1,scaleY:1,duration,ease:'Quad.Out'});
+    }
+
+    showJumpTakeoffEffect ()
+    {
+        for(let i=0;i<3;i++){
+            const leaf=this.add.ellipse(this.player.x+(i-1)*8,this.player.y+31,7+i,3,i===1?0x8b7650:0x668d4d,.55).setDepth(18);
+            this.tweens.add({targets:leaf,x:leaf.x+(i-1)*12,y:leaf.y+7+i*2,alpha:0,angle:(i-1)*35,duration:180+i*25,onComplete:()=>leaf.destroy()});
+        }
+    }
+
+    showLandingFeedback (impactVelocity)
+    {
+        if(impactVelocity<260)return;
+        const strong=impactVelocity>=650,medium=impactVelocity>=420;
+        this.setMotionSquash(strong?1.1:medium?1.07:1.035,strong?.86:medium?.9:.95,strong?120:95);
+        const particles=strong?4:medium?3:2;
+        for(let i=0;i<particles;i++){
+            const direction=i%2===0?-1:1;
+            const dust=this.add.ellipse(this.player.x+direction*(7+i*2),this.player.y+31,9,4,i%2?0x756346:0x5d7b49,medium?.62:.42).setDepth(18);
+            this.tweens.add({targets:dust,x:dust.x+direction*(16+i*5),y:dust.y-(5+i*2),alpha:0,scaleX:1.35,duration:strong?260:210,onComplete:()=>dust.destroy()});
+        }
+        if(strong)this.cameras.main.shake(70,.0012);
+    }
+
+    showDirectionChangeFeedback (direction)
+    {
+        this.tweens.killTweensOf(this.directionFx);
+        this.directionFx.lean=direction*-5;
+        this.tweens.add({targets:this.directionFx,lean:0,duration:120,ease:'Quad.Out'});
+    }
+
+    resetMovementPolishState ()
+    {
+        this.jumpsUsed=0;this.jumpWasDown=false;this.jumpBufferUntil=0;this.coyoteUntil=0;this.wasGrounded=false;this.lastAirVelocityY=0;this.fastFallActive=false;this.lastMoveDirection=0;
+        this.isDashing=false;this.dashLandingVisual=false;this.dashEndsAt=0;this.nextDashAt=0;this.airDashUsed=false;
+        this.tweens.killTweensOf(this.motionFx);this.tweens.killTweensOf(this.directionFx);
+        this.motionFx.scaleX=1;this.motionFx.scaleY=1;this.directionFx.lean=0;
+        this.playerVisual.parts.machete.angle=18;
+        this.playerVisual.setScale(this.playerVisual.facing||1,1);
     }
 
     spendStamina (amount)
@@ -1463,25 +1555,30 @@ export class Level3Scene extends Scene
 
         const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown;
         if(jumpDown&&!this.jumpWasDown)this.queueJumpInput(time);
+        else if(!jumpDown&&this.jumpWasDown)this.applyJumpCut();
         this.jumpWasDown=jumpDown;
 
         if(!this.isPlayerDead&&!this.phaseCompleted){
             if(!this.isDashing&&time>=this.knockbackUntil){
                 const left=this.cursors.left.isDown||this.keyA.isDown;
                 const right=this.cursors.right.isDown||this.keyD.isDown;
-                this.player.body.setVelocityX(left?-moveSpeed:right?moveSpeed:0);
+                const direction=left&&!right?-1:right&&!left?1:0;
+                if(direction!==0&&this.lastMoveDirection!==0&&direction!==this.lastMoveDirection)this.showDirectionChangeFeedback(direction);
+                if(direction!==0)this.lastMoveDirection=direction;
+                this.player.body.setVelocityX(direction*moveSpeed);
             }
             this.updateGroundedState(grounded);
             this.consumeJumpBuffer(grounded);
+            this.applyFastFall(grounded);
         } else {
             this.updateGroundedState(grounded);
+            this.fastFallActive=false;
         }
 
         if(this.player.y>760){
             this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);
             this.player.body.setVelocity(0,0);
-            this.isDashing=false;
-            this.stamina=this.maxStamina; this.staminaRegenBlockedUntil=0; this.jumpsUsed=0; this.wasGrounded=false; this.jumpBufferUntil=0; this.airDashUsed=false; this.updateStaminaHud();
+            this.stamina=this.maxStamina; this.staminaRegenBlockedUntil=0; this.resetMovementPolishState(); this.updateStaminaHud();
             if(this.caboclinhoTestActive&&!this.caboclinhoTestComplete)this.resetCaboclinhoTest();
         }
         this.syncPlayerVisual();this.animatePlayerVisual(time);this.updateAttack(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);
