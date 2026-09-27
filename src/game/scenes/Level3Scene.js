@@ -16,7 +16,7 @@ export class Level3Scene extends Scene
         this.playerVisual=this.createPlayerVisual(); this.syncPlayerVisual();
         this.maxHealth=100; this.health=100; this.maxHunger=100; this.hunger=100; this.nextHungerDrainAt=this.time.now+2000; this.nextStarvationDamageAt=this.time.now+2000; this.invulnerableUntil=0; this.knockbackUntil=0; this.isPlayerDead=false; this.phaseCompleted=false;
         this.doubleJumpUnlocked=this.registry.get('doubleJumpUnlocked')===true; this.jumpsUsed=0; this.jumpWasDown=false;
-        this.dashUnlocked=this.registry.get('dashUnlocked')===true; this.isDashing=false; this.dashEndsAt=0; this.nextDashAt=0; this.airDashUsed=false; this.dashSpeed=520; this.dashDuration=190; this.dashCooldown=380;
+        this.dashUnlocked=this.registry.get('dashUnlocked')===true; this.isDashing=false; this.dashEndsAt=0; this.nextDashAt=0; this.airDashUsed=false; this.nextDashDeniedFeedbackAt=0; this.dashDirection=1; this.dashSpeed=520; this.dashDuration=190; this.dashCooldown=380;
         this.isAttacking=false; this.attackStartedAt=0; this.nextAttackAt=0; this.attackDirection=1; this.attackHitSnakeRegistered=false; this.attackHitCarapanaRegistered=false;
         this.createSnake(); this.createCarapana(); this.createAttackHitbox(); this.createFruits(); this.createCaboclinhoTrial(); this.createFinalZone();
         this.cursors=this.input.keyboard.createCursorKeys(); this.keyA=this.input.keyboard.addKey('A'); this.keyD=this.input.keyboard.addKey('D'); this.keyW=this.input.keyboard.addKey('W'); this.spaceKey=this.input.keyboard.addKey('SPACE'); this.keyJ=this.input.keyboard.addKey('J'); this.keyX=this.input.keyboard.addKey('X'); this.keyShift=this.input.keyboard.addKey('SHIFT');
@@ -47,9 +47,9 @@ export class Level3Scene extends Scene
     {
         this.platforms=this.physics.add.staticGroup(); const add=(x,y,w,h)=>{const p=this.add.rectangle(x,y,w,h,0x000000,0);this.physics.add.existing(p,true);this.platforms.add(p);};
         add(350,710,700,116);add(1000,710,500,116);add(1510,710,420,116);add(2100,710,520,116);add(2700,710,420,116);
-        add(560,595,150,28);add(900,525,170,28);add(1180,445,160,28);add(1460,585,145,30);add(1720,505,175,28);add(1980,415,165,28);add(2260,560,150,30);add(2470,470,170,28);add(2660,370,165,28);add(2860,500,165,28);add(3440,390,190,30);add(3700,315,160,28);
+        add(560,595,150,28);add(900,525,170,28);add(1180,445,160,28);add(1460,585,145,30);add(1720,505,175,28);add(1980,415,165,28);add(2260,560,150,30);add(2470,470,170,28);add(2660,370,165,28);add(2860,500,165,28);add(3000,430,120,24);add(3550,390,150,30);add(3750,315,100,28);
         const g=this.add.graphics().setDepth(5); [[0,652,700,116],[750,652,500,116],[1300,652,420,116],[1840,652,520,116],[2490,652,420,116]].forEach(([x,y,w,h],i)=>{g.fillStyle(i%2?0x513824:0x4b3423,1);g.fillRect(x,y,w,h);g.fillStyle(0x285331,1);g.fillRect(x,y,w,12);});
-        [[485,581,150,28,'root'],[815,511,170,28,'bank'],[1100,431,160,28,'log'],[1388,570,145,30,'bank'],[1632,491,175,28,'root'],[1898,401,165,28,'log'],[2185,545,150,30,'bank'],[2385,456,170,28,'root'],[2578,356,165,28,'log'],[2778,486,165,28,'bank'],[3345,375,190,30,'root'],[3620,301,160,28,'log']].forEach(([x,y,w,h,t])=>this.drawNaturalPlatform(g,x,y,w,h,t));
+        [[485,581,150,28,'root'],[815,511,170,28,'bank'],[1100,431,160,28,'log'],[1388,570,145,30,'bank'],[1632,491,175,28,'root'],[1898,401,165,28,'log'],[2185,545,150,30,'bank'],[2385,456,170,28,'root'],[2578,356,165,28,'log'],[2778,486,165,28,'bank'],[2940,418,120,24,'root'],[3475,375,150,30,'root'],[3700,301,100,28,'log']].forEach(([x,y,w,h,t])=>this.drawNaturalPlatform(g,x,y,w,h,t));
     }
 
     drawNaturalPlatform (g,x,y,w,h,t)
@@ -155,7 +155,11 @@ export class Level3Scene extends Scene
 
         let state = 'IDLE';
 
-        if (!grounded)
+        if (this.isDashing)
+        {
+            state = 'DASH';
+        }
+        else if (!grounded)
         {
             state = velocityY < 0 ? 'JUMP' : 'FALL';
         }
@@ -243,8 +247,7 @@ export class Level3Scene extends Scene
         else if (state === 'FALL')
         {
             bodyOffsetY = 1;
-            torsoY = -6;
-            torsoAngle = 2;
+            torsoY = -6;            torsoAngle = 2;
             headY = -33;
             hatY = -46;
             hatAngle = 2;
@@ -254,6 +257,22 @@ export class Level3Scene extends Scene
             rightLegAngle = 15;
             leftLegY = 17;
             rightLegY = 17;
+        }
+        else if (state === 'DASH')
+        {
+            bodyOffsetY = 0;
+            torsoY = -7;
+            torsoAngle = -12;
+            headY = -34;
+            hatY = -47;
+            hatAngle = -7;
+            leftArmAngle = -34;
+            rightArmAngle = -42;
+            leftLegAngle = 20;
+            rightLegAngle = -24;
+            leftLegY = 15;
+            rightLegY = 14;
+            parts.machete.angle = 8;
         }
 
         visual.y = this.player.y + bodyOffsetY;
@@ -297,6 +316,7 @@ export class Level3Scene extends Scene
         } else {
             this.attackHitbox.body.enable = false;
         }
+
         if (elapsed >= 300) {
             this.isAttacking = false;
             this.attackHitbox.body.enable = false;
@@ -477,7 +497,6 @@ export class Level3Scene extends Scene
         this.snakeAlive = false;
         this.snake.body.setVelocity(0, 0);
         this.snake.body.enable = false;
-
         this.tweens.killTweensOf(this.snakeVisual);
 
         this.tweens.add({
@@ -596,7 +615,8 @@ export class Level3Scene extends Scene
         {
             this.carapanaReturning = true;
 
-            if (distance > 1)            {
+            if (distance > 1)
+            {
                 this.carapana.body.setVelocity(
                     (dx / distance) * patrol.chaseSpeed,
                     (dy / distance) * patrol.chaseSpeed
@@ -725,8 +745,7 @@ export class Level3Scene extends Scene
     damageCarapana (amount)
     {
         if (!this.carapanaAlive)
-        {
-            return;
+        {            return;
         }
 
         this.carapanaHealth = Math.max(0, this.carapanaHealth - amount);
@@ -895,7 +914,8 @@ export class Level3Scene extends Scene
             duration: 500,
             ease: 'Quad.Out',
             onComplete: () => {
-                feedback.destroy();            }
+                feedback.destroy();
+            }
         });
     }
 
@@ -919,58 +939,378 @@ export class Level3Scene extends Scene
 
     createCaboclinhoTrial ()
     {
-        this.caboclinhoTestActive=false;this.caboclinhoTestComplete=false;this.caboclinhoStage=0;this.caboclinhoMoving=false;this.caboclinhoPositions=[{x:2470,y:405},{x:2660,y:305},{x:2860,y:435}];
-        this.caboclinhoVisual=this.createCaboclinhoVisual();this.caboclinhoVisual.setVisible(false);
-        this.caboclinhoReachZone=this.add.rectangle(-100,-100,100,100,0x000000,0);this.physics.add.existing(this.caboclinhoReachZone);this.caboclinhoReachZone.body.setAllowGravity(false);this.caboclinhoReachZone.body.setImmovable(true);this.caboclinhoReachZone.body.enable=false;this.physics.add.overlap(this.player,this.caboclinhoReachZone,()=>this.reachCaboclinho());
-        this.caboclinhoTrigger=this.add.rectangle(2260,535,150,190,0x000000,0);this.physics.add.existing(this.caboclinhoTrigger);this.caboclinhoTrigger.body.setAllowGravity(false);this.caboclinhoTrigger.body.setImmovable(true);this.physics.add.overlap(this.player,this.caboclinhoTrigger,()=>this.startCaboclinhoTrial());
+        this.caboclinhoTestActive = false;
+        this.caboclinhoTestComplete = false;
+        this.caboclinhoStage = 0;
+        this.caboclinhoMoving = false;
+        this.caboclinhoPositions = [
+            { x: 2470, y: 405 },
+            { x: 2660, y: 305 },
+            { x: 3000, y: 375 }
+        ];
+
+        this.caboclinhoVisual = this.createCaboclinhoVisual();
+        this.caboclinhoVisual.setVisible(false);
+
+        this.caboclinhoReachZone = this.add.rectangle(-100, -100, 92, 92, 0x000000, 0);
+        this.physics.add.existing(this.caboclinhoReachZone);
+        this.caboclinhoReachZone.body.setAllowGravity(false);
+        this.caboclinhoReachZone.body.setImmovable(true);
+        this.caboclinhoReachZone.body.enable = false;
+        this.physics.add.overlap(this.player, this.caboclinhoReachZone, () => this.reachCaboclinho());
+
+        this.caboclinhoTrigger = this.add.rectangle(2260, 535, 150, 190, 0x000000, 0);
+        this.physics.add.existing(this.caboclinhoTrigger);
+        this.caboclinhoTrigger.body.setAllowGravity(false);
+        this.caboclinhoTrigger.body.setImmovable(true);
+        this.physics.add.overlap(this.player, this.caboclinhoTrigger, () => this.startCaboclinhoTrial());
     }
 
     createCaboclinhoVisual ()
     {
-        const c=this.add.container(-200,-200).setDepth(22);c.add([this.add.rectangle(0,18,15,24,0x4b3825),this.add.rectangle(0,-4,24,34,0x355b38),this.add.rectangle(0,-2,38,7,0x8d6547),this.add.circle(0,-30,10,0x9a704f),this.add.ellipse(0,-42,32,10,0x66502f),this.add.rectangle(7,-52,4,17,0x477248).setAngle(16)]);return c;
+        const c = this.add.container(-200, -200).setDepth(22);
+        c.add([
+            this.add.rectangle(0, 18, 15, 24, 0x4b3825),
+            this.add.rectangle(0, -4, 24, 34, 0x355b38),
+            this.add.rectangle(0, -2, 38, 7, 0x8d6547),
+            this.add.circle(0, -30, 10, 0x9a704f),
+            this.add.ellipse(0, -42, 32, 10, 0x66502f),
+            this.add.rectangle(7, -52, 4, 17, 0x477248).setAngle(16)
+        ]);
+        return c;
     }
 
     startCaboclinhoTrial ()
     {
-        if(this.caboclinhoTestActive||this.caboclinhoTestComplete)return;this.caboclinhoTestActive=true;this.caboclinhoTrigger.body.enable=false;this.resetCaboclinhoTest();const panel=this.add.rectangle(512,355,610,108,0x06100d,.9).setScrollFactor(0).setDepth(180);const text=this.add.text(512,355,'“Quem sobe a mata precisa saber voltar.”',{fontFamily:'Arial',fontSize:'24px',color:'#f1e1ae'}).setOrigin(.5).setScrollFactor(0).setDepth(181);this.time.delayedCall(1500,()=>{panel.destroy();text.destroy();this.enableCaboclinhoReachZone();});
+        if (this.caboclinhoTestActive || this.caboclinhoTestComplete) return;
+        this.caboclinhoTestActive = true;
+        this.caboclinhoTrigger.body.enable = false;
+        this.resetCaboclinhoTest();
+
+        const panel = this.add.rectangle(512, 355, 610, 108, 0x06100d, 0.9).setScrollFactor(0).setDepth(180);
+        const text = this.add.text(512, 355, '“Quem sobe a mata precisa saber voltar.”', {
+            fontFamily: 'Arial', fontSize: '24px', color: '#f1e1ae'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(181);
+
+        this.time.delayedCall(1500, () => {
+            panel.destroy();
+            text.destroy();            this.enableCaboclinhoReachZone();
+        });
     }
 
     resetCaboclinhoTest ()
     {
-        if(!this.caboclinhoTestActive||this.caboclinhoTestComplete)return;this.caboclinhoStage=0;this.caboclinhoMoving=false;const p=this.caboclinhoPositions[0];this.caboclinhoVisual.setPosition(p.x,p.y).setAlpha(1).setVisible(true);this.caboclinhoReachZone.setPosition(p.x,p.y);this.caboclinhoReachZone.body.enable=false;
+        if (!this.caboclinhoTestActive || this.caboclinhoTestComplete) return;
+        this.caboclinhoStage = 0;
+        this.caboclinhoMoving = false;
+        if (this.caboclinhoMoveShadow) { this.caboclinhoMoveShadow.destroy(); this.caboclinhoMoveShadow = null; }
+        const p = this.caboclinhoPositions[0];
+        this.tweens.killTweensOf(this.caboclinhoVisual);
+        this.caboclinhoVisual.setPosition(p.x, p.y).setAlpha(1).setAngle(0).setScale(1).setVisible(true);
+        this.caboclinhoReachZone.setPosition(p.x, p.y);
+        this.caboclinhoReachZone.body.enable = false;
     }
 
-    enableCaboclinhoReachZone () { if(this.caboclinhoTestComplete)return;const p=this.caboclinhoPositions[this.caboclinhoStage];this.caboclinhoReachZone.setPosition(p.x,p.y);this.caboclinhoReachZone.body.enable=true; }
-    reachCaboclinho () { if(!this.caboclinhoTestActive||this.caboclinhoTestComplete||this.caboclinhoMoving)return;this.caboclinhoReachZone.body.enable=false;if(this.caboclinhoStage>=2){this.completeCaboclinhoTrial();return;}this.moveCaboclinhoTo(this.caboclinhoStage+1); }
+    enableCaboclinhoReachZone ()
+    {
+        if (this.caboclinhoTestComplete) return;
+        const p = this.caboclinhoPositions[this.caboclinhoStage];
+        this.caboclinhoReachZone.setPosition(p.x, p.y);
+        this.caboclinhoReachZone.body.enable = true;
+    }
+
+    reachCaboclinho ()
+    {
+        if (!this.caboclinhoTestActive || this.caboclinhoTestComplete || this.caboclinhoMoving) return;
+        this.caboclinhoReachZone.body.enable = false;
+
+        if (this.caboclinhoStage >= 2) {
+            this.reactCaboclinhoRecognition();
+            return;
+        }
+
+        this.reactCaboclinhoBeforeMove(this.caboclinhoStage + 1);
+    }
+
+    reactCaboclinhoBeforeMove (nextStage)
+    {
+        if (this.caboclinhoMoving) return;
+        this.caboclinhoMoving = true;
+        const direction = this.caboclinhoPositions[nextStage].x >= this.caboclinhoVisual.x ? 1 : -1;
+
+        this.tweens.add({
+            targets: this.caboclinhoVisual,
+            scaleX: 1.08,
+            scaleY: 0.9,
+            angle: -direction * 7,
+            y: this.caboclinhoVisual.y + 5,
+            duration: 130,
+            yoyo: true,
+            ease: 'Quad.Out',
+            onComplete: () => this.moveCaboclinhoTo(nextStage)
+        });
+    }
 
     moveCaboclinhoTo (nextStage)
     {
-        this.caboclinhoMoving=true;const from=this.caboclinhoPositions[this.caboclinhoStage],to=this.caboclinhoPositions[nextStage];const leaf=this.add.ellipse(from.x,from.y-15,28,12,0x4d7b49,.55).setDepth(23);this.tweens.add({targets:leaf,scale:1.8,alpha:0,duration:280,onComplete:()=>leaf.destroy()});this.tweens.add({targets:this.caboclinhoVisual,x:to.x,y:to.y,angle:8,duration:520,ease:'Quad.Out',onComplete:()=>{this.caboclinhoVisual.setAngle(0);this.caboclinhoStage=nextStage;this.caboclinhoMoving=false;this.enableCaboclinhoReachZone();}});
+        const from = this.caboclinhoPositions[this.caboclinhoStage];
+        const to = this.caboclinhoPositions[nextStage];
+        const direction = to.x >= from.x ? 1 : -1;
+        if (this.caboclinhoMoveShadow) this.caboclinhoMoveShadow.destroy();
+        const shadow = this.add.ellipse(from.x, from.y + 42, 42, 10, 0x07100c, 0.28).setDepth(20);
+        this.caboclinhoMoveShadow = shadow;
+
+        for (let i = 0; i < 4; i += 1) {
+            const leaf = this.add.ellipse(from.x + i * 4, from.y + 4, 10, 5, i % 2 ? 0x668d4d : 0x4d7b49, 0.72).setDepth(23);
+            this.tweens.add({
+                targets: leaf,
+                x: from.x - direction * (32 + i * 9),
+                y: from.y - 18 - i * 7,
+                angle: direction * (55 + i * 18),
+                alpha: 0,
+                duration: 300 + i * 25,
+                onComplete: () => leaf.destroy()
+            });
+        }
+
+        const midpointX = (from.x + to.x) * 0.5;
+        const apexY = Math.min(from.y, to.y) - (nextStage === 2 ? 88 : 70);
+        const firstDuration = nextStage === 2 ? 185 : 205;
+        const secondDuration = nextStage === 2 ? 190 : 215;
+
+        this.tweens.add({
+            targets: this.caboclinhoVisual,
+            x: midpointX,
+            y: apexY,
+            angle: direction * 10,
+            duration: firstDuration,
+            ease: 'Quad.Out',
+            onComplete: () => {
+                this.tweens.add({
+                    targets: this.caboclinhoVisual,
+                    x: to.x,
+                    y: to.y,
+                    angle: -direction * 4,
+                    duration: secondDuration,
+                    ease: 'Quad.In',
+                    onComplete: () => {
+                        this.caboclinhoVisual.setAngle(0).setScale(1);
+                        shadow.setPosition(to.x, to.y + 42);
+                        this.tweens.add({ targets: shadow, scaleX: 1.25, alpha: 0, duration: 180, onComplete: () => { shadow.destroy(); if (this.caboclinhoMoveShadow === shadow) this.caboclinhoMoveShadow = null; } });
+
+                        for (let i = 0; i < 3; i += 1) {
+                            const leaf = this.add.ellipse(to.x, to.y + 22, 9, 4, 0x5e8548, 0.62).setDepth(23);
+                            this.tweens.add({
+                                targets: leaf,
+                                x: to.x + direction * (20 + i * 8),
+                                y: to.y + 8 - i * 8,
+                                angle: direction * (45 + i * 25),
+                                alpha: 0,
+                                duration: 240 + i * 35,
+                                onComplete: () => leaf.destroy()
+                            });
+                        }
+
+                        this.caboclinhoStage = nextStage;
+                        this.caboclinhoMoving = false;
+                        this.enableCaboclinhoReachZone();
+                    }
+                });
+            }
+        });
+    }
+
+    reactCaboclinhoRecognition ()
+    {
+        if (this.caboclinhoMoving || this.caboclinhoTestComplete) return;
+        this.caboclinhoMoving = true;
+        this.tweens.add({
+            targets: this.caboclinhoVisual,
+            y: this.caboclinhoVisual.y - 5,
+            angle: -4,
+            duration: 150,
+            yoyo: true,
+            ease: 'Sine.InOut',
+            onComplete: () => {
+                this.caboclinhoVisual.setAngle(0);
+                this.time.delayedCall(260, () => this.completeCaboclinhoTrial());
+            }
+        });
     }
 
     completeCaboclinhoTrial ()
     {
-        if(this.caboclinhoTestComplete)return;this.caboclinhoTestComplete=true;this.caboclinhoReachZone.body.enable=false;const panel=this.add.rectangle(512,350,650,190,0x06100d,.92).setScrollFactor(0).setDepth(190);const line=this.add.text(512,318,'Agora seus passos alcançam onde a mata se abre.',{fontFamily:'Arial',fontSize:'22px',color:'#c8d8cc'}).setOrigin(.5).setScrollFactor(0).setDepth(191);this.time.delayedCall(900,()=>{const skill=this.add.text(512,385,'HABILIDADE DESBLOQUEADA\nDASH',{fontFamily:'Arial Black',fontSize:'30px',color:'#f1e1ae',align:'center'}).setOrigin(.5).setScrollFactor(0).setDepth(191);this.showDashUnlockEffect();this.time.delayedCall(1200,()=>{this.dashUnlocked=true;this.registry.set('dashUnlocked',true);this.updateControlsText();panel.destroy();line.destroy();skill.destroy();this.showDashTutorial();});});
+        if (this.caboclinhoTestComplete) return;
+        this.caboclinhoTestComplete = true;
+        this.caboclinhoMoving = false;
+        this.caboclinhoReachZone.body.enable = false;
+
+        const panel = this.add.rectangle(512, 350, 650, 190, 0x06100d, 0.92).setScrollFactor(0).setDepth(190);
+        const line = this.add.text(512, 318, 'Agora seus passos alcançam onde a mata se abre.', {
+            fontFamily: 'Arial', fontSize: '22px', color: '#c8d8cc'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(191);
+
+        this.time.delayedCall(950, () => {
+            const skill = this.add.text(512, 385, 'HABILIDADE DESBLOQUEADA\nDASH', {
+                fontFamily: 'Arial Black', fontSize: '30px', color: '#f1e1ae', align: 'center'
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(191);
+
+            this.showDashUnlockEffect();
+
+            this.time.delayedCall(1250, () => {
+                this.dashUnlocked = true;
+                this.registry.set('dashUnlocked', true);
+                this.updateControlsText();
+                panel.destroy();
+                line.destroy();
+                skill.destroy();
+                this.showDashTutorial();
+            });
+        });
     }
 
     showDashUnlockEffect ()
     {
-        const ring=this.add.circle(this.player.x,this.player.y,20,0xd6b56c,.2).setDepth(40);this.tweens.add({targets:ring,scale:4,alpha:0,duration:700,onComplete:()=>ring.destroy()});for(let i=0;i<8;i++){const a=Math.PI*2*i/8,leaf=this.add.ellipse(this.player.x,this.player.y,10,5,i%2?0x759657:0x4f7c49,.82).setDepth(41);this.tweens.add({targets:leaf,x:this.player.x+Math.cos(a)*60,y:this.player.y+Math.sin(a)*45,angle:i*50,alpha:0,duration:650,onComplete:()=>leaf.destroy()});}
+        const px = this.player.x;
+        const py = this.player.y;
+        const direction = this.playerVisual.facing || 1;
+        const ring = this.add.circle(px, py, 20, 0xd6b56c, 0.22).setDepth(40);
+        const glow = this.add.ellipse(px, py, 52, 82, 0xf1e1ae, 0.12).setDepth(39);
+
+        this.tweens.add({ targets: ring, scale: 4.2, alpha: 0, duration: 720, onComplete: () => ring.destroy() });
+        this.tweens.add({ targets: glow, scaleX: 1.7, alpha: 0, duration: 620, onComplete: () => glow.destroy() });
+
+        for (let i = 0; i < 4; i += 1) {
+            const streak = this.add.rectangle(px - direction * (16 + i * 18), py - 24 + i * 14, 28 + i * 8, 3, 0xe2e9d7, 0.4).setDepth(40);
+            this.tweens.add({
+                targets: streak,
+                x: streak.x - direction * (65 + i * 8),
+                alpha: 0,
+                duration: 320 + i * 35,
+                onComplete: () => streak.destroy()
+            });
+        }
+
+        for (let i = 0; i < 9; i += 1) {
+            const angle = (Math.PI * 2 * i) / 9;
+            const leaf = this.add.ellipse(px, py, 10, 5, i % 2 ? 0x759657 : 0x4f7c49, 0.82).setDepth(41);
+            this.tweens.add({
+                targets: leaf,
+                x: px + Math.cos(angle) * 64,
+                y: py + Math.sin(angle) * 48,
+                angle: i * 48,
+                alpha: 0,
+                duration: 680,
+                onComplete: () => leaf.destroy()
+            });
+        }
     }
 
-    showDashTutorial () { const t=this.add.text(512,220,'DASH\nPressione SHIFT para avançar rapidamente.\nNo ar, o dash recarrega ao tocar o chão.',{fontFamily:'Arial Black',fontSize:'19px',color:'#f1e1ae',align:'center',backgroundColor:'#06100dcc',padding:{x:18,y:12}}).setOrigin(.5).setScrollFactor(0).setDepth(180);this.time.delayedCall(3600,()=>t.destroy()); }
+    showDashTutorial ()
+    {
+        const t = this.add.text(512, 220, 'DASH\nPressione SHIFT para avançar rapidamente.\nNo ar, o dash recarrega ao tocar o chão.', {
+            fontFamily: 'Arial Black', fontSize: '19px', color: '#f1e1ae', align: 'center',
+            backgroundColor: '#06100dcc', padding: { x: 18, y: 12 }
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(180);
+        this.time.delayedCall(3600, () => t.destroy());
+    }
 
     tryDash ()
     {
-        if(!this.dashUnlocked||this.phaseCompleted||this.isPlayerDead||this.isDashing||this.time.now<this.nextDashAt)return;const grounded=this.player.body.blocked.down||this.player.body.touching.down;if(!grounded&&this.airDashUsed)return;const left=this.cursors.left.isDown||this.keyA.isDown,right=this.cursors.right.isDown||this.keyD.isDown,direction=left&&!right?-1:right&&!left?1:(this.playerVisual.facing||1);this.isDashing=true;this.dashEndsAt=this.time.now+this.dashDuration;this.nextDashAt=this.time.now+this.dashCooldown;if(!grounded)this.airDashUsed=true;this.player.body.setVelocityX(direction*this.dashSpeed);this.player.body.setVelocityY(this.player.body.velocity.y*.45);this.showDashFeedback(direction);
+        if (!this.dashUnlocked || this.phaseCompleted || this.isPlayerDead || this.isDashing || this.time.now < this.nextDashAt) return;
+
+        const grounded = this.player.body.blocked.down || this.player.body.touching.down;
+        if (!grounded && this.airDashUsed) {
+            this.showDashUnavailableFeedback();
+            return;
+        }
+
+        const left = this.cursors.left.isDown || this.keyA.isDown;
+        const right = this.cursors.right.isDown || this.keyD.isDown;
+        const direction = left && !right ? -1 : right && !left ? 1 : (this.playerVisual.facing || 1);
+
+        this.isDashing = true;
+        this.dashDirection = direction;
+        this.dashEndsAt = this.time.now + this.dashDuration;
+        this.nextDashAt = this.time.now + this.dashCooldown;
+        if (!grounded) this.airDashUsed = true;
+
+        this.player.body.setVelocityX(direction * this.dashSpeed);
+        this.player.body.setVelocityY(this.player.body.velocity.y * 0.45);
+        this.showDashFeedback(direction);
     }
 
     showDashFeedback (direction)
     {
-        for(let i=0;i<4;i++){const line=this.add.rectangle(this.player.x-direction*(18+i*12),this.player.y-18+i*10,22+i*4,3,0xd6e1cf,.35).setDepth(18);this.tweens.add({targets:line,x:line.x-direction*45,alpha:0,duration:220+i*25,onComplete:()=>line.destroy()});}for(let i=0;i<3;i++){const leaf=this.add.ellipse(this.player.x-direction*8,this.player.y+10+i*6,9,4,0x668d4d,.75).setDepth(19);this.tweens.add({targets:leaf,x:leaf.x-direction*(38+i*10),y:leaf.y-12-i*4,angle:direction*70,alpha:0,duration:300,onComplete:()=>leaf.destroy()});}
+        const ghost = this.add.container(this.player.x - direction * 8, this.player.y).setDepth(17).setAlpha(0.22);
+        ghost.add([            this.add.rectangle(0, -4, 25, 38, 0xc7aa73, 0.55),
+            this.add.circle(0, -31, 9, 0xb98155, 0.55),
+            this.add.rectangle(direction * 11, 4, 7, 34, 0xb8c0ba, 0.45).setAngle(direction * -18)
+        ]);
+        this.tweens.add({
+            targets: ghost,
+            x: ghost.x - direction * 34,
+            alpha: 0,
+            duration: 210,
+            onComplete: () => ghost.destroy()
+        });
+
+        for (let i = 0; i < 4; i += 1) {
+            const line = this.add.rectangle(this.player.x - direction * (18 + i * 12), this.player.y - 18 + i * 10, 22 + i * 4, 3, 0xd6e1cf, 0.4).setDepth(18);
+            this.tweens.add({
+                targets: line,
+                x: line.x - direction * 48,
+                alpha: 0,
+                duration: 210 + i * 22,
+                onComplete: () => line.destroy()
+            });
+        }
+
+        for (let i = 0; i < 3; i += 1) {
+            const leaf = this.add.ellipse(this.player.x - direction * 8, this.player.y + 10 + i * 6, 9, 4, 0x668d4d, 0.75).setDepth(19);
+            this.tweens.add({
+                targets: leaf,
+                x: leaf.x - direction * (40 + i * 10),
+                y: leaf.y - 12 - i * 4,
+                angle: direction * 70,
+                alpha: 0,
+                duration: 290,
+                onComplete: () => leaf.destroy()
+            });
+        }
     }
 
-    updateDash (time,grounded) { if(grounded)this.airDashUsed=false;if(this.isDashing&&time>=this.dashEndsAt)this.isDashing=false; }
+    showDashUnavailableFeedback ()
+    {
+        if (this.time.now < this.nextDashDeniedFeedbackAt) return;
+        this.nextDashDeniedFeedbackAt = this.time.now + 240;
+        const pulse = this.add.circle(this.player.x, this.player.y, 11, 0xc8d8ce, 0.08).setDepth(18);
+        this.tweens.add({ targets: pulse, scale: 1.7, alpha: 0, duration: 160, onComplete: () => pulse.destroy() });
+    }
+
+    showAirDashRechargeFeedback ()
+    {
+        const ring = this.add.circle(this.player.x, this.player.y + 24, 10, 0x9fc98a, 0.22).setDepth(18);
+        this.tweens.add({ targets: ring, scale: 2.1, alpha: 0, duration: 220, onComplete: () => ring.destroy() });
+        for (let i = 0; i < 2; i += 1) {
+            const leaf = this.add.ellipse(this.player.x + (i ? 9 : -9), this.player.y + 20, 7, 3, 0x6f9558, 0.55).setDepth(19);
+            this.tweens.add({ targets: leaf, y: leaf.y - 14, alpha: 0, angle: i ? 45 : -45, duration: 240, onComplete: () => leaf.destroy() });
+        }
+    }
+
+    updateDash (time, grounded)
+    {
+        if (grounded && this.airDashUsed) {
+            this.airDashUsed = false;
+            this.showAirDashRechargeFeedback();
+        }
+
+        if (this.isDashing && time >= this.dashEndsAt) {
+            this.isDashing = false;
+            this.playerVisual.parts.machete.angle = 18;
+        }
+    }
+
     performJump (isGrounded) { if(isGrounded)this.jumpsUsed=0;if(this.jumpsUsed===0&&isGrounded){this.player.body.setVelocityY(-520);this.jumpsUsed=1;return;}if(this.doubleJumpUnlocked&&this.jumpsUsed===1&&!isGrounded){this.player.body.setVelocityY(-500);this.jumpsUsed=2;this.showDoubleJumpBurst(false);} }
 
     showDoubleJumpBurst (isFirst = false)
@@ -1017,7 +1357,7 @@ export class Level3Scene extends Scene
 
     createFinalZone ()
     {
-        this.finalZone=this.add.rectangle(3730,235,120,165,0x000000,0);this.physics.add.existing(this.finalZone);this.finalZone.body.setAllowGravity(false);this.finalZone.body.setImmovable(true);this.physics.add.overlap(this.player,this.finalZone,()=>this.completeLevel3());
+        this.finalZone=this.add.rectangle(3745,235,100,165,0x000000,0);this.physics.add.existing(this.finalZone);this.finalZone.body.setAllowGravity(false);this.finalZone.body.setImmovable(true);this.physics.add.overlap(this.player,this.finalZone,()=>this.completeLevel3());
     }
 
     completeLevel3 ()
@@ -1102,7 +1442,6 @@ export class Level3Scene extends Scene
 
         this.hungerBar = this.add.rectangle(12, 29, 150, 16, 0xd49a3a, 1)
             .setOrigin(0);
-
         this.hungerText = this.add.text(172, 27, '100/100', {
             fontFamily: 'Arial',
             fontSize: '14px',
