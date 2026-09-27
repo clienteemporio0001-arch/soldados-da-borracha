@@ -13,6 +13,7 @@ export class Level4Scene extends Scene
         this.cameras.main.setBackgroundColor('#08120f');
 
         this.createWoundedForest();
+        this.createRubberTreeAccents();
         this.createPlatforms();
         this.createHumanSigns();
         this.createMapinguariSigns();
@@ -148,12 +149,22 @@ export class Level4Scene extends Scene
             [1550,420,22,215,70],[1800,385,28,250,86]
         ];
         liveTrees.forEach(([x,y,w,h,c],i)=>{
-            distant.fillStyle(i%2 ? 0x0f2d21 : 0x123427, 0.9);
-            distant.fillRect(x,y,w,h);
-            distant.fillStyle(0x103324,0.9);
-            distant.fillCircle(x+w/2,y-8,c);
-            distant.fillCircle(x-c*.45,y+18,c*.58);
-            distant.fillCircle(x+c*.5,y+22,c*.62);
+            const cx=x+w*.5,baseY=y+h;
+            distant.fillStyle(i%2 ? 0x0f2d21 : 0x123427,.9);
+            distant.fillRoundedRect(x,y,w,h,Math.max(5,w*.22));
+            distant.fillStyle(0x1b3a2a,.3);
+            distant.fillRoundedRect(x+w*.18,y+10,w*.18,h-18,4);
+            distant.lineStyle(5,0x16281f,.65);
+            distant.beginPath();distant.moveTo(cx,baseY-6);distant.lineTo(x-22,baseY+2);distant.strokePath();
+            distant.beginPath();distant.moveTo(cx+3,baseY-5);distant.lineTo(x+w+26,baseY+2);distant.strokePath();
+            distant.lineStyle(6,0x173023,.7);
+            distant.beginPath();distant.moveTo(cx,y+72);distant.lineTo(cx+(i%2?58:-54),y+22);distant.strokePath();
+            distant.fillStyle(0x103324,.88);
+            distant.fillEllipse(cx,y-8,c*1.85,c*1.25);
+            distant.fillEllipse(x-c*.42,y+20,c*1.08,c*.82);
+            distant.fillEllipse(x+w+c*.46,y+22,c*1.16,c*.86);
+            distant.fillStyle(0x1b4930,.34);
+            distant.fillEllipse(cx+18,y-28,c*.95,c*.55);
         });
 
         // A partir do meio da fase, as silhuetas passam a ficar cortadas, tombadas e irregulares.
@@ -175,10 +186,10 @@ export class Level4Scene extends Scene
             broken.beginPath(); broken.moveTo(x1,y1); broken.lineTo(x2,y2); broken.strokePath();
         });
 
-        // Névoa baixa e fumaça distante.
-        this.add.rectangle(650,545,1500,105,0xb8c9be,.05).setDepth(-18).setScrollFactor(.2);
-        this.add.rectangle(2400,575,2200,90,0xb8b8a8,.045).setDepth(-16).setScrollFactor(.38);
-        this.add.ellipse(3350,360,280,160,0x8a8b7a,.055).setDepth(-14).setScrollFactor(.55);
+        // Névoa irregular e poeira úmida, sem faixas retangulares.
+        this.createOrganicFogMass(660,545,1380,145,0xb8c9be,.05,-18,.2,5);
+        this.createOrganicFogMass(2420,575,1950,125,0xb8b8a8,.045,-16,.38,8);
+        this.createOrganicFogMass(3350,390,420,210,0x8a8b7a,.055,-14,.55,11);
 
         const fg=this.add.graphics().setDepth(30).setScrollFactor(1.08).setAlpha(.68);
         [70,310,610,900,1240,1530,1860,2210,2580,2970,3360,3820].forEach((x,i)=>{
@@ -187,6 +198,12 @@ export class Level4Scene extends Scene
             fg.fillCircle(x,650,s);
             fg.fillCircle(x+s*.75,655,s*.7);
         });
+    }
+
+    createRubberTreeAccents ()
+    {
+        this.rubberLatexInterval=3400;
+        this.createRubberTreeVisual(1480,340,38,252,0,7,1);
     }
 
     createPlatforms ()
@@ -1338,6 +1355,7 @@ export class Level4Scene extends Scene
         if (this.phaseCompleted || this.isPlayerDead) return;
         this.isPlayerDead = true;
         this.resetCombatPolishState();
+        this.clearRubberLatexDrops();
         this.player.body.setVelocity(0, 0);
         this.time.delayedCall(650, () => {
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
@@ -2107,6 +2125,176 @@ export class Level4Scene extends Scene
         b.on('pointerdown',()=>this.scene.start('Level5Scene'));
     }
 
+    createOrganicFogMass (x,y,width,height,color,alpha,depth,scrollFactor,seed=0)
+    {
+        const fog=this.add.container(x,y)
+            .setDepth(depth)
+            .setScrollFactor(scrollFactor)
+            .setAlpha(alpha);
+
+        const parts=[
+            [0,0,.58,.62,1],
+            [-.31,.03,.42,.48,.78],
+            [.3,-.04,.46,.52,.72],
+            [-.12,-.22,.4,.42,.58],
+            [.14,.2,.48,.36,.52],
+            [-.44,.16,.28,.3,.38],
+            [.46,.12,.3,.32,.34]
+        ];
+
+        parts.forEach(([ox,oy,ws,hs,a],index)=>{
+            const wobble=((seed+index)%3-1)*.035;
+            const blob=this.add.ellipse(
+                ox*width,
+                oy*height,
+                width*(ws+wobble),
+                height*(hs-wobble*.5),
+                color,
+                a
+            ).setAngle(((seed*7+index*11)%17)-8);
+            fog.add(blob);
+        });
+
+        return fog;
+    }
+
+    ensureRubberLatexSystem ()
+    {
+        if(this.rubberLatexPoints)return;
+
+        this.rubberLatexPoints=[];
+        this.rubberLatexDrops=[];
+        this.rubberLatexSerial=0;
+        this.rubberLatexTimer=this.time.addEvent({
+            delay:this.rubberLatexInterval||2800,
+            loop:true,
+            callback:()=>this.spawnRubberLatexDrop()
+        });
+
+        this.events.once('shutdown',()=>this.cleanupRubberLatexSystem());
+    }
+
+    createRubberTreeVisual (x,y,trunkWidth,trunkHeight,index=0,depth=8,scrollFactor=1)
+    {
+        this.ensureRubberLatexSystem();
+
+        const g=this.add.graphics().setDepth(depth).setScrollFactor(scrollFactor);
+        const cx=x+trunkWidth*.5;
+        const baseY=y+trunkHeight;
+        const crownY=y-12-(index%2)*5;
+
+        g.fillStyle(index%2?0x493222:0x4d3625,.98);
+        g.fillRoundedRect(x,y,trunkWidth,trunkHeight,Math.max(7,trunkWidth*.28));
+        g.fillStyle(0x674831,.34);
+        g.fillRoundedRect(x+trunkWidth*.16,y+8,trunkWidth*.18,trunkHeight-16,5);
+        g.fillStyle(0x35261d,.28);
+        g.fillRoundedRect(x+trunkWidth*.68,y+18,trunkWidth*.12,trunkHeight-25,4);
+
+        g.lineStyle(5,0x3b2a1f,.82);
+        g.beginPath();g.moveTo(cx-2,baseY-8);g.lineTo(x-22-(index%2)*6,baseY+3);g.strokePath();
+        g.beginPath();g.moveTo(cx+5,baseY-7);g.lineTo(x+trunkWidth+25+(index%3)*4,baseY+2);g.strokePath();
+
+        g.lineStyle(6,0x3d2b20,.84);
+        g.beginPath();g.moveTo(cx,y+72);g.lineTo(cx+(index%2?-58:62),y+28);g.strokePath();
+        g.lineStyle(4,0x453023,.68);
+        g.beginPath();g.moveTo(cx+2,y+105);g.lineTo(cx+(index%2?42:-46),y+68);g.strokePath();
+
+        g.lineStyle(2,0x8b6a4a,.32);
+        [0,1,2].forEach(mark=>{
+            const my=y+55+mark*48+(index%3)*5;
+            g.beginPath();g.moveTo(x+8,my);g.lineTo(x+trunkWidth-6,my-5-(mark%2)*4);g.strokePath();
+        });
+
+        const cutY=y+trunkHeight*.5;
+        g.lineStyle(5,0xc8a678,.96);
+        g.beginPath();g.moveTo(x+6,cutY+8);g.lineTo(x+trunkWidth-6,cutY-11);g.strokePath();
+
+        g.lineStyle(2,0xb98c62,.58);
+        g.beginPath();g.moveTo(x+8,cutY-4);g.lineTo(x+trunkWidth-10,cutY-19);g.strokePath();
+        g.beginPath();g.moveTo(x+10,cutY+20);g.lineTo(x+trunkWidth-12,cutY+8);g.strokePath();
+
+        const channelX=x+trunkWidth*.58;
+        const bowlY=cutY+58;
+        g.lineStyle(2,0xe6dfce,.82);
+        g.beginPath();g.moveTo(x+trunkWidth-7,cutY-9);g.lineTo(channelX,bowlY-14);g.strokePath();
+
+        g.fillStyle(0x72563f,.98);
+        g.fillEllipse(channelX,bowlY,34,15);
+        g.fillStyle(0x33271f,.9);
+        g.fillEllipse(channelX,bowlY+2,27,9);
+        g.fillStyle(0xf0ecdc,.9);
+        g.fillEllipse(channelX,bowlY-2,24,6);
+
+        g.fillStyle(index%2?0x123e28:0x17482d,.95);
+        g.fillEllipse(cx,crownY,150+(index%3)*8,112+(index%2)*10);
+        g.fillEllipse(cx-58,crownY+22,98,76+(index%3)*5);
+        g.fillEllipse(cx+65,crownY+17,108+(index%2)*8,82);
+        g.fillStyle(0x215738,.56);
+        g.fillEllipse(cx-14,crownY-28,92,58);
+        g.fillEllipse(cx+42,crownY+8,76,54);
+
+        this.rubberLatexPoints.push({
+            x:channelX+3,
+            startY:cutY+2,
+            bowlY:bowlY-4,
+            depth:depth+2,
+            scrollFactor
+        });
+
+        return g;
+    }
+
+    spawnRubberLatexDrop ()
+    {
+        if(!this.rubberLatexPoints||!this.rubberLatexPoints.length||this.isPlayerDead||this.phaseCompleted)return;
+        if(this.rubberLatexDrops.length>=2)return;
+
+        const point=this.rubberLatexPoints[this.rubberLatexSerial%this.rubberLatexPoints.length];
+        this.rubberLatexSerial+=1;
+
+        const drop=this.add.circle(point.x,point.startY,2.5,0xf4f1e7,.92)
+            .setDepth(point.depth)
+            .setScrollFactor(point.scrollFactor);
+        this.rubberLatexDrops.push(drop);
+
+        this.tweens.add({
+            targets:drop,
+            y:point.bowlY,
+            x:drop.x+((this.rubberLatexSerial%3)-1)*2,
+            scaleY:1.35,
+            alpha:{from:.92,to:.7},
+            duration:620,
+            ease:'Quad.In',
+            onComplete:()=>{
+                const index=this.rubberLatexDrops.indexOf(drop);
+                if(index>=0)this.rubberLatexDrops.splice(index,1);
+                drop.destroy();
+            }
+        });
+    }
+
+    clearRubberLatexDrops ()
+    {
+        if(!this.rubberLatexDrops)return;
+        this.rubberLatexDrops.slice().forEach(drop=>{
+            if(drop&&drop.active){
+                this.tweens.killTweensOf(drop);
+                drop.destroy();
+            }
+        });
+        this.rubberLatexDrops.length=0;
+    }
+
+    cleanupRubberLatexSystem ()
+    {
+        if(this.rubberLatexTimer){
+            this.rubberLatexTimer.remove(false);
+            this.rubberLatexTimer=null;
+        }
+        this.clearRubberLatexDrops();
+        if(this.rubberLatexPoints)this.rubberLatexPoints.length=0;
+    }
+
     createLivingAtmosphere ()
     {
         this.livingAtmosphereProfile={"phase":4,"worldWidth":4100,"farScroll":0.07,"farAlpha":0.58,"farColor":1514261,"farStep":300,"farHeight":170,"farHeightStep":30,"farTrunk":19,"farCrown":54,"lowCanopy":false,"lowCanopyColor":1383188,"fogColor":11776930,"fogBackAlpha":0.042,"fogMidAlpha":0.047,"fogFrontAlpha":0.03,"rayColor":14144170,"rays":[{"x":760,"y":170,"w":90,"h":380,"alpha":0.018,"angle":-12,"scroll":0.52},{"x":1550,"y":175,"w":95,"h":360,"alpha":0.015,"angle":10,"scroll":0.56}],"swayColor":3883305,"sway":[{"x":720,"y":622,"w":90,"h":22,"alpha":0.2},{"x":1420,"y":620,"w":82,"h":21,"alpha":0.18}],"vignetteAlpha":0.028,"toneColor":5978920,"leafDelay":3100,"moteDelay":2600,"birdDelay":17000,"shadowDelay":10500,"maxLeaves":7,"maxMotes":9,"maxBirds":1,"initialMotes":3,"verticalLeaves":false,"largeLeaves":false,"leafColorA":9073735,"leafColorB":7363640,"leafAlpha":0.47,"leafDepth":16,"moteColor":10984322,"moteAlpha":0.22,"moteDepth":12,"dustMotes":true,"birdColor":1711127,"birdAlpha":0.45,"shadows":true,"shadowW":145,"shadowH":38,"shadowColor":856077,"shadowAlpha":0.1,"region1":1800,"region2":3000};
@@ -2144,16 +2332,13 @@ export class Level4Scene extends Scene
         }
 
         this.livingFogBack=this.trackLivingPermanent(
-            this.add.rectangle(width*.28,500,width*.72,120,p.fogColor,p.fogBackAlpha)
-                .setDepth(-20).setScrollFactor(.16)
+            this.createOrganicFogMass(width*.28,500,width*.72,170,p.fogColor,p.fogBackAlpha,-20,.16,17)
         );
         this.livingFogMid=this.trackLivingPermanent(
-            this.add.rectangle(width*.58,555,width*.78,94,p.fogColor,p.fogMidAlpha)
-                .setDepth(-15).setScrollFactor(.36)
+            this.createOrganicFogMass(width*.58,555,width*.72,145,p.fogColor,p.fogMidAlpha,-15,.36,25)
         );
         this.livingFogFront=this.trackLivingPermanent(
-            this.add.ellipse(width*.42,610,780,70,p.fogColor,p.fogFrontAlpha)
-                .setDepth(3).setScrollFactor(.72)
+            this.createOrganicFogMass(width*.42,610,760,90,p.fogColor,p.fogFrontAlpha,3,.72,33)
         );
 
         this.tweens.add({targets:this.livingFogBack,x:this.livingFogBack.x+70,duration:19000,yoyo:true,repeat:-1,ease:'Sine.InOut'});
@@ -2571,12 +2756,8 @@ export class Level4Scene extends Scene
             this.fastFallActive=false;
         }
 
-        if(this.player.y>760){
-            this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);
-            this.player.body.setVelocity(0,0);
-            this.stamina=this.maxStamina; this.staminaRegenBlockedUntil=0; this.resetMovementPolishState(); this.resetCombatPolishState(); this.updateStaminaHud();
-            this.resetUnstablePlatforms();
-            this.clearLivingAtmosphereTransient();
+        if(this.player.y>720&&!this.isPlayerDead){
+            this.handlePlayerDeath();
         }
 
         this.syncPlayerVisual();

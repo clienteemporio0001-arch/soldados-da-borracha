@@ -10,7 +10,7 @@ export class Level3Scene extends Scene
         this.physics.world.setBounds(0,0,this.worldWidth,768);
         this.cameras.main.setBounds(0,0,this.worldWidth,768);
         this.cameras.main.setBackgroundColor('#061510');
-        this.createHighForest(); this.createPlatforms(); this.createCaboclinhoSigns();
+        this.createHighForest(); this.createRubberTreeAccents(); this.createPlatforms(); this.createCaboclinhoSigns();
         this.player=this.add.rectangle(150,560,45,70,0x000000,0); this.physics.add.existing(this.player);
         this.player.body.setCollideWorldBounds(true); this.player.body.setMaxVelocity(260,900); this.player.body.setSize(45,70); this.createEnvironmentalChallenges(); this.physics.add.collider(this.player,this.platforms);
         this.playerVisual=this.createPlayerVisual(); this.syncPlayerVisual();
@@ -36,13 +36,49 @@ export class Level3Scene extends Scene
         const middle=this.add.graphics().setDepth(-24).setScrollFactor(0.44); [[120,315,46,345,1],[430,255,58,405,1.12],[780,340,40,320,.9],[1110,240,60,420,1.15],[1470,300,48,360,1],[1810,215,64,445,1.18],[2190,330,42,330,.94],[2510,235,58,425,1.12],[2860,285,50,375,1.04],[3210,205,66,455,1.2],[3570,300,46,360,1]].forEach(([x,y,w,h,s],i)=>this.drawHighTree(middle,x,y,w,h,s,i%2===0));
         const vines=this.add.graphics().setDepth(-12).setScrollFactor(.58); vines.lineStyle(5,0x18452d,.74); [300,690,1160,1580,2040,2460,2940,3380,3700].forEach((x,i)=>{vines.beginPath();vines.moveTo(x,15+(i%3)*20);vines.lineTo(x+(i%2?18:-16),270+(i%3)*45);vines.lineTo(x+(i%2?-5:7),430+(i%2)*35);vines.strokePath();});
         const roots=this.add.graphics().setDepth(4); roots.lineStyle(18,0x412d1e,.92); [[360,650,520,560],[930,650,1110,500],[1450,650,1610,540],[2040,650,2200,495],[2500,650,2680,450],[3020,650,3200,410]].forEach(([a,b,c,d])=>{roots.beginPath();roots.moveTo(a,b);roots.lineTo(c,d);roots.strokePath();});
-        this.add.rectangle(700,510,1700,110,0xb8cabf,.055).setDepth(-18).setScrollFactor(.2); this.add.rectangle(2200,565,2600,88,0xd1ddd4,.04).setDepth(-16).setScrollFactor(.38); this.add.rectangle(3100,610,1800,80,0xe0e8e1,.035).setDepth(-10).setScrollFactor(.68);
+        this.createOrganicFogMass(720,510,1580,145,0xb8cabf,.055,-18,.2,2);
+        this.createOrganicFogMass(2200,565,2280,120,0xd1ddd4,.04,-16,.38,4);
+        this.createOrganicFogMass(3100,610,1500,105,0xe0e8e1,.035,-10,.68,6);
         const fg=this.add.graphics().setDepth(30).setScrollFactor(1.08).setAlpha(.72); [80,310,620,880,1260,1540,1880,2220,2580,2910,3260,3600].forEach((x,i)=>{const s=30+(i%4)*5;fg.fillStyle(i%2?0x102f1d:0x0b2518,.95);fg.fillCircle(x,650,s);fg.fillCircle(x+s*.7,655,s*.72);});
     }
 
     drawHighTree (g,x,y,w,h,s,left)
     {
-        g.fillStyle(0x3c2b1f,.95);g.fillRect(x,y,w,h);g.fillStyle(0x523925,.5);g.fillRect(x+w*.18,y,w*.2,h);g.lineStyle(10,0x39281c,.86);g.beginPath();g.moveTo(x+w*.5,y+85);g.lineTo(x+(left?-70:100),y+8);g.strokePath();const cx=x+w/2,cy=y-10;g.fillStyle(0x103924,.97);g.fillCircle(cx,cy,78*s);g.fillCircle(cx-68*s,cy+24,55*s);g.fillCircle(cx+72*s,cy+20,60*s);g.fillStyle(0x1a4d30,.65);g.fillCircle(cx-12,cy-28,48*s);
+        const cx=x+w*.5,baseY=y+h,cy=y-12;
+
+        g.fillStyle(0x3c2b1f,.95);
+        g.fillRoundedRect(x,y,w,h,Math.max(7,w*.24));
+        g.fillStyle(0x523925,.4);
+        g.fillRoundedRect(x+w*.17,y+8,w*.2,h-16,5);
+        g.fillStyle(0x30231b,.28);
+        g.fillRoundedRect(x+w*.7,y+24,w*.12,h-32,4);
+
+        g.lineStyle(7,0x39281c,.8);
+        g.beginPath();g.moveTo(cx,baseY-8);g.lineTo(x-30,baseY+4);g.strokePath();
+        g.beginPath();g.moveTo(cx+4,baseY-7);g.lineTo(x+w+34,baseY+3);g.strokePath();
+
+        g.lineStyle(9,0x39281c,.84);
+        g.beginPath();g.moveTo(cx,y+88);g.lineTo(cx+(left?-82:90),y+7);g.strokePath();
+        g.lineStyle(5,0x493224,.62);
+        g.beginPath();g.moveTo(cx+3,y+132);g.lineTo(cx+(left?54:-60),y+66);g.strokePath();
+
+        g.fillStyle(0x103924,.96);
+        g.fillEllipse(cx,cy,158*s,114*s);
+        g.fillEllipse(cx-70*s,cy+24,112*s,80*s);
+        g.fillEllipse(cx+73*s,cy+20,122*s,84*s);
+        g.fillStyle(0x1a4d30,.58);
+        g.fillEllipse(cx-14,cy-30,98*s,62*s);
+        g.fillStyle(0x235c39,.32);
+        g.fillEllipse(cx+43,cy+6,78*s,52*s);
+    }
+
+    createRubberTreeAccents ()
+    {
+        this.rubberLatexInterval=3100;
+        [
+            [505,395,36,255],
+            [2770,390,34,260]
+        ].forEach(([x,y,w,h],index)=>this.createRubberTreeVisual(x,y,w,h,index,7,1));
     }
 
     createPlatforms ()
@@ -1042,6 +1078,7 @@ export class Level3Scene extends Scene
         if (this.phaseCompleted || this.isPlayerDead) return;
         this.isPlayerDead = true;
         this.resetCombatPolishState();
+        this.clearRubberLatexDrops();
         this.player.body.setVelocity(0, 0);
         this.time.delayedCall(650, () => {
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
@@ -1982,6 +2019,176 @@ export class Level3Scene extends Scene
         });
     }
 
+    createOrganicFogMass (x,y,width,height,color,alpha,depth,scrollFactor,seed=0)
+    {
+        const fog=this.add.container(x,y)
+            .setDepth(depth)
+            .setScrollFactor(scrollFactor)
+            .setAlpha(alpha);
+
+        const parts=[
+            [0,0,.58,.62,1],
+            [-.31,.03,.42,.48,.78],
+            [.3,-.04,.46,.52,.72],
+            [-.12,-.22,.4,.42,.58],
+            [.14,.2,.48,.36,.52],
+            [-.44,.16,.28,.3,.38],
+            [.46,.12,.3,.32,.34]
+        ];
+
+        parts.forEach(([ox,oy,ws,hs,a],index)=>{
+            const wobble=((seed+index)%3-1)*.035;
+            const blob=this.add.ellipse(
+                ox*width,
+                oy*height,
+                width*(ws+wobble),
+                height*(hs-wobble*.5),
+                color,
+                a
+            ).setAngle(((seed*7+index*11)%17)-8);
+            fog.add(blob);
+        });
+
+        return fog;
+    }
+
+    ensureRubberLatexSystem ()
+    {
+        if(this.rubberLatexPoints)return;
+
+        this.rubberLatexPoints=[];
+        this.rubberLatexDrops=[];
+        this.rubberLatexSerial=0;
+        this.rubberLatexTimer=this.time.addEvent({
+            delay:this.rubberLatexInterval||2800,
+            loop:true,
+            callback:()=>this.spawnRubberLatexDrop()
+        });
+
+        this.events.once('shutdown',()=>this.cleanupRubberLatexSystem());
+    }
+
+    createRubberTreeVisual (x,y,trunkWidth,trunkHeight,index=0,depth=8,scrollFactor=1)
+    {
+        this.ensureRubberLatexSystem();
+
+        const g=this.add.graphics().setDepth(depth).setScrollFactor(scrollFactor);
+        const cx=x+trunkWidth*.5;
+        const baseY=y+trunkHeight;
+        const crownY=y-12-(index%2)*5;
+
+        g.fillStyle(index%2?0x493222:0x4d3625,.98);
+        g.fillRoundedRect(x,y,trunkWidth,trunkHeight,Math.max(7,trunkWidth*.28));
+        g.fillStyle(0x674831,.34);
+        g.fillRoundedRect(x+trunkWidth*.16,y+8,trunkWidth*.18,trunkHeight-16,5);
+        g.fillStyle(0x35261d,.28);
+        g.fillRoundedRect(x+trunkWidth*.68,y+18,trunkWidth*.12,trunkHeight-25,4);
+
+        g.lineStyle(5,0x3b2a1f,.82);
+        g.beginPath();g.moveTo(cx-2,baseY-8);g.lineTo(x-22-(index%2)*6,baseY+3);g.strokePath();
+        g.beginPath();g.moveTo(cx+5,baseY-7);g.lineTo(x+trunkWidth+25+(index%3)*4,baseY+2);g.strokePath();
+
+        g.lineStyle(6,0x3d2b20,.84);
+        g.beginPath();g.moveTo(cx,y+72);g.lineTo(cx+(index%2?-58:62),y+28);g.strokePath();
+        g.lineStyle(4,0x453023,.68);
+        g.beginPath();g.moveTo(cx+2,y+105);g.lineTo(cx+(index%2?42:-46),y+68);g.strokePath();
+
+        g.lineStyle(2,0x8b6a4a,.32);
+        [0,1,2].forEach(mark=>{
+            const my=y+55+mark*48+(index%3)*5;
+            g.beginPath();g.moveTo(x+8,my);g.lineTo(x+trunkWidth-6,my-5-(mark%2)*4);g.strokePath();
+        });
+
+        const cutY=y+trunkHeight*.5;
+        g.lineStyle(5,0xc8a678,.96);
+        g.beginPath();g.moveTo(x+6,cutY+8);g.lineTo(x+trunkWidth-6,cutY-11);g.strokePath();
+
+        g.lineStyle(2,0xb98c62,.58);
+        g.beginPath();g.moveTo(x+8,cutY-4);g.lineTo(x+trunkWidth-10,cutY-19);g.strokePath();
+        g.beginPath();g.moveTo(x+10,cutY+20);g.lineTo(x+trunkWidth-12,cutY+8);g.strokePath();
+
+        const channelX=x+trunkWidth*.58;
+        const bowlY=cutY+58;
+        g.lineStyle(2,0xe6dfce,.82);
+        g.beginPath();g.moveTo(x+trunkWidth-7,cutY-9);g.lineTo(channelX,bowlY-14);g.strokePath();
+
+        g.fillStyle(0x72563f,.98);
+        g.fillEllipse(channelX,bowlY,34,15);
+        g.fillStyle(0x33271f,.9);
+        g.fillEllipse(channelX,bowlY+2,27,9);
+        g.fillStyle(0xf0ecdc,.9);
+        g.fillEllipse(channelX,bowlY-2,24,6);
+
+        g.fillStyle(index%2?0x123e28:0x17482d,.95);
+        g.fillEllipse(cx,crownY,150+(index%3)*8,112+(index%2)*10);
+        g.fillEllipse(cx-58,crownY+22,98,76+(index%3)*5);
+        g.fillEllipse(cx+65,crownY+17,108+(index%2)*8,82);
+        g.fillStyle(0x215738,.56);
+        g.fillEllipse(cx-14,crownY-28,92,58);
+        g.fillEllipse(cx+42,crownY+8,76,54);
+
+        this.rubberLatexPoints.push({
+            x:channelX+3,
+            startY:cutY+2,
+            bowlY:bowlY-4,
+            depth:depth+2,
+            scrollFactor
+        });
+
+        return g;
+    }
+
+    spawnRubberLatexDrop ()
+    {
+        if(!this.rubberLatexPoints||!this.rubberLatexPoints.length||this.isPlayerDead||this.phaseCompleted)return;
+        if(this.rubberLatexDrops.length>=2)return;
+
+        const point=this.rubberLatexPoints[this.rubberLatexSerial%this.rubberLatexPoints.length];
+        this.rubberLatexSerial+=1;
+
+        const drop=this.add.circle(point.x,point.startY,2.5,0xf4f1e7,.92)
+            .setDepth(point.depth)
+            .setScrollFactor(point.scrollFactor);
+        this.rubberLatexDrops.push(drop);
+
+        this.tweens.add({
+            targets:drop,
+            y:point.bowlY,
+            x:drop.x+((this.rubberLatexSerial%3)-1)*2,
+            scaleY:1.35,
+            alpha:{from:.92,to:.7},
+            duration:620,
+            ease:'Quad.In',
+            onComplete:()=>{
+                const index=this.rubberLatexDrops.indexOf(drop);
+                if(index>=0)this.rubberLatexDrops.splice(index,1);
+                drop.destroy();
+            }
+        });
+    }
+
+    clearRubberLatexDrops ()
+    {
+        if(!this.rubberLatexDrops)return;
+        this.rubberLatexDrops.slice().forEach(drop=>{
+            if(drop&&drop.active){
+                this.tweens.killTweensOf(drop);
+                drop.destroy();
+            }
+        });
+        this.rubberLatexDrops.length=0;
+    }
+
+    cleanupRubberLatexSystem ()
+    {
+        if(this.rubberLatexTimer){
+            this.rubberLatexTimer.remove(false);
+            this.rubberLatexTimer=null;
+        }
+        this.clearRubberLatexDrops();
+        if(this.rubberLatexPoints)this.rubberLatexPoints.length=0;
+    }
+
     createLivingAtmosphere ()
     {
         this.livingAtmosphereProfile={"phase":3,"worldWidth":3800,"farScroll":0.055,"farAlpha":0.5,"farColor":597271,"farStep":285,"farHeight":180,"farHeightStep":28,"farTrunk":17,"farCrown":58,"lowCanopy":true,"lowCanopyColor":533272,"fogColor":13096909,"fogBackAlpha":0.042,"fogMidAlpha":0.035,"fogFrontAlpha":0.018,"rayColor":15199435,"rays":[{"x":720,"y":105,"w":110,"h":500,"alpha":0.045,"angle":-10,"scroll":0.48},{"x":1900,"y":120,"w":135,"h":480,"alpha":0.05,"angle":8,"scroll":0.52},{"x":3000,"y":110,"w":115,"h":510,"alpha":0.042,"angle":-7,"scroll":0.57}],"swayColor":1856049,"sway":[{"x":980,"y":595,"w":90,"h":22,"alpha":0.24},{"x":2180,"y":585,"w":100,"h":24,"alpha":0.22},{"x":3220,"y":575,"w":105,"h":23,"alpha":0.23}],"vignetteAlpha":0,"toneColor":13293496,"leafDelay":2800,"moteDelay":2700,"birdDelay":15000,"shadowDelay":22000,"maxLeaves":8,"maxMotes":10,"maxBirds":2,"initialMotes":6,"verticalLeaves":true,"largeLeaves":false,"leafColorA":7902298,"leafColorB":6259277,"leafAlpha":0.48,"leafDepth":15,"moteColor":15724745,"moteAlpha":0.25,"moteDepth":10,"dustMotes":false,"birdColor":1517597,"birdAlpha":0.58,"shadows":false,"shadowW":90,"shadowH":25,"shadowColor":1055765,"shadowAlpha":0.06,"region1":1300,"region2":2650};
@@ -2019,16 +2226,13 @@ export class Level3Scene extends Scene
         }
 
         this.livingFogBack=this.trackLivingPermanent(
-            this.add.rectangle(width*.28,500,width*.72,120,p.fogColor,p.fogBackAlpha)
-                .setDepth(-20).setScrollFactor(.16)
+            this.createOrganicFogMass(width*.28,500,width*.72,155,p.fogColor,p.fogBackAlpha,-20,.16,15)
         );
         this.livingFogMid=this.trackLivingPermanent(
-            this.add.rectangle(width*.58,555,width*.78,94,p.fogColor,p.fogMidAlpha)
-                .setDepth(-15).setScrollFactor(.36)
+            this.createOrganicFogMass(width*.58,555,width*.72,130,p.fogColor,p.fogMidAlpha,-15,.36,21)
         );
         this.livingFogFront=this.trackLivingPermanent(
-            this.add.ellipse(width*.42,610,780,70,p.fogColor,p.fogFrontAlpha)
-                .setDepth(3).setScrollFactor(.72)
+            this.createOrganicFogMass(width*.42,610,740,80,p.fogColor,p.fogFrontAlpha,3,.72,31)
         );
 
         this.tweens.add({targets:this.livingFogBack,x:this.livingFogBack.x+70,duration:19000,yoyo:true,repeat:-1,ease:'Sine.InOut'});
@@ -2453,11 +2657,9 @@ export class Level3Scene extends Scene
             this.fastFallActive=false;
         }
 
-        if(this.player.y>760){
-            this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);
-            this.player.body.setVelocity(0,0);
-            this.stamina=this.maxStamina; this.staminaRegenBlockedUntil=0; this.resetMovementPolishState(); this.resetCombatPolishState(); this.resetEnvironmentalChallenges(); this.clearLivingAtmosphereTransient(); this.updateStaminaHud();
+        if(this.player.y>720&&!this.isPlayerDead){
             if(this.caboclinhoTestActive&&!this.caboclinhoTestComplete)this.resetCaboclinhoTest();
+            this.handlePlayerDeath();
         }
         this.syncPlayerVisual();this.animatePlayerVisual(time);this.updateAttack(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();
     }

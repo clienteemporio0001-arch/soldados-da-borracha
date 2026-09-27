@@ -12,6 +12,7 @@ export class Level5Scene extends Scene
         this.cameras.main.setBackgroundColor('#040907');
 
         this.createTerritory();
+        this.createRubberTreeAccents();
         this.createPlatforms();
 
         this.player = this.add.rectangle(150, 530, 45, 70, 0x000000, 0);
@@ -148,15 +149,26 @@ export class Level5Scene extends Scene
         distant.fillStyle(0x05120d, 1);
         distant.fillRect(-300, 470, this.worldWidth + 700, 320);
         for (let x = 0, i = 0; x < this.worldWidth; x += 250, i += 1) {
-            const w = 58 + (i % 4) * 13;
-            const h = 360 + (i % 3) * 70;
-            const y = 655 - h;
-            distant.fillStyle(i % 2 ? 0x0a1c14 : 0x0d2118, 0.96);
-            distant.fillRect(x, y, w, h);
-            distant.fillStyle(0x0a2519, 0.95);
-            distant.fillCircle(x + w * 0.5, y + 10, 95 + (i % 3) * 14);
-            distant.fillCircle(x - 55, y + 32, 62);
-            distant.fillCircle(x + w + 50, y + 38, 68);
+            const w=58+(i%4)*13;
+            const h=360+(i%3)*70;
+            const y=655-h;
+            const cx=x+w*.5;
+            distant.fillStyle(i%2?0x0a1c14:0x0d2118,.96);
+            distant.fillRoundedRect(x,y,w,h,Math.max(8,w*.22));
+            distant.fillStyle(0x163024,.24);
+            distant.fillRoundedRect(x+w*.16,y+15,w*.18,h-25,5);
+            distant.lineStyle(8,0x071710,.72);
+            distant.beginPath();distant.moveTo(cx,y+105);distant.lineTo(cx+(i%2?90:-86),y+28);distant.strokePath();
+            distant.lineStyle(7,0x071710,.62);
+            distant.beginPath();distant.moveTo(cx,650);distant.lineTo(x-32,655);distant.strokePath();
+            distant.beginPath();distant.moveTo(cx+5,650);distant.lineTo(x+w+38,655);distant.strokePath();
+            const crown=95+(i%3)*14;
+            distant.fillStyle(0x0a2519,.94);
+            distant.fillEllipse(cx,y+10,crown*1.9,crown*1.22);
+            distant.fillEllipse(x-50,y+36,120+(i%2)*14,78);
+            distant.fillEllipse(x+w+52,y+40,132+(i%3)*10,84);
+            distant.fillStyle(0x123523,.28);
+            distant.fillEllipse(cx+28,y-18,crown*.92,crown*.52);
         }
 
         const roots = this.add.graphics().setDepth(-12).setScrollFactor(0.76);
@@ -174,8 +186,8 @@ export class Level5Scene extends Scene
             marks.beginPath(); marks.moveTo(x1+28,y1); marks.lineTo(x2+35,y2+12); marks.strokePath();
         });
 
-        this.add.rectangle(870,570,1650,115,0xb7c7bd,.035).setDepth(-18).setScrollFactor(.25);
-        this.add.rectangle(2500,545,2450,130,0xb7c7bd,.045).setDepth(-17).setScrollFactor(.42);
+        this.createOrganicFogMass(880,570,1500,155,0xb7c7bd,.035,-18,.25,7);
+        this.createOrganicFogMass(2500,545,2200,175,0xb7c7bd,.045,-17,.42,10);
 
         const fg = this.add.graphics().setDepth(32).setScrollFactor(1.08).setAlpha(.72);
         [40,260,540,790,1060,1310,1600,1880,2180,2440,2720,3010,3290,3570,3860].forEach((x,i)=>{
@@ -184,6 +196,12 @@ export class Level5Scene extends Scene
             fg.fillCircle(x,652,r);
             fg.fillCircle(x+r*.8,656,r*.72);
         });
+    }
+
+    createRubberTreeAccents ()
+    {
+        this.rubberLatexInterval=3600;
+        this.createRubberTreeVisual(450,334,38,258,0,7,1);
     }
 
     createPlatforms ()
@@ -1103,7 +1121,7 @@ export class Level5Scene extends Scene
     handlePlayerDeath ()
     {
         if(this.phaseCompleted||this.isPlayerDead)return;
-        this.isPlayerDead=true;this.resetCombatPolishState();this.player.body.setVelocity(0,0);this.isDashing=false;
+        this.isPlayerDead=true;this.resetCombatPolishState();this.clearRubberLatexDrops();this.player.body.setVelocity(0,0);this.isDashing=false;
         this.time.delayedCall(650,()=>{
             if(this.bossStarted&&!this.bossDefeated)this.resetBossFight();
             this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);this.player.body.setVelocity(0,0);
@@ -1403,6 +1421,176 @@ export class Level5Scene extends Scene
         if(!this.staminaHud||this.time.now<this.nextStaminaFeedbackAt)return;this.nextStaminaFeedbackAt=this.time.now+220;this.tweens.killTweensOf(this.staminaBar);this.tweens.add({targets:this.staminaBar,alpha:.25,duration:70,yoyo:true,repeat:2,onComplete:()=>this.staminaBar.setAlpha(1)});
     }
 
+    createOrganicFogMass (x,y,width,height,color,alpha,depth,scrollFactor,seed=0)
+    {
+        const fog=this.add.container(x,y)
+            .setDepth(depth)
+            .setScrollFactor(scrollFactor)
+            .setAlpha(alpha);
+
+        const parts=[
+            [0,0,.58,.62,1],
+            [-.31,.03,.42,.48,.78],
+            [.3,-.04,.46,.52,.72],
+            [-.12,-.22,.4,.42,.58],
+            [.14,.2,.48,.36,.52],
+            [-.44,.16,.28,.3,.38],
+            [.46,.12,.3,.32,.34]
+        ];
+
+        parts.forEach(([ox,oy,ws,hs,a],index)=>{
+            const wobble=((seed+index)%3-1)*.035;
+            const blob=this.add.ellipse(
+                ox*width,
+                oy*height,
+                width*(ws+wobble),
+                height*(hs-wobble*.5),
+                color,
+                a
+            ).setAngle(((seed*7+index*11)%17)-8);
+            fog.add(blob);
+        });
+
+        return fog;
+    }
+
+    ensureRubberLatexSystem ()
+    {
+        if(this.rubberLatexPoints)return;
+
+        this.rubberLatexPoints=[];
+        this.rubberLatexDrops=[];
+        this.rubberLatexSerial=0;
+        this.rubberLatexTimer=this.time.addEvent({
+            delay:this.rubberLatexInterval||2800,
+            loop:true,
+            callback:()=>this.spawnRubberLatexDrop()
+        });
+
+        this.events.once('shutdown',()=>this.cleanupRubberLatexSystem());
+    }
+
+    createRubberTreeVisual (x,y,trunkWidth,trunkHeight,index=0,depth=8,scrollFactor=1)
+    {
+        this.ensureRubberLatexSystem();
+
+        const g=this.add.graphics().setDepth(depth).setScrollFactor(scrollFactor);
+        const cx=x+trunkWidth*.5;
+        const baseY=y+trunkHeight;
+        const crownY=y-12-(index%2)*5;
+
+        g.fillStyle(index%2?0x493222:0x4d3625,.98);
+        g.fillRoundedRect(x,y,trunkWidth,trunkHeight,Math.max(7,trunkWidth*.28));
+        g.fillStyle(0x674831,.34);
+        g.fillRoundedRect(x+trunkWidth*.16,y+8,trunkWidth*.18,trunkHeight-16,5);
+        g.fillStyle(0x35261d,.28);
+        g.fillRoundedRect(x+trunkWidth*.68,y+18,trunkWidth*.12,trunkHeight-25,4);
+
+        g.lineStyle(5,0x3b2a1f,.82);
+        g.beginPath();g.moveTo(cx-2,baseY-8);g.lineTo(x-22-(index%2)*6,baseY+3);g.strokePath();
+        g.beginPath();g.moveTo(cx+5,baseY-7);g.lineTo(x+trunkWidth+25+(index%3)*4,baseY+2);g.strokePath();
+
+        g.lineStyle(6,0x3d2b20,.84);
+        g.beginPath();g.moveTo(cx,y+72);g.lineTo(cx+(index%2?-58:62),y+28);g.strokePath();
+        g.lineStyle(4,0x453023,.68);
+        g.beginPath();g.moveTo(cx+2,y+105);g.lineTo(cx+(index%2?42:-46),y+68);g.strokePath();
+
+        g.lineStyle(2,0x8b6a4a,.32);
+        [0,1,2].forEach(mark=>{
+            const my=y+55+mark*48+(index%3)*5;
+            g.beginPath();g.moveTo(x+8,my);g.lineTo(x+trunkWidth-6,my-5-(mark%2)*4);g.strokePath();
+        });
+
+        const cutY=y+trunkHeight*.5;
+        g.lineStyle(5,0xc8a678,.96);
+        g.beginPath();g.moveTo(x+6,cutY+8);g.lineTo(x+trunkWidth-6,cutY-11);g.strokePath();
+
+        g.lineStyle(2,0xb98c62,.58);
+        g.beginPath();g.moveTo(x+8,cutY-4);g.lineTo(x+trunkWidth-10,cutY-19);g.strokePath();
+        g.beginPath();g.moveTo(x+10,cutY+20);g.lineTo(x+trunkWidth-12,cutY+8);g.strokePath();
+
+        const channelX=x+trunkWidth*.58;
+        const bowlY=cutY+58;
+        g.lineStyle(2,0xe6dfce,.82);
+        g.beginPath();g.moveTo(x+trunkWidth-7,cutY-9);g.lineTo(channelX,bowlY-14);g.strokePath();
+
+        g.fillStyle(0x72563f,.98);
+        g.fillEllipse(channelX,bowlY,34,15);
+        g.fillStyle(0x33271f,.9);
+        g.fillEllipse(channelX,bowlY+2,27,9);
+        g.fillStyle(0xf0ecdc,.9);
+        g.fillEllipse(channelX,bowlY-2,24,6);
+
+        g.fillStyle(index%2?0x123e28:0x17482d,.95);
+        g.fillEllipse(cx,crownY,150+(index%3)*8,112+(index%2)*10);
+        g.fillEllipse(cx-58,crownY+22,98,76+(index%3)*5);
+        g.fillEllipse(cx+65,crownY+17,108+(index%2)*8,82);
+        g.fillStyle(0x215738,.56);
+        g.fillEllipse(cx-14,crownY-28,92,58);
+        g.fillEllipse(cx+42,crownY+8,76,54);
+
+        this.rubberLatexPoints.push({
+            x:channelX+3,
+            startY:cutY+2,
+            bowlY:bowlY-4,
+            depth:depth+2,
+            scrollFactor
+        });
+
+        return g;
+    }
+
+    spawnRubberLatexDrop ()
+    {
+        if(!this.rubberLatexPoints||!this.rubberLatexPoints.length||this.isPlayerDead||this.phaseCompleted)return;
+        if(this.rubberLatexDrops.length>=2)return;
+
+        const point=this.rubberLatexPoints[this.rubberLatexSerial%this.rubberLatexPoints.length];
+        this.rubberLatexSerial+=1;
+
+        const drop=this.add.circle(point.x,point.startY,2.5,0xf4f1e7,.92)
+            .setDepth(point.depth)
+            .setScrollFactor(point.scrollFactor);
+        this.rubberLatexDrops.push(drop);
+
+        this.tweens.add({
+            targets:drop,
+            y:point.bowlY,
+            x:drop.x+((this.rubberLatexSerial%3)-1)*2,
+            scaleY:1.35,
+            alpha:{from:.92,to:.7},
+            duration:620,
+            ease:'Quad.In',
+            onComplete:()=>{
+                const index=this.rubberLatexDrops.indexOf(drop);
+                if(index>=0)this.rubberLatexDrops.splice(index,1);
+                drop.destroy();
+            }
+        });
+    }
+
+    clearRubberLatexDrops ()
+    {
+        if(!this.rubberLatexDrops)return;
+        this.rubberLatexDrops.slice().forEach(drop=>{
+            if(drop&&drop.active){
+                this.tweens.killTweensOf(drop);
+                drop.destroy();
+            }
+        });
+        this.rubberLatexDrops.length=0;
+    }
+
+    cleanupRubberLatexSystem ()
+    {
+        if(this.rubberLatexTimer){
+            this.rubberLatexTimer.remove(false);
+            this.rubberLatexTimer=null;
+        }
+        this.clearRubberLatexDrops();
+        if(this.rubberLatexPoints)this.rubberLatexPoints.length=0;
+    }
+
     createLivingAtmosphere ()
     {
         this.livingAtmosphereProfile={"phase":5,"worldWidth":4000,"farScroll":0.05,"farAlpha":0.7,"farColor":199432,"farStep":220,"farHeight":260,"farHeightStep":46,"farTrunk":28,"farCrown":78,"lowCanopy":false,"lowCanopyColor":398093,"fogColor":11452085,"fogBackAlpha":0.07,"fogMidAlpha":0.06,"fogFrontAlpha":0.034,"rayColor":13094574,"rays":[{"x":820,"y":170,"w":100,"h":360,"alpha":0.014,"angle":-10,"scroll":0.5}],"swayColor":1320986,"sway":[{"x":920,"y":620,"w":110,"h":30,"alpha":0.24},{"x":1960,"y":618,"w":120,"h":31,"alpha":0.22},{"x":2710,"y":616,"w":125,"h":32,"alpha":0.2}],"vignetteAlpha":0.04,"toneColor":132613,"leafDelay":3300,"moteDelay":3900,"birdDelay":18000,"shadowDelay":10500,"maxLeaves":7,"maxMotes":5,"maxBirds":1,"initialMotes":2,"verticalLeaves":false,"largeLeaves":true,"leafColorA":4153917,"leafColorB":3099953,"leafAlpha":0.5,"leafDepth":15,"moteColor":13226160,"moteAlpha":0.14,"moteDepth":10,"dustMotes":false,"birdColor":593676,"birdAlpha":0.4,"shadows":true,"shadowW":180,"shadowH":48,"shadowColor":132356,"shadowAlpha":0.12,"region1":1900,"region2":2800};
@@ -1440,16 +1628,13 @@ export class Level5Scene extends Scene
         }
 
         this.livingFogBack=this.trackLivingPermanent(
-            this.add.rectangle(width*.28,500,width*.72,120,p.fogColor,p.fogBackAlpha)
-                .setDepth(-20).setScrollFactor(.16)
+            this.createOrganicFogMass(width*.28,500,width*.72,180,p.fogColor,p.fogBackAlpha,-20,.16,19)
         );
         this.livingFogMid=this.trackLivingPermanent(
-            this.add.rectangle(width*.58,555,width*.78,94,p.fogColor,p.fogMidAlpha)
-                .setDepth(-15).setScrollFactor(.36)
+            this.createOrganicFogMass(width*.58,555,width*.72,155,p.fogColor,p.fogMidAlpha,-15,.36,27)
         );
         this.livingFogFront=this.trackLivingPermanent(
-            this.add.ellipse(width*.42,610,780,70,p.fogColor,p.fogFrontAlpha)
-                .setDepth(3).setScrollFactor(.72)
+            this.createOrganicFogMass(width*.42,610,780,92,p.fogColor,p.fogFrontAlpha,3,.72,37)
         );
 
         this.tweens.add({targets:this.livingFogBack,x:this.livingFogBack.x+70,duration:19000,yoyo:true,repeat:-1,ease:'Sine.InOut'});
@@ -1960,11 +2145,8 @@ export class Level5Scene extends Scene
             this.updateGroundedState(grounded);this.consumeJumpBuffer(grounded);this.applyFastFall(grounded);
         } else {this.updateGroundedState(grounded);this.fastFallActive=false;}
 
-        if(this.player.y>760){
-            if(this.bossStarted&&!this.bossDefeated)this.resetBossFight();
-            this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);this.player.body.setVelocity(0,0);
-            if(this.bossStarted&&!this.bossDefeated){this.health=100;this.hunger=100;this.updateHealthHud();this.updateHungerHud();}
-            this.stamina=100;this.staminaRegenBlockedUntil=0;this.resetMovementPolishState(); this.resetCombatPolishState();this.resetTraversalHazards();this.clearLivingAtmosphereTransient();this.updateStaminaHud();
+        if(this.player.y>720&&!this.isPlayerDead){
+            this.handlePlayerDeath();
         }
 
         this.syncPlayerVisual();this.animatePlayerVisual(time);this.updateAttack(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();

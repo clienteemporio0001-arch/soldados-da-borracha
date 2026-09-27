@@ -184,40 +184,12 @@ export class Level2Scene extends Scene
             vines.strokePath();
         });
 
-        // Seringueiras pontuais preservam a identidade do projeto.
-        const rubber = this.add.graphics().setDepth(7).setScrollFactor(0.96);
+        // Seringueiras mais orgânicas, mantendo a identidade procedural.
+        this.rubberLatexInterval=2500;
         [
-            [520, 390, 42, 265], [1465, 375, 44, 280],
-            [2160, 392, 40, 263], [3020, 365, 46, 290]
-        ].forEach(([x, y, trunkW, trunkH], index) => {
-            rubber.fillStyle(0x4b3424, 0.96);
-            rubber.fillRect(x, y, trunkW, trunkH);
-            rubber.fillStyle(0x61452e, 0.5);
-            rubber.fillRect(x + 7, y, 8, trunkH);
-
-            rubber.lineStyle(4, 0xc3a477, 0.9);
-            rubber.beginPath();
-            rubber.moveTo(x + 7, y + 144);
-            rubber.lineTo(x + trunkW - 7, y + 127);
-            rubber.strokePath();
-
-            rubber.lineStyle(2, 0xd8d3c3, 0.66);
-            rubber.beginPath();
-            rubber.moveTo(x + trunkW - 8, y + 130);
-            rubber.lineTo(x + trunkW * 0.56, y + 170);
-            rubber.strokePath();
-
-            rubber.fillStyle(0x8c7558, 0.95);
-            rubber.fillEllipse(x + trunkW * 0.55, y + 184, 28, 12);
-            rubber.fillStyle(0xe7e1cf, 0.66);
-            rubber.fillEllipse(x + trunkW * 0.55, y + 181, 20, 5);
-
-            const crownY = y - 14;
-            rubber.fillStyle(index % 2 === 0 ? 0x15432b : 0x123b27, 0.95);
-            rubber.fillCircle(x + trunkW / 2, crownY, 68);
-            rubber.fillCircle(x - 40, crownY + 18, 46);
-            rubber.fillCircle(x + 68, crownY + 22, 51);
-        });
+            [520,390,42,265],[1465,375,44,280],
+            [2160,392,40,263],[3020,365,46,290]
+        ].forEach(([x,y,w,h],index)=>this.createRubberTreeVisual(x,y,w,h,index,7,.96));
 
         // Raízes visuais no plano de gameplay, sem física adicional.
         const roots = this.add.graphics().setDepth(4);
@@ -229,16 +201,10 @@ export class Level2Scene extends Scene
             roots.strokePath();
         });
 
-        // Névoa: mais presente que na Fase 1, porém atrás do gameplay.
-        this.add.rectangle(640, 490, 1650, 126, 0xa7c2b3, 0.065)
-            .setDepth(-18)
-            .setScrollFactor(0.18);
-        this.add.rectangle(1930, 548, 2450, 100, 0xd5e0d7, 0.045)
-            .setDepth(-16)
-            .setScrollFactor(0.38);
-        this.add.rectangle(2520, 520, 820, 150, 0xc8d8ce, 0.07)
-            .setDepth(-11)
-            .setScrollFactor(0.68);
+        // Névoa orgânica mais densa, sempre atrás da leitura de gameplay.
+        this.createOrganicFogMass(650,495,1540,155,0xa7c2b3,.065,-18,.18,3);
+        this.createOrganicFogMass(1940,548,2200,135,0xd5e0d7,.045,-16,.38,5);
+        this.createOrganicFogMass(2510,520,760,175,0xc8d8ce,.07,-11,.68,7);
 
         // Pequenas manchas de luar ajudam a quebrar o escuro contínuo.
         this.add.ellipse(790, 572, 330, 78, 0xb9cab7, 0.025)
@@ -274,25 +240,34 @@ export class Level2Scene extends Scene
 
     drawDeepTree (graphics, x, y, trunkWidth, trunkHeight, crownScale, branchLeft)
     {
-        graphics.fillStyle(0x3b2b1f, 0.94);
-        graphics.fillRect(x, y, trunkWidth, trunkHeight);
-        graphics.fillStyle(0x4c3726, 0.5);
-        graphics.fillRect(x + trunkWidth * 0.18, y, trunkWidth * 0.18, trunkHeight);
+        const cx=x+trunkWidth*.5;
+        const baseY=y+trunkHeight;
 
-        graphics.lineStyle(9, 0x38291d, 0.82);
-        graphics.beginPath();
-        graphics.moveTo(x + trunkWidth * 0.5, y + 76);
-        graphics.lineTo(x + (branchLeft ? -58 : 88), y + 8);
-        graphics.strokePath();
+        graphics.fillStyle(0x3b2b1f,.94);
+        graphics.fillRoundedRect(x,y,trunkWidth,trunkHeight,Math.max(6,trunkWidth*.24));
+        graphics.fillStyle(0x4c3726,.42);
+        graphics.fillRoundedRect(x+trunkWidth*.17,y+9,trunkWidth*.2,trunkHeight-17,5);
+        graphics.fillStyle(0x2d231b,.28);
+        graphics.fillRoundedRect(x+trunkWidth*.7,y+22,trunkWidth*.11,trunkHeight-30,4);
 
-        const cx = x + trunkWidth / 2;
-        const cy = y - 6;
-        graphics.fillStyle(0x0f3423, 0.96);
-        graphics.fillCircle(cx, cy, 72 * crownScale);
-        graphics.fillCircle(cx - 62 * crownScale, cy + 24, 50 * crownScale);
-        graphics.fillCircle(cx + 64 * crownScale, cy + 18, 54 * crownScale);
-        graphics.fillStyle(0x17472d, 0.62);
-        graphics.fillCircle(cx - 12, cy - 24, 43 * crownScale);
+        graphics.lineStyle(6,0x38291d,.78);
+        graphics.beginPath();graphics.moveTo(cx,baseY-7);graphics.lineTo(x-26,baseY+3);graphics.strokePath();
+        graphics.beginPath();graphics.moveTo(cx+4,baseY-6);graphics.lineTo(x+trunkWidth+30,baseY+2);graphics.strokePath();
+
+        graphics.lineStyle(8,0x38291d,.82);
+        graphics.beginPath();graphics.moveTo(cx,y+82);graphics.lineTo(cx+(branchLeft?-70:76),y+12);graphics.strokePath();
+        graphics.lineStyle(5,0x463123,.64);
+        graphics.beginPath();graphics.moveTo(cx,y+122);graphics.lineTo(cx+(branchLeft?46:-52),y+72);graphics.strokePath();
+
+        const cy=y-8;
+        graphics.fillStyle(0x0f3423,.95);
+        graphics.fillEllipse(cx,cy,145*crownScale,108*crownScale);
+        graphics.fillEllipse(cx-61*crownScale,cy+24,101*crownScale,76*crownScale);
+        graphics.fillEllipse(cx+65*crownScale,cy+18,112*crownScale,80*crownScale);
+        graphics.fillStyle(0x17472d,.56);
+        graphics.fillEllipse(cx-13,cy-25,88*crownScale,58*crownScale);
+        graphics.fillStyle(0x1d4f32,.34);
+        graphics.fillEllipse(cx+38,cy+8,72*crownScale,50*crownScale);
     }
 
     createPlatforms ()
@@ -1407,6 +1382,7 @@ export class Level2Scene extends Scene
         if (this.phaseCompleted || this.isPlayerDead) return;
         this.isPlayerDead = true;
         this.resetCombatPolishState();
+        this.clearRubberLatexDrops();
         this.player.body.setVelocity(0, 0);
         this.time.delayedCall(650, () => {
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
@@ -2613,6 +2589,176 @@ export class Level2Scene extends Scene
         });
     }
 
+    createOrganicFogMass (x,y,width,height,color,alpha,depth,scrollFactor,seed=0)
+    {
+        const fog=this.add.container(x,y)
+            .setDepth(depth)
+            .setScrollFactor(scrollFactor)
+            .setAlpha(alpha);
+
+        const parts=[
+            [0,0,.58,.62,1],
+            [-.31,.03,.42,.48,.78],
+            [.3,-.04,.46,.52,.72],
+            [-.12,-.22,.4,.42,.58],
+            [.14,.2,.48,.36,.52],
+            [-.44,.16,.28,.3,.38],
+            [.46,.12,.3,.32,.34]
+        ];
+
+        parts.forEach(([ox,oy,ws,hs,a],index)=>{
+            const wobble=((seed+index)%3-1)*.035;
+            const blob=this.add.ellipse(
+                ox*width,
+                oy*height,
+                width*(ws+wobble),
+                height*(hs-wobble*.5),
+                color,
+                a
+            ).setAngle(((seed*7+index*11)%17)-8);
+            fog.add(blob);
+        });
+
+        return fog;
+    }
+
+    ensureRubberLatexSystem ()
+    {
+        if(this.rubberLatexPoints)return;
+
+        this.rubberLatexPoints=[];
+        this.rubberLatexDrops=[];
+        this.rubberLatexSerial=0;
+        this.rubberLatexTimer=this.time.addEvent({
+            delay:this.rubberLatexInterval||2800,
+            loop:true,
+            callback:()=>this.spawnRubberLatexDrop()
+        });
+
+        this.events.once('shutdown',()=>this.cleanupRubberLatexSystem());
+    }
+
+    createRubberTreeVisual (x,y,trunkWidth,trunkHeight,index=0,depth=8,scrollFactor=1)
+    {
+        this.ensureRubberLatexSystem();
+
+        const g=this.add.graphics().setDepth(depth).setScrollFactor(scrollFactor);
+        const cx=x+trunkWidth*.5;
+        const baseY=y+trunkHeight;
+        const crownY=y-12-(index%2)*5;
+
+        g.fillStyle(index%2?0x493222:0x4d3625,.98);
+        g.fillRoundedRect(x,y,trunkWidth,trunkHeight,Math.max(7,trunkWidth*.28));
+        g.fillStyle(0x674831,.34);
+        g.fillRoundedRect(x+trunkWidth*.16,y+8,trunkWidth*.18,trunkHeight-16,5);
+        g.fillStyle(0x35261d,.28);
+        g.fillRoundedRect(x+trunkWidth*.68,y+18,trunkWidth*.12,trunkHeight-25,4);
+
+        g.lineStyle(5,0x3b2a1f,.82);
+        g.beginPath();g.moveTo(cx-2,baseY-8);g.lineTo(x-22-(index%2)*6,baseY+3);g.strokePath();
+        g.beginPath();g.moveTo(cx+5,baseY-7);g.lineTo(x+trunkWidth+25+(index%3)*4,baseY+2);g.strokePath();
+
+        g.lineStyle(6,0x3d2b20,.84);
+        g.beginPath();g.moveTo(cx,y+72);g.lineTo(cx+(index%2?-58:62),y+28);g.strokePath();
+        g.lineStyle(4,0x453023,.68);
+        g.beginPath();g.moveTo(cx+2,y+105);g.lineTo(cx+(index%2?42:-46),y+68);g.strokePath();
+
+        g.lineStyle(2,0x8b6a4a,.32);
+        [0,1,2].forEach(mark=>{
+            const my=y+55+mark*48+(index%3)*5;
+            g.beginPath();g.moveTo(x+8,my);g.lineTo(x+trunkWidth-6,my-5-(mark%2)*4);g.strokePath();
+        });
+
+        const cutY=y+trunkHeight*.5;
+        g.lineStyle(5,0xc8a678,.96);
+        g.beginPath();g.moveTo(x+6,cutY+8);g.lineTo(x+trunkWidth-6,cutY-11);g.strokePath();
+
+        g.lineStyle(2,0xb98c62,.58);
+        g.beginPath();g.moveTo(x+8,cutY-4);g.lineTo(x+trunkWidth-10,cutY-19);g.strokePath();
+        g.beginPath();g.moveTo(x+10,cutY+20);g.lineTo(x+trunkWidth-12,cutY+8);g.strokePath();
+
+        const channelX=x+trunkWidth*.58;
+        const bowlY=cutY+58;
+        g.lineStyle(2,0xe6dfce,.82);
+        g.beginPath();g.moveTo(x+trunkWidth-7,cutY-9);g.lineTo(channelX,bowlY-14);g.strokePath();
+
+        g.fillStyle(0x72563f,.98);
+        g.fillEllipse(channelX,bowlY,34,15);
+        g.fillStyle(0x33271f,.9);
+        g.fillEllipse(channelX,bowlY+2,27,9);
+        g.fillStyle(0xf0ecdc,.9);
+        g.fillEllipse(channelX,bowlY-2,24,6);
+
+        g.fillStyle(index%2?0x123e28:0x17482d,.95);
+        g.fillEllipse(cx,crownY,150+(index%3)*8,112+(index%2)*10);
+        g.fillEllipse(cx-58,crownY+22,98,76+(index%3)*5);
+        g.fillEllipse(cx+65,crownY+17,108+(index%2)*8,82);
+        g.fillStyle(0x215738,.56);
+        g.fillEllipse(cx-14,crownY-28,92,58);
+        g.fillEllipse(cx+42,crownY+8,76,54);
+
+        this.rubberLatexPoints.push({
+            x:channelX+3,
+            startY:cutY+2,
+            bowlY:bowlY-4,
+            depth:depth+2,
+            scrollFactor
+        });
+
+        return g;
+    }
+
+    spawnRubberLatexDrop ()
+    {
+        if(!this.rubberLatexPoints||!this.rubberLatexPoints.length||this.isPlayerDead||this.phaseCompleted)return;
+        if(this.rubberLatexDrops.length>=2)return;
+
+        const point=this.rubberLatexPoints[this.rubberLatexSerial%this.rubberLatexPoints.length];
+        this.rubberLatexSerial+=1;
+
+        const drop=this.add.circle(point.x,point.startY,2.5,0xf4f1e7,.92)
+            .setDepth(point.depth)
+            .setScrollFactor(point.scrollFactor);
+        this.rubberLatexDrops.push(drop);
+
+        this.tweens.add({
+            targets:drop,
+            y:point.bowlY,
+            x:drop.x+((this.rubberLatexSerial%3)-1)*2,
+            scaleY:1.35,
+            alpha:{from:.92,to:.7},
+            duration:620,
+            ease:'Quad.In',
+            onComplete:()=>{
+                const index=this.rubberLatexDrops.indexOf(drop);
+                if(index>=0)this.rubberLatexDrops.splice(index,1);
+                drop.destroy();
+            }
+        });
+    }
+
+    clearRubberLatexDrops ()
+    {
+        if(!this.rubberLatexDrops)return;
+        this.rubberLatexDrops.slice().forEach(drop=>{
+            if(drop&&drop.active){
+                this.tweens.killTweensOf(drop);
+                drop.destroy();
+            }
+        });
+        this.rubberLatexDrops.length=0;
+    }
+
+    cleanupRubberLatexSystem ()
+    {
+        if(this.rubberLatexTimer){
+            this.rubberLatexTimer.remove(false);
+            this.rubberLatexTimer=null;
+        }
+        this.clearRubberLatexDrops();
+        if(this.rubberLatexPoints)this.rubberLatexPoints.length=0;
+    }
+
     createLivingAtmosphere ()
     {
         this.livingAtmosphereProfile={"phase":2,"worldWidth":3300,"farScroll":0.065,"farAlpha":0.62,"farColor":399121,"farStep":235,"farHeight":215,"farHeightStep":38,"farTrunk":21,"farCrown":68,"lowCanopy":false,"lowCanopyColor":465940,"fogColor":11190196,"fogBackAlpha":0.065,"fogMidAlpha":0.052,"fogFrontAlpha":0.028,"rayColor":13359298,"rays":[{"x":820,"y":150,"w":90,"h":430,"alpha":0.025,"angle":-12,"scroll":0.5},{"x":1760,"y":170,"w":105,"h":410,"alpha":0.02,"angle":9,"scroll":0.56}],"swayColor":1194788,"sway":[{"x":650,"y":620,"w":100,"h":30,"alpha":0.3},{"x":1450,"y":617,"w":95,"h":28,"alpha":0.28},{"x":2180,"y":620,"w":88,"h":26,"alpha":0.26}],"vignetteAlpha":0,"toneColor":463631,"leafDelay":3500,"moteDelay":3300,"birdDelay":14500,"shadowDelay":13000,"maxLeaves":6,"maxMotes":7,"maxBirds":2,"initialMotes":3,"verticalLeaves":false,"largeLeaves":false,"leafColorA":5403460,"leafColorB":4153658,"leafAlpha":0.5,"leafDepth":15,"moteColor":14081993,"moteAlpha":0.2,"moteDepth":10,"dustMotes":false,"birdColor":990743,"birdAlpha":0.58,"shadows":true,"shadowW":110,"shadowH":32,"shadowColor":594446,"shadowAlpha":0.08,"region1":1650,"region2":2300};
@@ -2650,16 +2796,13 @@ export class Level2Scene extends Scene
         }
 
         this.livingFogBack=this.trackLivingPermanent(
-            this.add.rectangle(width*.28,500,width*.72,120,p.fogColor,p.fogBackAlpha)
-                .setDepth(-20).setScrollFactor(.16)
+            this.createOrganicFogMass(width*.28,500,width*.72,165,p.fogColor,p.fogBackAlpha,-20,.16,13)
         );
         this.livingFogMid=this.trackLivingPermanent(
-            this.add.rectangle(width*.58,555,width*.78,94,p.fogColor,p.fogMidAlpha)
-                .setDepth(-15).setScrollFactor(.36)
+            this.createOrganicFogMass(width*.58,555,width*.72,140,p.fogColor,p.fogMidAlpha,-15,.36,19)
         );
         this.livingFogFront=this.trackLivingPermanent(
-            this.add.ellipse(width*.42,610,780,70,p.fogColor,p.fogFrontAlpha)
-                .setDepth(3).setScrollFactor(.72)
+            this.createOrganicFogMass(width*.42,610,760,86,p.fogColor,p.fogFrontAlpha,3,.72,29)
         );
 
         this.tweens.add({targets:this.livingFogBack,x:this.livingFogBack.x+70,duration:19000,yoyo:true,repeat:-1,ease:'Sine.InOut'});
@@ -3232,15 +3375,8 @@ export class Level2Scene extends Scene
             if (this.player.x > this.arenaMaxX) this.player.x = this.arenaMaxX;
         }
 
-        if (this.player.y > 760) {
-            this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
-            this.player.body.setVelocity(0, 0);
-            this.stamina = this.maxStamina;
-            this.staminaRegenBlockedUntil = 0;
-            this.resetMovementPolishState(); this.resetCombatPolishState();
-            this.resetEnvironmentalChallenges();
-            this.clearLivingAtmosphereTransient();
-            this.updateStaminaHud();
+        if (this.player.y > 720 && !this.isPlayerDead) {
+            this.handlePlayerDeath();
         }
 
         this.syncPlayerVisual();
