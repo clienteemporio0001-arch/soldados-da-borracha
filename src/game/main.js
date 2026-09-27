@@ -2,12 +2,11 @@ import { Boot } from './scenes/Boot';
 import { Game as MainGame } from './scenes/Game';
 import { GameOver } from './scenes/GameOver';
 import { IntroScene } from './scenes/IntroScene';
+import { Level2Scene } from './scenes/Level2Scene';
 import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
 import { AUTO, Game, Scale } from 'phaser';
 
-//  Find out more information about the Game Config at:
-//  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config = {
     type: AUTO,
     width: 1024,
@@ -31,14 +30,13 @@ const config = {
         MainMenu,
         IntroScene,
         MainGame,
+        Level2Scene,
         GameOver
     ]
 };
 
 const StartGame = (parent) => {
-
     return new Game({ ...config, parent });
-
 }
 
 export default StartGame;

@@ -683,7 +683,7 @@ export class Game extends Scene
         });
 
         button.on('pointerdown', () => {
-            this.scene.start('MainMenu');
+            this.scene.start('Level2Scene');
         });
     }
 
