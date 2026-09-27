@@ -2003,6 +2003,15 @@ export class Game extends Scene
                 lineSpacing: 3
             }
         ).setScrollFactor(0).setDepth(101);
+
+        const playerName = String(this.registry.get('playerName') || 'SERINGUEIRO').slice(0, 16);
+        this.add.text(995, 18, `SERINGUEIRO: ${playerName}`, {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#9fba9f',
+            backgroundColor: '#06100dcc',
+            padding: { x: 10, y: 6 }
+        }).setOrigin(1, 0).setScrollFactor(0).setDepth(103);
     }
 
 

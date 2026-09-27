@@ -2463,6 +2463,14 @@ export class Level2Scene extends Scene
         panel.setStrokeStyle(1, 0x78917c, 0.35);
         this.add.text(30, 27, 'SOLDADOS DA BORRACHA - FASE 2', { fontFamily: 'Arial', fontSize: '18px', color: '#f1e1ae' }).setScrollFactor(0).setDepth(101);
         this.add.text(30, 56, 'Controles:\nA/D ou ←/→ = mover\nW / ↑ / Espaço = pular\nJ / X = atacar', { fontFamily: 'Arial', fontSize: '15px', color: '#c7d6ca', lineSpacing: 3 }).setScrollFactor(0).setDepth(101);
+        const playerName = String(this.registry.get('playerName') || 'SERINGUEIRO').slice(0, 16);
+        this.add.text(995, 18, `SERINGUEIRO: ${playerName}`, {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#9fba9f',
+            backgroundColor: '#06100dcc',
+            padding: { x: 10, y: 6 }
+        }).setOrigin(1, 0).setScrollFactor(0).setDepth(103);
     }
 
     createStaminaHud ()

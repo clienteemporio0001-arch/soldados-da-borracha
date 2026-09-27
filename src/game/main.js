@@ -6,6 +6,7 @@ import { Level2Scene } from './scenes/Level2Scene';
 import { Level3Scene } from './scenes/Level3Scene';
 import { Level4Scene } from './scenes/Level4Scene';
 import { Level5Scene } from './scenes/Level5Scene';
+import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
 import { AUTO, Game, Scale } from 'phaser';
@@ -31,6 +32,7 @@ const config = {
         Boot,
         Preloader,
         MainMenu,
+        LevelSelectScene,
         IntroScene,
         MainGame,
         Level2Scene,

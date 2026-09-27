@@ -1770,6 +1770,15 @@ export class Level3Scene extends Scene
     createHud ()
     {
         const p=this.add.rectangle(15,15,365,124,0x06100d,.72).setOrigin(0).setScrollFactor(0).setDepth(100);p.setStrokeStyle(1,0x78917c,.35);this.add.text(30,27,'SOLDADOS DA BORRACHA - FASE 3',{fontFamily:'Arial',fontSize:'18px',color:'#f1e1ae'}).setScrollFactor(0).setDepth(101);this.controlsText=this.add.text(30,56,'',{fontFamily:'Arial',fontSize:'15px',color:'#c7d6ca',lineSpacing:3}).setScrollFactor(0).setDepth(101);this.updateControlsText();
+        const playerName = String(this.registry.get('playerName') || 'SERINGUEIRO').slice(0, 16);
+        this.add.text(995, 18, `SERINGUEIRO: ${playerName}`, {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#9fba9f',
+            backgroundColor: '#06100dcc',
+            padding: { x: 10, y: 6 }
+        }).setOrigin(1, 0).setScrollFactor(0).setDepth(103);
+
     }
     updateControlsText () { const d=this.dashUnlocked?'\nSHIFT = dash':'';this.controlsText.setText(`Controles:\nA/D ou ←/→ = mover\nW / ↑ / Espaço = pular\nJ / X = atacar${d}`); }
     showLevelTitle () { const t=this.add.text(512,275,'FASE 3\nAS RAÍZES DO ALTO',{fontFamily:'Arial Black',fontSize:'34px',color:'#f1e1ae',align:'center',backgroundColor:'#06100dcc',padding:{x:24,y:16}}).setOrigin(.5).setScrollFactor(0).setDepth(170);this.tweens.add({targets:t,alpha:0,delay:1800,duration:800,onComplete:()=>t.destroy()}); }
