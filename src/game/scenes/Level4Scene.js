@@ -120,6 +120,7 @@ export class Level4Scene extends Scene
         this.createHungerHud();
         this.createStaminaHud();
         this.showLevelTitle();
+        this.createLivingAtmosphere();
 
         this.spawnPoint = { x: 150, y: 515 };
     }
@@ -1355,6 +1356,7 @@ export class Level4Scene extends Scene
             this.updateStaminaHud();
             this.playerVisual.setAlpha(1);
             this.resetUnstablePlatforms();
+            this.clearLivingAtmosphereTransient();
         });
     }
 
@@ -2105,6 +2107,355 @@ export class Level4Scene extends Scene
         b.on('pointerdown',()=>this.scene.start('Level5Scene'));
     }
 
+    createLivingAtmosphere ()
+    {
+        this.livingAtmosphereProfile={"phase":4,"worldWidth":4100,"farScroll":0.07,"farAlpha":0.58,"farColor":1514261,"farStep":300,"farHeight":170,"farHeightStep":30,"farTrunk":19,"farCrown":54,"lowCanopy":false,"lowCanopyColor":1383188,"fogColor":11776930,"fogBackAlpha":0.042,"fogMidAlpha":0.047,"fogFrontAlpha":0.03,"rayColor":14144170,"rays":[{"x":760,"y":170,"w":90,"h":380,"alpha":0.018,"angle":-12,"scroll":0.52},{"x":1550,"y":175,"w":95,"h":360,"alpha":0.015,"angle":10,"scroll":0.56}],"swayColor":3883305,"sway":[{"x":720,"y":622,"w":90,"h":22,"alpha":0.2},{"x":1420,"y":620,"w":82,"h":21,"alpha":0.18}],"vignetteAlpha":0.028,"toneColor":5978920,"leafDelay":3100,"moteDelay":2600,"birdDelay":17000,"shadowDelay":10500,"maxLeaves":7,"maxMotes":9,"maxBirds":1,"initialMotes":3,"verticalLeaves":false,"largeLeaves":false,"leafColorA":9073735,"leafColorB":7363640,"leafAlpha":0.47,"leafDepth":16,"moteColor":10984322,"moteAlpha":0.22,"moteDepth":12,"dustMotes":true,"birdColor":1711127,"birdAlpha":0.45,"shadows":true,"shadowW":145,"shadowH":38,"shadowColor":856077,"shadowAlpha":0.1,"region1":1800,"region2":3000};
+        this.livingAtmosphereTimers=[];
+        this.livingAtmospherePermanent=[];
+        this.livingAtmosphereLeaves=[];
+        this.livingAtmosphereMotes=[];
+        this.livingAtmosphereBirds=[];
+        this.livingAtmosphereShadows=[];
+        this.livingAtmosphereSerial=0;
+        this.livingAtmosphereRegion=-1;
+
+        const p=this.livingAtmosphereProfile;
+        const width=this.physics.world.bounds.width||p.worldWidth;
+
+        const far=this.add.graphics().setDepth(-44).setScrollFactor(p.farScroll).setAlpha(p.farAlpha);
+        far.fillStyle(p.farColor,1);
+        for(let x=-180,i=0;x<width+500;x+=p.farStep,i++){
+            const h=p.farHeight+(i%3)*p.farHeightStep;
+            far.fillRect(x,520-h*.52,p.farTrunk+(i%2)*5,h);
+            far.fillCircle(x+20,505-h*.52,p.farCrown+(i%3)*9);
+            far.fillCircle(x-28,525-h*.52,p.farCrown*.62);
+            far.fillCircle(x+62,530-h*.52,p.farCrown*.68);
+        }
+        this.trackLivingPermanent(far);
+
+        if(p.lowCanopy){
+            const canopy=this.add.graphics().setDepth(-22).setScrollFactor(.16).setAlpha(.72);
+            canopy.fillStyle(p.lowCanopyColor,1);
+            for(let x=-120,i=0;x<width+400;x+=210,i++){
+                canopy.fillEllipse(x,700-(i%3)*16,260+(i%2)*45,110+(i%3)*18);
+            }
+            this.trackLivingPermanent(canopy);
+            this.tweens.add({targets:canopy,y:-8,duration:12000,yoyo:true,repeat:-1,ease:'Sine.InOut'});
+        }
+
+        this.livingFogBack=this.trackLivingPermanent(
+            this.add.rectangle(width*.28,500,width*.72,120,p.fogColor,p.fogBackAlpha)
+                .setDepth(-20).setScrollFactor(.16)
+        );
+        this.livingFogMid=this.trackLivingPermanent(
+            this.add.rectangle(width*.58,555,width*.78,94,p.fogColor,p.fogMidAlpha)
+                .setDepth(-15).setScrollFactor(.36)
+        );
+        this.livingFogFront=this.trackLivingPermanent(
+            this.add.ellipse(width*.42,610,780,70,p.fogColor,p.fogFrontAlpha)
+                .setDepth(3).setScrollFactor(.72)
+        );
+
+        this.tweens.add({targets:this.livingFogBack,x:this.livingFogBack.x+70,duration:19000,yoyo:true,repeat:-1,ease:'Sine.InOut'});
+        this.tweens.add({targets:this.livingFogMid,x:this.livingFogMid.x-95,duration:15000,yoyo:true,repeat:-1,ease:'Sine.InOut'});
+        this.tweens.add({targets:this.livingFogFront,x:this.livingFogFront.x+55,duration:11500,yoyo:true,repeat:-1,ease:'Sine.InOut'});
+
+        this.livingAtmosphereRays=[];
+        p.rays.forEach((rayData,index)=>{
+            const ray=this.add.rectangle(rayData.x,rayData.y,rayData.w,rayData.h,p.rayColor,rayData.alpha)
+                .setOrigin(.5,0).setAngle(rayData.angle).setDepth(-8).setScrollFactor(rayData.scroll);
+            this.livingAtmosphereRays.push(this.trackLivingPermanent(ray));
+            this.tweens.add({
+                targets:ray,
+                scaleX:{from:.96,to:1.04},
+                duration:3200+index*700,
+                yoyo:true,
+                repeat:-1,
+                ease:'Sine.InOut'
+            });
+        });
+
+        p.sway.forEach((s,index)=>{
+            const plant=this.add.ellipse(s.x,s.y,s.w,s.h,p.swayColor,s.alpha)
+                .setDepth(7).setScrollFactor(.94).setAngle(index%2?-2:2);
+            this.trackLivingPermanent(plant);
+            this.tweens.add({
+                targets:plant,
+                angle:index%2?3:-3,
+                scaleX:{from:.96,to:1.04},
+                duration:2600+index*520,
+                yoyo:true,
+                repeat:-1,
+                ease:'Sine.InOut'
+            });
+        });
+
+        if(p.vignetteAlpha>0){
+            [
+                this.add.rectangle(0,0,1024,78,0x000000,p.vignetteAlpha).setOrigin(0),
+                this.add.rectangle(0,690,1024,78,0x000000,p.vignetteAlpha).setOrigin(0),
+                this.add.rectangle(0,0,70,768,0x000000,p.vignetteAlpha).setOrigin(0),
+                this.add.rectangle(954,0,70,768,0x000000,p.vignetteAlpha).setOrigin(0)
+            ].forEach(edge=>this.trackLivingPermanent(edge.setScrollFactor(0).setDepth(80)));
+        }
+
+        this.livingAtmosphereTone=this.trackLivingPermanent(
+            this.add.rectangle(0,0,1024,768,p.toneColor,0)
+                .setOrigin(0).setScrollFactor(0).setDepth(-43)
+        );
+
+        this.addLivingAtmosphereTimer(p.leafDelay,()=>this.spawnLivingLeaf());
+        this.addLivingAtmosphereTimer(p.moteDelay,()=>this.spawnLivingMote());
+        this.addLivingAtmosphereTimer(p.birdDelay,()=>this.spawnLivingBird());
+        this.addLivingAtmosphereTimer(p.shadowDelay,()=>this.spawnLivingShadow());
+
+        for(let i=0;i<p.initialMotes;i++)this.spawnLivingMote(true);
+
+        this.events.once('shutdown',()=>this.cleanupLivingAtmosphere());
+    }
+
+    trackLivingPermanent (object)
+    {
+        this.livingAtmospherePermanent.push(object);
+        return object;
+    }
+
+    addLivingAtmosphereTimer (delay,callback)
+    {
+        const timer=this.time.addEvent({delay,loop:true,callback});
+        this.livingAtmosphereTimers.push(timer);
+        return timer;
+    }
+
+    removeLivingObject (list,object)
+    {
+        const index=list.indexOf(object);
+        if(index>=0)list.splice(index,1);
+        if(object&&object.active)object.destroy();
+    }
+
+    spawnLivingLeaf (initial=false)
+    {
+        const p=this.livingAtmosphereProfile;
+        if(this.phaseCompleted||this.isPlayerDead)return;
+        const bossQuiet=(p.phase===2&&this.arenaStarted)||(p.phase===5&&this.bossStarted);
+        if(bossQuiet&&this.livingAtmosphereSerial%3!==0)return;
+        if(this.livingAtmosphereLeaves.length>=p.maxLeaves)return;
+
+        const serial=this.livingAtmosphereSerial++;
+        const cam=this.cameras.main;
+        const x=cam.scrollX+90+(serial*173)%840;
+        const y=(p.verticalLeaves?70:130)+(serial%4)*52;
+        const leaf=this.add.ellipse(x,y,p.largeLeaves?13:9,p.largeLeaves?6:4,serial%2?p.leafColorA:p.leafColorB,p.leafAlpha)
+            .setDepth(p.leafDepth).setAngle((serial%5)*24-45);
+        this.livingAtmosphereLeaves.push(leaf);
+
+        const drift=p.verticalLeaves?(serial%2?26:-22):(90+(serial%3)*34);
+        const fall=p.verticalLeaves?300+(serial%3)*70:170+(serial%3)*40;
+        this.tweens.add({
+            targets:leaf,
+            x:leaf.x+drift,
+            y:leaf.y+fall,
+            angle:leaf.angle+(serial%2?190:-170),
+            alpha:0,
+            duration:initial?3600:4300+(serial%3)*550,
+            ease:'Sine.In',
+            onComplete:()=>this.removeLivingObject(this.livingAtmosphereLeaves,leaf)
+        });
+    }
+
+    spawnLivingMote (initial=false)
+    {
+        const p=this.livingAtmosphereProfile;
+        if(this.phaseCompleted||this.isPlayerDead)return;
+        const quiet=(p.phase===2&&(this.arenaStarted||this.player.x>2350))||
+            (p.phase===4&&this.player.x>1850)||
+            (p.phase===5&&(this.bossStarted||this.player.x>2800));
+        if(quiet&&!initial)return;
+        if(this.livingAtmosphereMotes.length>=p.maxMotes)return;
+
+        const serial=this.livingAtmosphereSerial++;
+        const cam=this.cameras.main;
+        const x=cam.scrollX+130+(serial*137)%760;
+        const y=180+(serial%5)*68;
+        const mote=this.add.circle(x,y,p.dustMotes?2.4:1.8,p.moteColor,p.moteAlpha)
+            .setDepth(p.moteDepth);
+        this.livingAtmosphereMotes.push(mote);
+
+        this.tweens.add({
+            targets:mote,
+            x:mote.x+(serial%2?28:-24),
+            y:mote.y+(p.dustMotes?48:-34-(serial%3)*8),
+            alpha:0,
+            duration:initial?4200:5000+(serial%4)*500,
+            ease:'Sine.InOut',
+            onComplete:()=>this.removeLivingObject(this.livingAtmosphereMotes,mote)
+        });
+    }
+
+    spawnLivingBird ()
+    {
+        const p=this.livingAtmosphereProfile;
+        if(this.phaseCompleted||this.isPlayerDead)return;
+        const blocked=(p.phase===2&&(this.arenaStarted||this.player.x>2050))||
+            (p.phase===4&&this.player.x>1650)||
+            (p.phase===5&&(this.bossStarted||this.player.x>2200));
+        if(blocked||this.livingAtmosphereBirds.length>=p.maxBirds)return;
+
+        const serial=this.livingAtmosphereSerial++;
+        const cam=this.cameras.main;
+        const count=1+(serial%2);
+        for(let i=0;i<count&&this.livingAtmosphereBirds.length<p.maxBirds;i++){
+            const bird=this.add.triangle(cam.scrollX-40-i*35,160+i*28,-8,3,0,-3,8,3,p.birdColor,p.birdAlpha)
+                .setDepth(-21).setScrollFactor(.48);
+            this.livingAtmosphereBirds.push(bird);
+            this.tweens.add({
+                targets:bird,
+                x:bird.x+1120+i*90,
+                y:bird.y-70-i*22,
+                alpha:0,
+                duration:6500+i*900,
+                ease:'Sine.InOut',
+                onComplete:()=>this.removeLivingObject(this.livingAtmosphereBirds,bird)
+            });
+        }
+    }
+
+    spawnLivingShadow ()
+    {
+        const p=this.livingAtmosphereProfile;
+        if(this.phaseCompleted||this.isPlayerDead||!p.shadows)return;
+        const allowed=(p.phase===2&&this.player.x>1250&&!this.arenaStarted)||
+            (p.phase===4&&this.player.x>2850)||
+            (p.phase===5&&this.player.x>1750&&!this.bossStarted);
+        if(!allowed||this.livingAtmosphereShadows.length>=1)return;
+
+        const serial=this.livingAtmosphereSerial++;
+        const cam=this.cameras.main;
+        const shadow=this.add.ellipse(cam.scrollX+760,470+(serial%3)*35,p.shadowW,p.shadowH,p.shadowColor,p.shadowAlpha)
+            .setDepth(-23).setScrollFactor(.4);
+        this.livingAtmosphereShadows.push(shadow);
+        this.tweens.add({
+            targets:shadow,
+            x:shadow.x+(serial%2?210:-180),
+            alpha:0,
+            duration:2600+(serial%3)*500,
+            ease:'Sine.InOut',
+            onComplete:()=>this.removeLivingObject(this.livingAtmosphereShadows,shadow)
+        });
+
+        if(p.phase===4||p.phase===5){
+            const rumble=this.add.ellipse(
+                shadow.x,
+                600,
+                p.phase===5?210:160,
+                p.phase===5?30:24,
+                p.moteColor,
+                p.phase===5?.055:.045
+            ).setDepth(-14).setScrollFactor(.46);
+            this.livingAtmosphereShadows.push(rumble);
+            this.tweens.add({
+                targets:rumble,
+                scaleX:1.45,
+                x:rumble.x+(serial%2?34:-30),
+                alpha:0,
+                duration:900,
+                ease:'Sine.Out',
+                onComplete:()=>this.removeLivingObject(this.livingAtmosphereShadows,rumble)
+            });
+        }
+    }
+
+    updateLivingAtmosphere ()
+    {
+        const p=this.livingAtmosphereProfile;
+        if(!p||!this.player)return;
+
+        let region=0;
+        if(this.player.x>=p.region2)region=2;
+        else if(this.player.x>=p.region1)region=1;
+
+        if(p.phase===2&&this.arenaStarted)region=3;
+        if(p.phase===5&&this.bossStarted)region=3;
+
+        if(region===this.livingAtmosphereRegion)return;
+        this.livingAtmosphereRegion=region;
+
+        let back=p.fogBackAlpha,mid=p.fogMidAlpha,front=p.fogFrontAlpha,tone=0,rayScale=1;
+
+        if(p.phase===1){
+            if(region===1){front*=1.08;rayScale=1.2;}
+            if(region===2){mid*=1.12;tone=.018;rayScale=.9;}
+        }
+        else if(p.phase===2){
+            if(region===1){back*=1.1;mid*=1.15;tone=.018;rayScale=.7;}
+            if(region>=2){back*=1.22;mid*=1.28;front*=.8;tone=.032;rayScale=.35;}
+            if(region===3){front*=.55;rayScale=.18;}
+        }
+        else if(p.phase===3){
+            if(region===1){back*=.9;mid*=1.08;rayScale=1.25;tone=.012;}
+            if(region===2){front*=.8;rayScale=1.45;tone=.018;}
+        }
+        else if(p.phase===4){
+            if(region===1){back*=.9;mid*=1.15;front*=1.18;tone=.035;rayScale=.45;}
+            if(region===2){back*=1.05;mid*=1.3;front*=1.1;tone=.055;rayScale=.2;}
+        }
+        else if(p.phase===5){
+            if(region===1){back*=1.18;mid*=1.2;front*=1.08;tone=.035;rayScale=.45;}
+            if(region===2){back*=1.35;mid*=1.32;front*=1.12;tone=.065;rayScale=.22;}
+            if(region===3){back*=1.4;mid*=1.38;front*=.82;tone=.072;rayScale=.1;}
+        }
+
+        [
+            [this.livingFogBack,back],
+            [this.livingFogMid,mid],
+            [this.livingFogFront,front],
+            [this.livingAtmosphereTone,tone]
+        ].forEach(([target,alpha])=>{
+            this.tweens.add({targets:target,alpha,duration:1100,ease:'Sine.InOut'});
+        });
+
+        this.livingAtmosphereRays.forEach((ray,index)=>{
+            const base=p.rays[index].alpha;
+            this.tweens.add({targets:ray,alpha:base*rayScale,duration:1000,ease:'Sine.InOut'});
+        });
+    }
+
+    clearLivingAtmosphereTransient ()
+    {
+        [
+            this.livingAtmosphereLeaves,
+            this.livingAtmosphereMotes,
+            this.livingAtmosphereBirds,
+            this.livingAtmosphereShadows
+        ].forEach(list=>{
+            if(!list)return;
+            list.slice().forEach(object=>{
+                if(object&&object.active){
+                    this.tweens.killTweensOf(object);
+                    object.destroy();
+                }
+            });
+            list.length=0;
+        });
+    }
+
+    cleanupLivingAtmosphere ()
+    {
+        if(!this.livingAtmosphereTimers)return;
+        this.livingAtmosphereTimers.forEach(timer=>timer.remove(false));
+        this.livingAtmosphereTimers.length=0;
+        this.clearLivingAtmosphereTransient();
+
+        this.livingAtmospherePermanent.forEach(object=>{
+            if(object&&object.active){
+                this.tweens.killTweensOf(object);
+                object.destroy();
+            }
+        });
+        this.livingAtmospherePermanent.length=0;
+    }
+
     createHud ()
     {
         const panel = this.add.rectangle(15, 15, 286, 112, 0x06100d, 0.58)
@@ -2225,6 +2576,7 @@ export class Level4Scene extends Scene
             this.player.body.setVelocity(0,0);
             this.stamina=this.maxStamina; this.staminaRegenBlockedUntil=0; this.resetMovementPolishState(); this.resetCombatPolishState(); this.updateStaminaHud();
             this.resetUnstablePlatforms();
+            this.clearLivingAtmosphereTransient();
         }
 
         this.syncPlayerVisual();
@@ -2234,6 +2586,7 @@ export class Level4Scene extends Scene
         this.updateCarapana(time);
         this.updateFruits(time);
         this.updateHunger(time);
+        this.updateLivingAtmosphere();
     }
 
     createStaminaHud ()
