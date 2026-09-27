@@ -333,8 +333,12 @@ export class Level5Scene extends Scene
 
     createTraversalHazards ()
     {
+        this.traversalTimers=[];
+        this.traversalTransient=[];
+        this.traversalReactionSensors=[];
         this.unstablePlatforms=[];
-        this.addUnstablePlatform(2440,545,118,18);
+        this.addUnstablePlatform(1570,560,125,18,'root',610);
+        this.addUnstablePlatform(2440,545,118,18,'log',520);
         this.fallingTreeTriggered=false;
 
         this.fallingTreeSensor=this.add.rectangle(2570,470,150,240,0x000000,0);
@@ -342,19 +346,38 @@ export class Level5Scene extends Scene
         this.fallingTreeSensor.body.setAllowGravity(false);
         this.fallingTreeSensor.body.setImmovable(true);
         this.physics.add.overlap(this.player,this.fallingTreeSensor,()=>this.triggerTraversalTree());
+
+        [
+            {x:1840,type:0},
+            {x:2280,type:1},
+            {x:2760,type:2}
+        ].forEach(data=>this.addTraversalReactionSensor(data.x,data.type));
     }
 
-    addUnstablePlatform (x,y,w,h)
+    scheduleTraversal (delay,callback)
+    {
+        const timer=this.time.delayedCall(delay,callback);
+        this.traversalTimers.push(timer);
+        return timer;
+    }
+
+    trackTraversalObject (object)
+    {
+        this.traversalTransient.push(object);
+        return object;
+    }
+
+    addUnstablePlatform (x,y,w,h,kind='log',delay=520)
     {
         const body=this.add.rectangle(x,y,w,h,0x000000,0);
         this.physics.add.existing(body,true);
         this.platforms.add(body);
-        const visual=this.add.rectangle(x,y,w,h,0x4a3323,.98).setDepth(10);
-        visual.setStrokeStyle(2,0x77563b,.8);
+        const visual=this.add.rectangle(x,y,w,h,kind==='root'?0x3f3025:0x4a3323,.98).setDepth(10);
+        visual.setStrokeStyle(2,kind==='root'?0x6b5139:0x77563b,.8);
         const sensor=this.add.rectangle(x,y-20,w,55,0x000000,0);
         this.physics.add.existing(sensor);
         sensor.body.setAllowGravity(false);sensor.body.setImmovable(true);
-        const item={x,y,w,h,body,visual,sensor,triggered:false};
+        const item={x,y,w,h,kind,delay,body,visual,sensor,triggered:false};
         this.unstablePlatforms.push(item);
         this.physics.add.overlap(this.player,sensor,()=>this.triggerUnstablePlatform(item));
     }
@@ -369,14 +392,26 @@ export class Level5Scene extends Scene
             const dirt=this.add.circle(item.x-30+i*20,item.y+6,4,0x6b553e,.62).setDepth(20);
             this.tweens.add({targets:dirt,y:dirt.y+24,x:dirt.x+(i%2?8:-8),alpha:0,duration:340,onComplete:()=>dirt.destroy()});
         }
-        this.time.delayedCall(520,()=>{
+        this.scheduleTraversal(item.delay,()=>{
+            if(!item.triggered)return;
             item.body.body.enable=false;
-            this.tweens.add({targets:item.visual,y:item.y+150,angle:8,alpha:.15,duration:620,ease:'Quad.In'});
+            this.tweens.add({targets:item.visual,y:item.y+(item.kind==='root'?115:150),angle:item.kind==='root'?-7:8,alpha:.15,duration:620,ease:'Quad.In'});
         });
     }
 
     resetTraversalHazards ()
     {
+        this.traversalTimers.forEach(timer=>timer.remove(false));
+        this.traversalTimers.length=0;
+
+        this.traversalTransient.forEach(object=>{
+            if(object&&object.active){
+                this.tweens.killTweensOf(object);
+                object.destroy();
+            }
+        });
+        this.traversalTransient.length=0;
+
         this.unstablePlatforms.forEach(item=>{
             this.tweens.killTweensOf(item.visual);
             item.triggered=false;
@@ -387,6 +422,52 @@ export class Level5Scene extends Scene
         if(this.traversalFallenTree){this.traversalFallenTree.destroy();this.traversalFallenTree=null;}
         this.fallingTreeTriggered=false;
         if(this.fallingTreeSensor)this.fallingTreeSensor.body.enable=true;
+        this.traversalReactionSensors.forEach(item=>{
+            item.triggered=false;
+            item.sensor.body.enable=true;
+        });
+    }
+
+    addTraversalReactionSensor (x,type)
+    {
+        const sensor=this.add.rectangle(x,500,150,260,0x000000,0);
+        this.physics.add.existing(sensor);
+        sensor.body.setAllowGravity(false);
+        sensor.body.setImmovable(true);
+        const item={x,type,sensor,triggered:false};
+        this.traversalReactionSensors.push(item);
+        this.physics.add.overlap(this.player,sensor,()=>this.triggerTraversalReaction(item));
+    }
+
+    triggerTraversalReaction (item)
+    {
+        if(item.triggered||this.bossStarted||this.phaseCompleted)return;
+        item.triggered=true;
+        item.sensor.body.enable=false;
+
+        const count=item.type===2?7:5;
+        for(let i=0;i<count;i++){
+            const leaf=this.trackTraversalObject(
+                this.add.ellipse(item.x-40+i*14,585-(i%3)*9,10,4,i%2?0x365f3c:0x557548,.7).setDepth(18)
+            );
+            this.tweens.add({targets:leaf,x:leaf.x+38+i*4,y:leaf.y-35-(i%3)*11,angle:65+i*28,alpha:0,duration:460+i*38,onComplete:()=>leaf.destroy()});
+        }
+
+        const dust=this.trackTraversalObject(this.add.ellipse(item.x,610,150+(item.type*25),30,0x887760,.09).setDepth(17));
+        this.tweens.add({targets:dust,scaleX:1.45,alpha:0,duration:620,onComplete:()=>dust.destroy()});
+
+        if(item.type===1){
+            for(let i=0;i<2;i++){
+                const bird=this.trackTraversalObject(
+                    this.add.triangle(item.x+i*22,390-i*14,-8,3,0,-4,8,3,0x101a15,.85).setDepth(19)
+                );
+                this.tweens.add({targets:bird,x:bird.x+115+i*18,y:bird.y-80-i*20,alpha:0,duration:680+i*80,onComplete:()=>bird.destroy()});
+            }
+        }
+        else if(item.type===2){
+            const fog=this.trackTraversalObject(this.add.ellipse(item.x,595,220,48,0xc5d0c8,.045).setDepth(4));
+            this.tweens.add({targets:fog,x:fog.x+105,scaleX:1.45,alpha:0,duration:850,onComplete:()=>fog.destroy()});
+        }
     }
 
     triggerTraversalTree ()
@@ -398,9 +479,10 @@ export class Level5Scene extends Scene
         for(let i=0;i<5;i++){
             const leaf=this.add.ellipse(2670+i*10,360+i*9,12,5,0x3e663f,.78).setDepth(18);
             leaves.push(leaf);
+            this.trackTraversalObject(leaf);
             this.tweens.add({targets:leaf,x:leaf.x+(i%2?16:-16),angle:i*30,duration:170,yoyo:true,repeat:1});
         }
-        this.time.delayedCall(420,()=>{
+        this.scheduleTraversal(420,()=>{
             leaves.forEach(l=>this.tweens.add({targets:l,y:l.y+50,alpha:0,duration:350,onComplete:()=>l.destroy()}));
             const tree=this.add.rectangle(2720,400,300,34,0x3e2a1e,.97).setOrigin(.5).setAngle(-76).setDepth(13);
             this.traversalFallenTree=tree;
@@ -1027,6 +1109,7 @@ export class Level5Scene extends Scene
             this.health=100;this.hunger=100;this.stamina=100;this.resetMovementPolishState(); this.resetCombatPolishState();
             this.staminaRegenBlockedUntil=0;this.nextHungerDrainAt=this.time.now+2000;this.nextStarvationDamageAt=this.time.now+2000;
             this.invulnerableUntil=this.time.now+900;this.isPlayerDead=false;
+            if(!this.bossStarted)this.resetTraversalHazards();
             this.updateHealthHud();this.updateHungerHud();this.updateStaminaHud();this.playerVisual.setAlpha(1);
         });
     }

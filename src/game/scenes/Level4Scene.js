@@ -1480,6 +1480,8 @@ export class Level4Scene extends Scene
     createUnstablePlatforms ()
     {
         this.unstablePlatforms=[];
+        this.unstableChainTimer=null;
+        this.unstableChainObjects=[];
         const data=[
             {x:1505,y:510,w:145,h:24},
             {x:2050,y:425,w:145,h:24},
@@ -1538,12 +1540,69 @@ export class Level4Scene extends Scene
                     duration:650,
                     ease:'Quad.In'
                 });
+                if(item.index===1)this.triggerUnstableChainReaction(item);
             }
+        });
+    }
+
+    triggerUnstableChainReaction (item)
+    {
+        if(this.unstableChainTimer)this.unstableChainTimer.remove(false);
+        this.unstableChainTimer=this.time.delayedCall(180,()=>{
+            this.unstableChainTimer=null;
+
+            const chunk=this.add.rectangle(item.x+95,item.y-6,70,12,0x4a3221,.88).setDepth(8).setAngle(-10);
+            this.unstableChainObjects.push(chunk);
+            this.tweens.add({
+                targets:chunk,
+                y:chunk.y+75,
+                angle:18,
+                alpha:0,
+                duration:420,
+                ease:'Quad.In',
+                onComplete:()=>{
+                    const index=this.unstableChainObjects.indexOf(chunk);
+                    if(index>=0)this.unstableChainObjects.splice(index,1);
+                    chunk.destroy();
+                }
+            });
+
+            for(let i=0;i<4;i++){
+                const leaf=this.add.ellipse(item.x+60+i*15,item.y-12-(i%2)*8,9,4,i%2?0x526d42:0x647c4a,.62).setDepth(9);
+                this.unstableChainObjects.push(leaf);
+                this.tweens.add({
+                    targets:leaf,
+                    x:leaf.x+24+i*5,
+                    y:leaf.y-18-i*5,
+                    angle:50+i*25,
+                    alpha:0,
+                    duration:330+i*35,
+                    onComplete:()=>{
+                        const index=this.unstableChainObjects.indexOf(leaf);
+                        if(index>=0)this.unstableChainObjects.splice(index,1);
+                        leaf.destroy();
+                    }
+                });
+            }
+
+            this.cameras.main.shake(55,.0008);
         });
     }
 
     resetUnstablePlatforms ()
     {
+        if(this.unstableChainTimer){
+            this.unstableChainTimer.remove(false);
+            this.unstableChainTimer=null;
+        }
+        this.unstableChainObjects.forEach(object=>{
+            if(object&&object.active){
+                this.tweens.killTweensOf(object);
+                object.destroy();
+            }
+        });
+        this.unstableChainObjects.length=0;
+
         this.unstablePlatforms.forEach(item=>{
             this.tweens.killTweensOf(item.visual);
             item.triggered=false;

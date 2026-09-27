@@ -54,6 +54,7 @@ export class Game extends Scene
         this.player.body.setMaxVelocity(260, 900);
         this.player.body.setSize(45, 70);
 
+        this.createEnvironmentalChallenges();
         this.physics.add.collider(this.player, this.platforms);
 
         this.playerVisual = this.createPlayerPlaceholder();
@@ -1806,6 +1807,7 @@ export class Game extends Scene
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
             this.player.body.setVelocity(0, 0);
             this.resetMovementPolishState(); this.resetCombatPolishState();
+            this.resetEnvironmentalChallenges();
 
             this.health = this.maxHealth;
             this.hunger = this.maxHunger;
@@ -1952,6 +1954,236 @@ export class Game extends Scene
 
         this.healthBar.width = 90 * ratio;
         this.healthText.setText(`${this.health}/${this.maxHealth}`);
+    }
+
+    createEnvironmentalChallenges ()
+    {
+        this.environmentTimers = [];
+        this.environmentTransient = [];
+        this.environmentUnstablePlatforms = [];
+        this.environmentReactionSensors = [];
+        this.environmentBranchVisual = null;
+        this.environmentBranchTriggered = false;
+
+        this.addEnvironmentalUnstablePlatform(1180, 610, 105, 20, 650);
+
+        this.environmentBranchSensor = this.add.rectangle(1910, 505, 180, 250, 0x000000, 0);
+        this.physics.add.existing(this.environmentBranchSensor);
+        this.environmentBranchSensor.body.setAllowGravity(false);
+        this.environmentBranchSensor.body.setImmovable(true);
+        this.physics.add.overlap(this.player, this.environmentBranchSensor, () => this.triggerEnvironmentalBranch());
+
+        [
+            { x: 930, type: 0 },
+            { x: 1640, type: 1 },
+            { x: 2460, type: 2 }
+        ].forEach((data) => this.addEnvironmentalReactionSensor(data.x, data.type));
+    }
+
+    scheduleEnvironment (delay, callback)
+    {
+        const timer = this.time.delayedCall(delay, callback);
+        this.environmentTimers.push(timer);
+        return timer;
+    }
+
+    trackEnvironmentObject (object)
+    {
+        this.environmentTransient.push(object);
+        return object;
+    }
+
+    addEnvironmentalUnstablePlatform (x, y, w, h, delay)
+    {
+        const body = this.add.rectangle(x, y, w, h, 0x000000, 0);
+        this.physics.add.existing(body, true);
+        this.platforms.add(body);
+
+        const visual = this.add.container(x, y).setDepth(8);
+        const log = this.add.rectangle(0, 0, w, h, 0x503621).setStrokeStyle(2, 0x78563a, 0.75);
+        const moss = this.add.rectangle(0, -h / 2 + 2, w - 14, 5, 0x315d34, 0.82);
+        visual.add([log, moss]);
+
+        const sensor = this.add.rectangle(x, y - 18, w - 8, 42, 0x000000, 0);
+        this.physics.add.existing(sensor);
+        sensor.body.setAllowGravity(false);
+        sensor.body.setImmovable(true);
+
+        const item = { x, y, w, h, delay, body, visual, sensor, triggered: false };
+        this.environmentUnstablePlatforms.push(item);
+        this.physics.add.overlap(this.player, sensor, () => this.triggerEnvironmentalUnstablePlatform(item));
+    }
+
+    triggerEnvironmentalUnstablePlatform (item)
+    {
+        if (item.triggered || this.phaseCompleted) return;
+        item.triggered = true;
+        item.sensor.body.enable = false;
+
+        for (let i = 0; i < 4; i += 1)
+        {
+            const debris = this.trackEnvironmentObject(
+                this.add.ellipse(item.x - 32 + i * 20, item.y + 4, 7, 3, i % 2 ? 0x6b5439 : 0x547044, 0.62).setDepth(9)
+            );
+            this.tweens.add({
+                targets: debris,
+                x: debris.x + (i % 2 ? 9 : -8),
+                y: debris.y + 16,
+                angle: i * 35,
+                alpha: 0,
+                duration: 320 + i * 24,
+                onComplete: () => debris.destroy()
+            });
+        }
+
+        this.tweens.add({
+            targets: item.visual,
+            x: item.x + 3,
+            y: item.y + 2,
+            angle: 1.5,
+            duration: 55,
+            yoyo: true,
+            repeat: 4
+        });
+
+        this.scheduleEnvironment(item.delay, () => {
+            if (!item.triggered) return;
+            item.body.body.enable = false;
+            this.tweens.add({
+                targets: item.visual,
+                y: item.y + 120,
+                angle: -8,
+                alpha: 0.18,
+                duration: 560,
+                ease: 'Quad.In'
+            });
+        });
+    }
+
+    triggerEnvironmentalBranch ()
+    {
+        if (this.environmentBranchTriggered || this.phaseCompleted) return;
+        this.environmentBranchTriggered = true;
+        this.environmentBranchSensor.body.enable = false;
+
+        const warningLeaves = [];
+        for (let i = 0; i < 5; i += 1)
+        {
+            const leaf = this.trackEnvironmentObject(
+                this.add.ellipse(1970 + i * 12, 345 + (i % 2) * 10, 10, 5, i % 2 ? 0x4f7041 : 0x617b48, 0.72).setDepth(15)
+            );
+            warningLeaves.push(leaf);
+            this.tweens.add({ targets: leaf, x: leaf.x + (i % 2 ? 10 : -9), angle: i * 28, duration: 95, yoyo: true, repeat: 3 });
+        }
+
+        this.scheduleEnvironment(500, () => {
+            warningLeaves.forEach((leaf) => {
+                if (!leaf.active) return;
+                this.tweens.add({ targets: leaf, y: leaf.y + 35, alpha: 0, duration: 220, onComplete: () => leaf.destroy() });
+            });
+            const branch = this.add.rectangle(1990, 365, 185, 18, 0x4b3221, 0.96)
+                .setOrigin(0.5)
+                .setAngle(-58)
+                .setDepth(14);
+            this.environmentBranchVisual = branch;
+            this.tweens.add({
+                targets: branch,
+                angle: 7,
+                y: 605,
+                duration: 470,
+                ease: 'Quad.In',
+                onComplete: () => {
+                    this.cameras.main.shake(65, 0.0009);
+                    this.scheduleEnvironment(850, () => {
+                        if (this.environmentBranchVisual === branch) this.environmentBranchVisual = null;
+                        branch.destroy();
+                    });
+                }
+            });
+        });
+    }
+
+    addEnvironmentalReactionSensor (x, type)
+    {
+        const sensor = this.add.rectangle(x, 515, 145, 260, 0x000000, 0);
+        this.physics.add.existing(sensor);
+        sensor.body.setAllowGravity(false);
+        sensor.body.setImmovable(true);
+        const item = { sensor, x, type, triggered: false };
+        this.environmentReactionSensors.push(item);
+        this.physics.add.overlap(this.player, sensor, () => this.triggerEnvironmentalReaction(item));
+    }
+
+    triggerEnvironmentalReaction (item)
+    {
+        if (item.triggered || this.phaseCompleted) return;
+        item.triggered = true;
+        item.sensor.body.enable = false;
+
+        if (item.type === 0)
+        {
+            for (let i = 0; i < 4; i += 1)
+            {
+                const leaf = this.trackEnvironmentObject(
+                    this.add.ellipse(item.x - 30 + i * 18, 600 - (i % 2) * 8, 9, 4, i % 2 ? 0x557744 : 0x6a8150, 0.62).setDepth(18)
+                );
+                this.tweens.add({ targets: leaf, x: leaf.x + 28 + i * 5, y: leaf.y - 35 - i * 5, angle: 65 + i * 20, alpha: 0, duration: 420 + i * 35, onComplete: () => leaf.destroy() });
+            }
+        }
+        else if (item.type === 1)
+        {
+            for (let i = 0; i < 3; i += 1)
+            {
+                const bird = this.trackEnvironmentObject(
+                    this.add.triangle(item.x + i * 18, 420 - i * 12, -7, 3, 0, -3, 7, 3, 0x17231c, 0.8).setDepth(17)
+                );
+                this.tweens.add({ targets: bird, x: bird.x + 90 + i * 18, y: bird.y - 65 - i * 18, alpha: 0, duration: 620 + i * 70, onComplete: () => bird.destroy() });
+            }
+        }
+        else
+        {
+            const fog = this.trackEnvironmentObject(
+                this.add.ellipse(item.x, 590, 190, 44, 0xcbd8cf, 0.055).setDepth(3)
+            );
+            this.tweens.add({ targets: fog, x: fog.x + 90, scaleX: 1.35, alpha: 0, duration: 820, onComplete: () => fog.destroy() });
+        }
+    }
+
+    resetEnvironmentalChallenges ()
+    {
+        this.environmentTimers.forEach((timer) => timer.remove(false));
+        this.environmentTimers.length = 0;
+
+        this.environmentTransient.forEach((object) => {
+            if (object && object.active)
+            {
+                this.tweens.killTweensOf(object);
+                object.destroy();
+            }
+        });
+        this.environmentTransient.length = 0;
+
+        this.environmentUnstablePlatforms.forEach((item) => {
+            this.tweens.killTweensOf(item.visual);
+            item.triggered = false;
+            item.body.body.enable = true;
+            item.sensor.body.enable = true;
+            item.visual.setPosition(item.x, item.y).setAngle(0).setAlpha(1);
+        });
+
+        if (this.environmentBranchVisual)
+        {
+            this.tweens.killTweensOf(this.environmentBranchVisual);
+            this.environmentBranchVisual.destroy();
+            this.environmentBranchVisual = null;
+        }
+        this.environmentBranchTriggered = false;
+        if (this.environmentBranchSensor) this.environmentBranchSensor.body.enable = true;
+
+        this.environmentReactionSensors.forEach((item) => {
+            item.triggered = false;
+            item.sensor.body.enable = true;
+        });
     }
 
     createHud ()
@@ -2252,6 +2484,7 @@ export class Game extends Scene
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
             this.player.body.setVelocity(0, 0);
             this.resetMovementPolishState(); this.resetCombatPolishState();
+            this.resetEnvironmentalChallenges();
         }
 
         this.syncPlayerVisual();

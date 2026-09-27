@@ -25,6 +25,7 @@ export class Level2Scene extends Scene
         this.player.body.setCollideWorldBounds(true);
         this.player.body.setMaxVelocity(260, 900);
         this.player.body.setSize(45, 70);
+        this.createEnvironmentalChallenges();
         this.physics.add.collider(this.player, this.platforms);
 
         this.playerVisual = this.createPlayerVisual();
@@ -1414,6 +1415,7 @@ export class Level2Scene extends Scene
             this.stamina = this.maxStamina;
             this.staminaRegenBlockedUntil = 0;
             this.resetMovementPolishState(); this.resetCombatPolishState();
+            this.resetEnvironmentalChallenges();
             this.nextHungerDrainAt = this.time.now + 2000;
             this.nextStarvationDamageAt = this.time.now + 2000;
             this.invulnerableUntil = this.time.now + 1000;
@@ -2457,6 +2459,158 @@ export class Level2Scene extends Scene
         button.on('pointerdown', () => this.scene.start('Level3Scene'));
     }
 
+    createEnvironmentalChallenges ()
+    {
+        this.environmentTimers = [];
+        this.environmentTransient = [];
+        this.environmentPlatforms = [];
+        this.environmentReactionSensors = [];
+
+        this.addEnvironmentalPlatform(1160, 575, 120, 20, 600, 'log');
+        this.addEnvironmentalPlatform(1880, 605, 120, 18, 620, 'root');
+
+        [
+            { x: 1040, type: 0 },
+            { x: 1830, type: 1 },
+            { x: 2300, type: 0 }
+        ].forEach((data) => this.addEnvironmentalReactionSensor(data.x, data.type));
+    }
+
+    scheduleEnvironment (delay, callback)
+    {
+        const timer = this.time.delayedCall(delay, callback);
+        this.environmentTimers.push(timer);
+        return timer;
+    }
+
+    trackEnvironmentObject (object)
+    {
+        this.environmentTransient.push(object);
+        return object;
+    }
+
+    addEnvironmentalPlatform (x, y, w, h, delay, kind)
+    {
+        const body = this.add.rectangle(x, y, w, h, 0x000000, 0);
+        this.physics.add.existing(body, true);
+        this.platforms.add(body);
+
+        const visual = this.add.container(x, y).setDepth(8);
+        if (kind === 'root')
+        {
+            const root = this.add.rectangle(0, 2, w, h, 0x4b3422).setStrokeStyle(2, 0x68472d, 0.75);
+            const ridge = this.add.rectangle(0, -h / 2 + 2, w - 14, 4, 0x315d34, 0.75);
+            visual.add([root, ridge]);
+        }
+        else
+        {
+            const log = this.add.rectangle(0, 0, w, h, 0x49311f).setStrokeStyle(2, 0x735038, 0.75);
+            const moss = this.add.rectangle(0, -h / 2 + 2, w - 12, 5, 0x2d5932, 0.82);
+            visual.add([log, moss]);
+        }
+
+        const sensor = this.add.rectangle(x, y - 18, w - 8, 44, 0x000000, 0);
+        this.physics.add.existing(sensor);
+        sensor.body.setAllowGravity(false);
+        sensor.body.setImmovable(true);
+
+        const item = { x, y, w, h, delay, kind, body, visual, sensor, triggered: false };
+        this.environmentPlatforms.push(item);
+        this.physics.add.overlap(this.player, sensor, () => this.triggerEnvironmentalPlatform(item));
+    }
+
+    triggerEnvironmentalPlatform (item)
+    {
+        if (item.triggered || this.phaseCompleted || this.arenaStarted) return;
+        item.triggered = true;
+        item.sensor.body.enable = false;
+
+        for (let i = 0; i < 5; i += 1)
+        {
+            const particle = this.trackEnvironmentObject(
+                this.add.ellipse(item.x - 38 + i * 19, item.y + 4, 7, 3, item.kind === 'root' ? 0x71563b : (i % 2 ? 0x5b7042 : 0x6d5639), 0.62).setDepth(9)
+            );
+            this.tweens.add({ targets: particle, x: particle.x + (i % 2 ? 9 : -8), y: particle.y + 18, angle: i * 32, alpha: 0, duration: 340 + i * 22, onComplete: () => particle.destroy() });
+        }
+
+        this.tweens.add({ targets: item.visual, x: item.x + 3, y: item.y + 2, angle: item.kind === 'root' ? -1.5 : 1.5, duration: 55, yoyo: true, repeat: 4 });
+
+        this.scheduleEnvironment(item.delay, () => {
+            if (!item.triggered) return;
+            item.body.body.enable = false;
+            this.tweens.add({ targets: item.visual, y: item.y + 105, angle: item.kind === 'root' ? -6 : 8, alpha: 0.16, duration: 560, ease: 'Quad.In' });
+        });
+    }
+
+    addEnvironmentalReactionSensor (x, type)
+    {
+        const sensor = this.add.rectangle(x, 515, 145, 250, 0x000000, 0);
+        this.physics.add.existing(sensor);
+        sensor.body.setAllowGravity(false);
+        sensor.body.setImmovable(true);
+        const item = { sensor, x, type, triggered: false };
+        this.environmentReactionSensors.push(item);
+        this.physics.add.overlap(this.player, sensor, () => this.triggerEnvironmentalReaction(item));
+    }
+
+    triggerEnvironmentalReaction (item)
+    {
+        if (item.triggered || this.phaseCompleted || this.arenaStarted) return;
+        item.triggered = true;
+        item.sensor.body.enable = false;
+
+        const count = item.type === 1 ? 6 : 4;
+        for (let i = 0; i < count; i += 1)
+        {
+            const leaf = this.trackEnvironmentObject(
+                this.add.ellipse(item.x - 35 + i * 14, 590 - (i % 3) * 7, 9, 4, i % 2 ? 0x456b3e : 0x66824d, 0.64).setDepth(18)
+            );
+            this.tweens.add({
+                targets: leaf,
+                x: leaf.x + (item.type === 1 ? 42 : 28) + i * 3,
+                y: leaf.y - 28 - (i % 3) * 9,
+                angle: 55 + i * 24,
+                alpha: 0,
+                duration: 430 + i * 34,
+                onComplete: () => leaf.destroy()
+            });
+        }
+
+        if (item.type === 1)
+        {
+            const fog = this.trackEnvironmentObject(this.add.ellipse(item.x, 605, 160, 35, 0xc9d7ce, 0.045).setDepth(3));
+            this.tweens.add({ targets: fog, x: fog.x + 75, scaleX: 1.3, alpha: 0, duration: 760, onComplete: () => fog.destroy() });
+        }
+    }
+
+    resetEnvironmentalChallenges ()
+    {
+        this.environmentTimers.forEach((timer) => timer.remove(false));
+        this.environmentTimers.length = 0;
+
+        this.environmentTransient.forEach((object) => {
+            if (object && object.active)
+            {
+                this.tweens.killTweensOf(object);
+                object.destroy();
+            }
+        });
+        this.environmentTransient.length = 0;
+
+        this.environmentPlatforms.forEach((item) => {
+            this.tweens.killTweensOf(item.visual);
+            item.triggered = false;
+            item.body.body.enable = true;
+            item.sensor.body.enable = true;
+            item.visual.setPosition(item.x, item.y).setAngle(0).setAlpha(1);
+        });
+
+        this.environmentReactionSensors.forEach((item) => {
+            item.triggered = false;
+            item.sensor.body.enable = true;
+        });
+    }
+
     createHud ()
     {
         const panel = this.add.rectangle(15, 15, 286, 112, 0x06100d, 0.58)
@@ -2733,6 +2887,7 @@ export class Level2Scene extends Scene
             this.stamina = this.maxStamina;
             this.staminaRegenBlockedUntil = 0;
             this.resetMovementPolishState(); this.resetCombatPolishState();
+            this.resetEnvironmentalChallenges();
             this.updateStaminaHud();
         }
 
