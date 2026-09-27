@@ -71,6 +71,7 @@ export class Game extends Scene
 
         this.createSnake();
         this.createAttackHitbox();
+        this.createFruits();
 
         // Controles preservados.
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -577,6 +578,126 @@ export class Game extends Scene
 
 
 
+
+    createFruits ()
+    {
+        this.fruits = [];
+
+        const fruitData = [
+            { x: 300, y: 632, color: 0xc94a3b },
+            { x: 560, y: 565, color: 0xe2c74f },
+            { x: 900, y: 525, color: 0xe8873a },
+            { x: 1510, y: 632, color: 0xc94a3b },
+            { x: 1650, y: 505, color: 0xe2c74f },
+            { x: 2470, y: 485, color: 0xe8873a },
+            { x: 2720, y: 632, color: 0xc94a3b }
+        ];
+
+        fruitData.forEach((data, index) => {
+            const visual = this.add.container(data.x, data.y).setDepth(18);
+
+            const body = this.add.circle(0, 0, 9, data.color);
+            const shine = this.add.circle(-3, -3, 2.5, 0xffffff, 0.42);
+            const stem = this.add.rectangle(0, -11, 3, 7, 0x5b4324).setOrigin(0.5, 1);
+            const leaf = this.add.ellipse(6, -13, 10, 5, 0x4f7a38)
+                .setAngle(-24);
+
+            visual.add([body, shine, stem, leaf]);
+
+            const sensor = this.add.rectangle(data.x, data.y, 26, 30, 0x000000, 0);
+            this.physics.add.existing(sensor);
+
+            sensor.body.setAllowGravity(false);
+            sensor.body.setImmovable(true);
+
+            const fruit = {
+                visual,
+                sensor,
+                baseY: data.y,
+                phase: index * 0.85,
+                collected: false
+            };
+
+            this.fruits.push(fruit);
+
+            this.physics.add.overlap(this.player, sensor, () => {
+                this.collectFruit(fruit);
+            });
+        });
+    }
+
+    updateFruits (time)
+    {
+        const seconds = time * 0.001;
+
+        this.fruits.forEach((fruit) => {
+            if (fruit.collected)
+            {
+                return;
+            }
+
+            const wave = Math.sin(seconds * 2.4 + fruit.phase);
+            const pulse = 1 + Math.sin(seconds * 2.8 + fruit.phase) * 0.035;
+
+            fruit.visual.y = fruit.baseY + wave * 3;
+            fruit.visual.setScale(pulse);
+        });
+    }
+
+    collectFruit (fruit)
+    {
+        if (fruit.collected)
+        {
+            return;
+        }
+
+        fruit.collected = true;
+        fruit.sensor.body.enable = false;
+
+        this.health = Math.min(this.maxHealth, this.health + 20);
+        this.updateHealthHud();
+
+        const feedback = this.add.text(
+            fruit.visual.x,
+            fruit.visual.y - 18,
+            '+20',
+            {
+                fontFamily: 'Arial',
+                fontSize: '18px',
+                fontStyle: 'bold',
+                color: '#dff2a2',
+                stroke: '#17301d',
+                strokeThickness: 3
+            }
+        )
+            .setOrigin(0.5)
+            .setDepth(40);
+
+        this.tweens.add({
+            targets: fruit.visual,
+            y: fruit.visual.y - 12,
+            scaleX: 1.25,
+            scaleY: 1.25,
+            alpha: 0,
+            duration: 220,
+            ease: 'Quad.Out',
+            onComplete: () => {
+                fruit.visual.setVisible(false);
+            }
+        });
+
+        this.tweens.add({
+            targets: feedback,
+            y: feedback.y - 24,
+            alpha: 0,
+            duration: 500,
+            ease: 'Quad.Out',
+            onComplete: () => {
+                feedback.destroy();
+            }
+        });
+    }
+
     createAttackHitbox ()
     {
         this.attackHitbox = this.add.rectangle(0, 0, 54, 46, 0x000000, 0);
@@ -1007,5 +1128,6 @@ export class Game extends Scene
         this.animatePlayerVisual(this.time.now);
         this.updateAttack(this.time.now);
         this.updateSnake(this.time.now);
+        this.updateFruits(this.time.now);
     }
 }
