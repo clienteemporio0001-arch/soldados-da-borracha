@@ -63,7 +63,14 @@ export class Game extends Scene
         this.knockbackUntil = 0;
         this.isPlayerDead = false;
 
+        this.isAttacking = false;
+        this.attackStartedAt = 0;
+        this.nextAttackAt = 0;
+        this.attackDirection = 1;
+        this.attackHitRegistered = false;
+
         this.createSnake();
+        this.createAttackHitbox();
 
         // Controles preservados.
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -71,6 +78,11 @@ export class Game extends Scene
         this.keyD = this.input.keyboard.addKey('D');
         this.keyW = this.input.keyboard.addKey('W');
         this.spaceKey = this.input.keyboard.addKey('SPACE');
+        this.keyJ = this.input.keyboard.addKey('J');
+        this.keyX = this.input.keyboard.addKey('X');
+
+        this.keyJ.on('down', () => this.startAttack());
+        this.keyX.on('down', () => this.startAttack());
 
         // Câmera lateral preservada.
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -383,6 +395,16 @@ export class Game extends Scene
         const rightArm = this.add.rectangle(17, -14, 9, 30, 0xb89562)
             .setOrigin(0.5, 0.12);
 
+        const machete = this.add.container(24, 7);
+        const macheteHandle = this.add.rectangle(0, 0, 6, 16, 0x3a2a1d)
+            .setOrigin(0.5, 0.9);
+        const macheteBlade = this.add.rectangle(0, -20, 7, 30, 0xb8c0ba)
+            .setOrigin(0.5, 0.9);
+        const macheteTip = this.add.triangle(0, -38, -3.5, 0, 3.5, 0, 0, -8, 0xcbd1cc)
+            .setOrigin(0.5, 1);
+        machete.add([macheteHandle, macheteBlade, macheteTip]);
+        machete.setAngle(18);
+
         const head = this.add.circle(0, -34, 11, 0xb98155);
 
         const hat = this.add.container(0, -47);
@@ -396,6 +418,7 @@ export class Game extends Scene
             torso,
             leftArm,
             rightArm,
+            machete,
             head,
             hat
         ]);
@@ -406,6 +429,7 @@ export class Game extends Scene
             torso,
             leftArm,
             rightArm,
+            machete,
             leftLeg,
             rightLeg
         };
@@ -552,6 +576,154 @@ export class Game extends Scene
     }
 
 
+
+    createAttackHitbox ()
+    {
+        this.attackHitbox = this.add.rectangle(0, 0, 54, 46, 0x000000, 0);
+        this.physics.add.existing(this.attackHitbox);
+
+        this.attackHitbox.body.setAllowGravity(false);
+        this.attackHitbox.body.enable = false;
+
+        this.physics.add.overlap(this.attackHitbox, this.snake, () => {
+            this.tryHitSnake();
+        });
+    }
+
+    startAttack ()
+    {
+        const now = this.time.now;
+
+        if (this.isPlayerDead || this.isAttacking || now < this.nextAttackAt)
+        {
+            return;
+        }
+
+        this.isAttacking = true;
+        this.attackStartedAt = now;
+        this.nextAttackAt = now + 400;
+        this.attackDirection = this.playerVisual.facing || 1;
+        this.attackHitRegistered = false;
+    }
+
+    updateAttack (time)
+    {
+        if (!this.isAttacking)
+        {
+            this.attackHitbox.body.enable = false;
+            return;
+        }
+
+        const elapsed = time - this.attackStartedAt;
+        const progress = Math.min(elapsed / 300, 1);
+        const swing = Math.sin(progress * Math.PI);
+
+        const parts = this.playerVisual.parts;
+        const direction = this.attackDirection;
+
+        parts.rightArm.angle += (55 * swing);
+        parts.machete.angle = 18 + (95 * swing);
+        parts.torso.angle += (5 * swing);
+
+        const activeWindow = elapsed >= 90 && elapsed <= 210;
+
+        if (activeWindow)
+        {
+            this.attackHitbox.body.enable = true;
+            this.attackHitbox.setPosition(
+                this.player.x + (46 * direction),
+                this.player.y - 2
+            );
+        }
+        else
+        {
+            this.attackHitbox.body.enable = false;
+        }
+
+        if (elapsed >= 300)
+        {
+            this.isAttacking = false;
+            this.attackHitbox.body.enable = false;
+            parts.machete.angle = 18;
+        }
+    }
+
+    tryHitSnake ()
+    {
+        if (
+            !this.isAttacking ||
+            !this.attackHitbox.body.enable ||
+            this.attackHitRegistered ||
+            !this.snakeAlive
+        )
+        {
+            return;
+        }
+
+        this.attackHitRegistered = true;
+        this.damageSnake(25);
+    }
+
+    damageSnake (amount)
+    {
+        if (!this.snakeAlive)
+        {
+            return;
+        }
+
+        this.snakeHealth = Math.max(0, this.snakeHealth - amount);
+
+        this.tweens.killTweensOf(this.snakeVisual);
+        this.snakeVisual.setAlpha(1);
+
+        this.tweens.add({
+            targets: this.snakeVisual,
+            alpha: 0.35,
+            scaleY: 1.12,
+            duration: 70,
+            yoyo: true,
+            repeat: 1,
+            onComplete: () => {
+                if (this.snakeAlive)
+                {
+                    this.snakeVisual.setAlpha(1);
+                    this.snakeVisual.scaleY = 1;
+                }
+            }
+        });
+
+        if (this.snakeHealth <= 0)
+        {
+            this.defeatSnake();
+        }
+    }
+
+    defeatSnake ()
+    {
+        if (!this.snakeAlive)
+        {
+            return;
+        }
+
+        this.snakeAlive = false;
+        this.snake.body.setVelocity(0, 0);
+        this.snake.body.enable = false;
+
+        this.tweens.killTweensOf(this.snakeVisual);
+
+        this.tweens.add({
+            targets: this.snakeVisual,
+            angle: 18,
+            scaleY: 0.55,
+            alpha: 0,
+            duration: 450,
+            delay: 180,
+            onComplete: () => {
+                this.snakeVisual.setVisible(false);
+            }
+        });
+    }
+
     createSnake ()
     {
         this.snakePatrol = {
@@ -574,6 +746,9 @@ export class Game extends Scene
 
         this.snakeVisual = this.add.container(this.snake.x, this.snake.y).setDepth(19);
         this.snakeVisual.facing = 1;
+        this.snakeMaxHealth = 50;
+        this.snakeHealth = 50;
+        this.snakeAlive = true;
 
         const tail = this.add.ellipse(-30, 2, 22, 8, 0x49652f).setOrigin(0.5);
         const bodyBack = this.add.ellipse(-15, 0, 28, 13, 0x58773a).setOrigin(0.5);
@@ -605,7 +780,7 @@ export class Game extends Scene
 
     updateSnake (time)
     {
-        if (!this.snake || !this.snake.body)
+        if (!this.snake || !this.snake.body || !this.snakeAlive)
         {
             return;
         }
@@ -640,7 +815,7 @@ export class Game extends Scene
 
     handleSnakeContact ()
     {
-        if (this.isPlayerDead || this.time.now < this.invulnerableUntil)
+        if (!this.snakeAlive || this.isPlayerDead || this.time.now < this.invulnerableUntil)
         {
             return;
         }
@@ -830,6 +1005,7 @@ export class Game extends Scene
 
         this.syncPlayerVisual();
         this.animatePlayerVisual(this.time.now);
+        this.updateAttack(this.time.now);
         this.updateSnake(this.time.now);
     }
 }
