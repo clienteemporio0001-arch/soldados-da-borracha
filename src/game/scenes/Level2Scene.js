@@ -45,6 +45,19 @@ export class Level2Scene extends Scene
         this.firstDoubleJumpPending = false;
         this.jumpsUsed = 0;
         this.jumpWasDown = false;
+        this.wasGrounded = false;
+        this.jumpBufferUntil = 0;
+        this.jumpBufferMs = 130;
+
+        this.maxStamina = 100;
+        this.stamina = 100;
+        this.doubleJumpStaminaCost = 30;
+        this.staminaRegenDelay = 350;
+        this.staminaGroundRegen = 40;
+        this.staminaAirRegen = 12;
+        this.staminaRegenBlockedUntil = 0;
+        this.lastStaminaUpdateAt = this.time.now;
+        this.nextStaminaFeedbackAt = 0;
 
         this.isAttacking = false;
         this.attackStartedAt = 0;
@@ -80,6 +93,8 @@ export class Level2Scene extends Scene
         this.createHud();
         this.createHealthHud();
         this.createHungerHud();
+        this.createStaminaHud();
+        this.staminaHud.setVisible(false);
         this.showLevelTitle();
 
         this.spawnPoint = { x: 150, y: 560 };
@@ -297,7 +312,8 @@ export class Level2Scene extends Scene
             [0, 652, 800, 116], [860, 652, 600, 116], [1520, 652, 760, 116], [2340, 652, 960, 116]
         ];
 
-        ground.forEach(([x, y, w, h], i) => {            terrain.fillStyle(i % 2 === 0 ? 0x4b3423 : 0x513824, 1);
+        ground.forEach(([x, y, w, h], i) => {
+            terrain.fillStyle(i % 2 === 0 ? 0x4b3423 : 0x513824, 1);
             terrain.fillRect(x, y, w, h);
             terrain.fillStyle(0x284f2d, 1);
             terrain.fillRect(x, y, w, 12);
@@ -597,6 +613,7 @@ export class Level2Scene extends Scene
             leftLegY = 17;
             rightLegY = 17;
         }
+
         visual.y = this.player.y + bodyOffsetY;
 
         parts.torso.y = lerp(parts.torso.y, torsoY);
@@ -895,7 +912,8 @@ export class Level2Scene extends Scene
         this.carapanaReturning = false;
 
         this.physics.add.overlap(this.player, this.carapana, () => {
-            this.handleCarapanaContact();        });
+            this.handleCarapanaContact();
+        });
 
         this.carapanaVisual = this.add.container(
             this.carapana.x,
@@ -979,8 +997,7 @@ export class Level2Scene extends Scene
 
             if (this.carapanaReturning || outsidePatrol)
             {
-                const returnDx = patrol.baseX - this.carapana.x;
-                const returnDy = patrol.baseY - this.carapana.y;
+                const returnDx = patrol.baseX - this.carapana.x;                const returnDy = patrol.baseY - this.carapana.y;
                 const returnDistance = Math.hypot(returnDx, returnDy);
 
                 if (returnDistance > 18)
@@ -1156,12 +1173,18 @@ export class Level2Scene extends Scene
             this.player.body.setVelocity(0, 0);
             this.health = 100;
             this.hunger = 100;
+            this.stamina = this.maxStamina;
+            this.staminaRegenBlockedUntil = 0;
+            this.jumpsUsed = 0;
+            this.wasGrounded = false;
+            this.jumpBufferUntil = 0;
             this.nextHungerDrainAt = this.time.now + 2000;
             this.nextStarvationDamageAt = this.time.now + 2000;
             this.invulnerableUntil = this.time.now + 1000;
             this.isPlayerDead = false;
             this.updateHealthHud();
             this.updateHungerHud();
+            this.updateStaminaHud();
             this.playerVisual.setAlpha(1);
         });
     }
@@ -1194,6 +1217,7 @@ export class Level2Scene extends Scene
 
             sensor.body.setAllowGravity(false);
             sensor.body.setImmovable(true);
+
             const fruit = {
                 visual,
                 sensor,
@@ -1493,6 +1517,7 @@ export class Level2Scene extends Scene
             }
         });
     }
+
     curupiraJump (time)
     {
         const direction = this.player.x < this.curupira.x ? -1 : 1;
@@ -1792,7 +1817,8 @@ export class Level2Scene extends Scene
             this.arenaBarrier.setVisible(false);
             this.arenaBarrier.body.enable = false;
 
-            const panel = this.add.rectangle(512, 350, 620, 190, 0x06100d, 0.92).setScrollFactor(0).setDepth(190);            const text = this.add.text(
+            const panel = this.add.rectangle(512, 350, 620, 190, 0x06100d, 0.92).setScrollFactor(0).setDepth(190);
+            const text = this.add.text(
                 512,
                 325,
                 'A floresta testou seus passos.',
@@ -1812,6 +1838,10 @@ export class Level2Scene extends Scene
                 this.time.delayedCall(1050, () => {
                     this.doubleJumpUnlocked = true;
                     this.firstDoubleJumpPending = true;
+                    this.stamina = this.maxStamina;
+                    this.staminaRegenBlockedUntil = 0;
+                    this.staminaHud.setVisible(true);
+                    this.updateStaminaHud();
                     this.registry.set('doubleJumpUnlocked', true);
                     panel.destroy();
                     text.destroy();
@@ -1873,25 +1903,91 @@ export class Level2Scene extends Scene
         this.time.delayedCall(3000, () => tutorial.destroy());
     }
 
-    performJump (isGrounded)
+    updateGroundedState (grounded)
     {
-        if (isGrounded) {
+        if (grounded && !this.wasGrounded) {
             this.jumpsUsed = 0;
         }
+        this.wasGrounded = grounded;
+    }
 
-        if (this.jumpsUsed === 0 && isGrounded) {
+    queueJumpInput (time)
+    {
+        this.jumpBufferUntil = time + this.jumpBufferMs;
+    }
+
+    consumeJumpBuffer (grounded)
+    {
+        if (this.jumpBufferUntil < this.time.now) return false;
+
+        if (this.jumpsUsed === 0 && grounded) {
             this.player.body.setVelocityY(-520);
             this.jumpsUsed = 1;
-            return;
+            this.jumpBufferUntil = 0;
+            return true;
         }
 
-        if (this.doubleJumpUnlocked && this.jumpsUsed === 1 && !isGrounded) {
+        if (this.doubleJumpUnlocked && this.jumpsUsed === 1 && !grounded) {
+            if (this.stamina < this.doubleJumpStaminaCost) {
+                this.showStaminaBlockedFeedback();
+                this.jumpBufferUntil = 0;
+                return false;
+            }
+
+            this.spendStamina(this.doubleJumpStaminaCost);
             this.player.body.setVelocityY(-500);
             this.jumpsUsed = 2;
+            this.jumpBufferUntil = 0;
             const isFirstDoubleJump = this.firstDoubleJumpPending;
             this.firstDoubleJumpPending = false;
             this.showDoubleJumpBurst(isFirstDoubleJump);
+            return true;
         }
+
+        return false;
+    }
+
+    spendStamina (amount)
+    {
+        this.stamina = Math.max(0, this.stamina - amount);
+        this.staminaRegenBlockedUntil = this.time.now + this.staminaRegenDelay;
+        this.updateStaminaHud();
+    }
+
+    updateStamina (time, grounded)
+    {
+        const delta = Math.min(0.05, Math.max(0, (time - this.lastStaminaUpdateAt) / 1000));
+        this.lastStaminaUpdateAt = time;
+
+        if (
+            !this.doubleJumpUnlocked ||
+            this.phaseCompleted ||
+            this.isPlayerDead ||
+            time < this.staminaRegenBlockedUntil ||
+            this.stamina >= this.maxStamina
+        ) {
+            return;
+        }
+
+        const rate = grounded ? this.staminaGroundRegen : this.staminaAirRegen;
+        this.stamina = Math.min(this.maxStamina, this.stamina + rate * delta);
+        this.updateStaminaHud();
+    }
+
+    showStaminaBlockedFeedback ()
+    {
+        if (!this.staminaHud || !this.staminaHud.visible || this.time.now < this.nextStaminaFeedbackAt) return;
+
+        this.nextStaminaFeedbackAt = this.time.now + 220;
+        this.tweens.killTweensOf(this.staminaBar);
+        this.tweens.add({
+            targets: this.staminaBar,
+            alpha: 0.25,
+            duration: 70,
+            yoyo: true,
+            repeat: 2,
+            onComplete: () => this.staminaBar.setAlpha(1)
+        });
     }
 
     showDoubleJumpBurst (isFirst = false)
@@ -1900,8 +1996,7 @@ export class Level2Scene extends Scene
             this.player.x,
             this.player.y + 24,
             isFirst ? 18 : 12,
-            0xc8d59b,
-            isFirst ? 0.5 : 0.35
+            0xc8d59b,            isFirst ? 0.5 : 0.35
         ).setDepth(18);
 
         this.tweens.add({
@@ -1968,6 +2063,47 @@ export class Level2Scene extends Scene
         panel.setStrokeStyle(1, 0x78917c, 0.35);
         this.add.text(30, 27, 'SOLDADOS DA BORRACHA - FASE 2', { fontFamily: 'Arial', fontSize: '18px', color: '#f1e1ae' }).setScrollFactor(0).setDepth(101);
         this.add.text(30, 56, 'Controles:\nA/D ou ←/→ = mover\nW / ↑ / Espaço = pular\nJ / X = atacar', { fontFamily: 'Arial', fontSize: '15px', color: '#c7d6ca', lineSpacing: 3 }).setScrollFactor(0).setDepth(101);
+    }
+
+    createStaminaHud ()
+    {
+        this.staminaHud = this.add.container(395, 138)
+            .setScrollFactor(0)
+            .setDepth(102);
+
+        const background = this.add.rectangle(0, 0, 235, 50, 0x06100d, 0.78)
+            .setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.35);
+
+        const label = this.add.text(12, 6, 'FÔLEGO', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#cfe5d2'
+        });
+
+        const barBack = this.add.rectangle(12, 26, 150, 14, 0x1d3025, 0.95)
+            .setOrigin(0);
+        barBack.setStrokeStyle(1, 0x668574, 0.65);
+
+        this.staminaBar = this.add.rectangle(12, 26, 150, 14, 0x72b58a, 1)
+            .setOrigin(0);
+
+        this.staminaText = this.add.text(172, 24, '100/100', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#ffffff'
+        });
+
+        this.staminaHud.add([background, label, barBack, this.staminaBar, this.staminaText]);
+        this.updateStaminaHud();
+    }
+
+    updateStaminaHud ()
+    {
+        if (!this.staminaBar || !this.staminaText) return;
+        const ratio = Math.max(0, Math.min(1, this.stamina / this.maxStamina));
+        this.staminaBar.width = 150 * ratio;
+        this.staminaText.setText(Math.round(this.stamina) + '/' + this.maxStamina);
     }
 
     createHealthHud ()
@@ -2091,7 +2227,8 @@ export class Level2Scene extends Scene
             this.nextHungerDrainAt += steps * 2000;
             this.updateHungerHud();
         }
-        if (this.hunger <= 0 && time >= this.nextStarvationDamageAt) {            this.nextStarvationDamageAt = time + 2000;
+        if (this.hunger <= 0 && time >= this.nextStarvationDamageAt) {
+            this.nextStarvationDamageAt = time + 2000;
             this.health = Math.max(0, this.health - 5);
             this.updateHealthHud();
             if (this.health <= 0) this.handlePlayerDeath();
@@ -2106,20 +2243,29 @@ export class Level2Scene extends Scene
 
     update ()
     {
+        const time = this.time.now;
         const moveSpeed = 260;
         const grounded = this.player.body.blocked.down || this.player.body.touching.down;
-        if (grounded) this.jumpsUsed = 0;
+
+        this.updateStamina(time, grounded);
+
+        const jumpDown = this.keyW.isDown || this.cursors.up.isDown || this.spaceKey.isDown;
+        if (jumpDown && !this.jumpWasDown) {
+            this.queueJumpInput(time);
+        }
+        this.jumpWasDown = jumpDown;
 
         if (!this.isPlayerDead && !this.phaseCompleted) {
-            if (this.time.now >= this.knockbackUntil) {
+            if (time >= this.knockbackUntil) {
                 const left = this.cursors.left.isDown || this.keyA.isDown;
                 const right = this.cursors.right.isDown || this.keyD.isDown;
                 this.player.body.setVelocityX(left ? -moveSpeed : right ? moveSpeed : 0);
             }
 
-            const jumpDown = this.keyW.isDown || this.cursors.up.isDown || this.spaceKey.isDown;
-            if (jumpDown && !this.jumpWasDown) this.performJump(grounded);
-            this.jumpWasDown = jumpDown;
+            this.updateGroundedState(grounded);
+            this.consumeJumpBuffer(grounded);
+        } else {
+            this.updateGroundedState(grounded);
         }
 
         if (this.arenaStarted && !this.arenaCleared) {
@@ -2130,15 +2276,22 @@ export class Level2Scene extends Scene
         if (this.player.y > 760) {
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
             this.player.body.setVelocity(0, 0);
+            this.stamina = this.maxStamina;
+            this.staminaRegenBlockedUntil = 0;
+            this.jumpsUsed = 0;
+            this.wasGrounded = false;
+            this.jumpBufferUntil = 0;
+            this.updateStaminaHud();
         }
 
         this.syncPlayerVisual();
-        this.animatePlayerVisual(this.time.now);
-        this.updateAttack(this.time.now);
-        this.updateSnake(this.time.now);
-        this.updateCarapana(this.time.now);
-        this.updateFruits(this.time.now);
-        this.updateCurupira(this.time.now);
-        this.updateHunger(this.time.now);
+        this.animatePlayerVisual(time);
+        this.updateAttack(time);
+        this.updateSnake(time);
+        this.updateCarapana(time);
+        this.updateFruits(time);
+        this.updateCurupira(time);
+        this.updateHunger(time);
     }
+
 }

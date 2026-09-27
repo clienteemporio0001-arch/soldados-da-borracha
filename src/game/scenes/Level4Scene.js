@@ -42,6 +42,19 @@ export class Level4Scene extends Scene
         this.dashUnlocked = this.registry.get('dashUnlocked') === true;
         this.jumpsUsed = 0;
         this.jumpWasDown = false;
+        this.wasGrounded = false;
+        this.jumpBufferUntil = 0;
+        this.jumpBufferMs = 130;
+        this.maxStamina = 100;
+        this.stamina = 100;
+        this.doubleJumpStaminaCost = 30;
+        this.dashStaminaCost = 25;
+        this.staminaRegenDelay = 350;
+        this.staminaGroundRegen = 40;
+        this.staminaAirRegen = 12;
+        this.staminaRegenBlockedUntil = 0;
+        this.lastStaminaUpdateAt = this.time.now;
+        this.nextStaminaFeedbackAt = 0;
         this.isDashing = false;
         this.dashEndsAt = 0;
         this.nextDashAt = 0;
@@ -92,6 +105,7 @@ export class Level4Scene extends Scene
         this.createHud();
         this.createHealthHud();
         this.createHungerHud();
+        this.createStaminaHud();
         this.showLevelTitle();
 
         this.spawnPoint = { x: 150, y: 515 };
@@ -238,61 +252,88 @@ export class Level4Scene extends Scene
     {
         const g=this.add.graphics().setDepth(9);
 
-        // Árvore cortada.
-        g.fillStyle(0x63462f,1);g.fillRect(1470,535,42,120);
-        g.fillStyle(0xa57a51,.9);g.fillEllipse(1491,535,44,15);
-        g.lineStyle(2,0x69472f,.8);g.strokeEllipse(1491,535,29,9);
+        // Destruição humana: cortes retos, repetição organizada e objetos deixados para trás.
+        [[1470,535,42,120],[1560,558,34,92]].forEach(([x,y,w,h])=>{
+            g.fillStyle(0x63462f,1);g.fillRect(x,y,w,h);
+            g.fillStyle(0xa57a51,.92);g.fillEllipse(x+w/2,y,w+2,14);
+            g.lineStyle(2,0x69472f,.8);g.strokeEllipse(x+w/2,y,w*.7,8);
+        });
 
-        // Corda e madeira cortada.
-        g.lineStyle(4,0x9a7a4c,.75);g.beginPath();g.moveTo(1580,570);g.lineTo(1635,615);g.lineTo(1660,580);g.strokePath();
-        g.fillStyle(0x755337,.92);g.fillRect(1680,610,75,12);g.fillRect(1705,592,72,11);
+        // Madeira cortada e empilhada em linhas regulares.
+        g.fillStyle(0x755337,.94);
+        [[1650,612,78,12],[1670,596,76,11],[1692,580,72,10],[1735,613,58,11]].forEach(([x,y,w,h])=>g.fillRect(x,y,w,h));
+        g.fillStyle(0xa57a51,.75);
+        [1650,1735].forEach(x=>{g.fillEllipse(x+6,618,11,11);});
 
-        // Caixa e ferramenta abandonada.        g.fillStyle(0x725437,.95);g.fillRect(1765,598,55,45);g.lineStyle(3,0x3d2c20,.9);g.strokeRect(1765,598,55,45);
-        g.lineStyle(5,0x6b4c31,.95);g.beginPath();g.moveTo(1850,612);g.lineTo(1890,575);g.strokePath();
-        g.fillStyle(0x9aa09a,.85);g.fillRect(1885,565,27,10);
+        // Corda enrolada e caixa fechada: sinais de trabalho organizado.
+        g.lineStyle(4,0x9a7a4c,.82);
+        g.strokeCircle(1608,610,18);g.strokeCircle(1618,610,13);
+        g.fillStyle(0x725437,.95);g.fillRect(1790,596,58,46);g.lineStyle(3,0x3d2c20,.9);g.strokeRect(1790,596,58,46);
+        g.beginPath();g.moveTo(1819,596);g.lineTo(1819,642);g.strokePath();
 
-        // Fogueira apagada.
-        g.lineStyle(6,0x453024,.95);g.beginPath();g.moveTo(1970,628);g.lineTo(2010,603);g.strokePath();g.beginPath();g.moveTo(2008,628);g.lineTo(1972,603);g.strokePath();
-        g.fillStyle(0x1d1c18,.85);g.fillEllipse(1990,630,70,18);
-        this.add.ellipse(1990,575,70,95,0xb9b7a5,.045).setDepth(8);
+        // Ferramentas dispostas/abandonadas.
+        g.lineStyle(5,0x6b4c31,.95);g.beginPath();g.moveTo(1870,615);g.lineTo(1910,578);g.strokePath();
+        g.fillStyle(0x9aa09a,.9);g.fillRect(1905,568,28,10);
+        g.lineStyle(4,0x6b4c31,.8);g.beginPath();g.moveTo(1945,620);g.lineTo(1964,585);g.strokePath();
 
-        // Pegadas humanas na direção do acampamento.
+        // Fogueira apagada com pedras em círculo.
+        g.fillStyle(0x5a5145,.75);
+        for(let i=0;i<8;i++){const a=Math.PI*2*i/8;g.fillCircle(2025+Math.cos(a)*29,625+Math.sin(a)*10,5);}
+        g.lineStyle(6,0x453024,.95);g.beginPath();g.moveTo(2006,628);g.lineTo(2044,603);g.strokePath();g.beginPath();g.moveTo(2042,628);g.lineTo(2008,603);g.strokePath();
+        g.fillStyle(0x1d1c18,.88);g.fillEllipse(2025,628,62,16);
+        this.add.ellipse(2025,575,64,92,0xb9b7a5,.04).setDepth(8);
+
+        // Pegadas humanas relativamente alinhadas, conduzindo ao acampamento.
         g.fillStyle(0x594635,.68);
-        for(let i=0;i<7;i++){
-            g.fillEllipse(2050+i*65,630-(i%2)*8,13,25);
-        }
+        for(let i=0;i<7;i++) g.fillEllipse(2090+i*58,630-(i%2)*7,12,23);
     }
 
     createMapinguariSigns ()
     {
         const g=this.add.graphics().setDepth(8);
 
-        // Primeira pegada gigantesca.
-        this.drawGiantFootprint(g,2260,625,.85);
+        // A partir daqui a destruição deixa de ser organizada e passa a ser bruta.
+        this.drawGiantFootprint(g,2260,625,.88);
+        this.drawGiantFootprint(g,2740,620,1.08);
+        this.drawGiantFootprint(g,3060,610,1.22);
 
-        // Marcas cada vez maiores.
-        this.drawGiantFootprint(g,2740,620,1.05);
-        this.drawGiantFootprint(g,3060,610,1.18);
-
-        g.lineStyle(11,0x4b3325,.75);
-        g.beginPath();g.moveTo(2820,420);g.lineTo(2890,320);g.strokePath();
-        g.beginPath();g.moveTo(2845,425);g.lineTo(2920,335);g.strokePath();
-
-        // Vegetação que treme antes da fuga.
-        this.mapinguariLeaves=[
-            this.add.ellipse(3000,500,32,13,0x284b30,.75).setDepth(7),
-            this.add.ellipse(3040,480,36,14,0x31593a,.7).setDepth(7),
-            this.add.ellipse(3080,510,30,12,0x24452d,.72).setDepth(7)
-        ];
-        this.mapinguariLeaves.forEach((leaf,i)=>{
-            this.tweens.add({targets:leaf,x:leaf.x+(i%2?8:-8),angle:(i%2?7:-7),duration:230+i*35,yoyo:true,repeat:-1,ease:'Sine.InOut'});
+        // Troncos partidos de modo irregular e em alturas impossíveis para ferramentas comuns.
+        g.lineStyle(18,0x493124,.9);
+        [[2300,535,2385,455],[2480,500,2565,382],[2820,455,2910,330],[2975,470,3070,345]].forEach(([x1,y1,x2,y2],i)=>{
+            g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.strokePath();
+            g.fillStyle(0x6a4932,.82);g.fillTriangle(x2-10,y2+8,x2+8,y2+18,x2+3,y2-10-(i%2)*7);
         });
 
-        // Silhueta distante parcial, sempre coberta por vegetação.
-        this.mapinguariShadow=this.add.ellipse(3280,405,120,230,0x070807,.32).setDepth(-8);
+        // Sulcos largos e vegetação esmagada atravessando o caminho.
+        g.lineStyle(14,0x2d211a,.68);
+        [[2360,635,2500,600],[2570,630,2720,590],[2860,625,3025,575]].forEach(([x1,y1,x2,y2])=>{g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.strokePath();});
+        g.fillStyle(0x203523,.52);
+        [[2450,620,90,16],[2670,612,110,18],[2940,600,125,20]].forEach(([x,y,w,h])=>g.fillEllipse(x,y,w,h));
+
+        // Objetos humanos deslocados pela passagem de algo grande.
+        g.fillStyle(0x725437,.75);g.fillRect(2580,560,48,34);g.fillRect(2960,535,38,28);
+        g.lineStyle(4,0x9a7a4c,.55);g.beginPath();g.moveTo(2610,585);g.lineTo(2665,545);g.strokePath();
+
+        // Marcas muito altas.
+        g.lineStyle(11,0x4b3325,.78);
+        g.beginPath();g.moveTo(2820,420);g.lineTo(2890,310);g.strokePath();
+        g.beginPath();g.moveTo(2848,425);g.lineTo(2925,322);g.strokePath();
+
+        this.mapinguariLeaves=[
+            this.add.ellipse(3000,500,34,14,0x284b30,.78).setDepth(7),
+            this.add.ellipse(3040,480,38,15,0x31593a,.74).setDepth(7),
+            this.add.ellipse(3080,510,32,13,0x24452d,.76).setDepth(7),
+            this.add.ellipse(3120,492,31,12,0x294c31,.7).setDepth(7)
+        ];
+        this.mapinguariLeaves.forEach((leaf,i)=>{
+            this.tweens.add({targets:leaf,x:leaf.x+(i%2?8:-8),angle:(i%2?7:-7),duration:250+i*30,yoyo:true,repeat:-1,ease:'Sine.InOut'});
+        });
+
+        // Presença parcial: maior que antes, ainda escondida atrás da vegetação.
+        this.mapinguariShadow=this.add.ellipse(3295,395,168,292,0x050605,.3).setDepth(-8);
         this.mapinguariEyes=[
-            this.add.circle(3258,372,4,0xd4b35e,.24).setDepth(-7),
-            this.add.circle(3280,372,4,0xd4b35e,.24).setDepth(-7)
+            this.add.circle(3268,357,5,0xd4b35e,.28).setDepth(-7),
+            this.add.circle(3300,357,5,0xd4b35e,.28).setDepth(-7)
         ];
         this.mapinguariShadow.setVisible(false);
         this.mapinguariEyes.forEach(e=>e.setVisible(false));
@@ -496,7 +537,8 @@ export class Level4Scene extends Scene
             hatY = -46;
             hatAngle = 2;
             leftArmAngle = -34;
-            rightArmAngle = 34;            leftLegAngle = -15;
+            rightArmAngle = 34;
+            leftLegAngle = -15;
             rightLegAngle = 15;
             leftLegY = 17;
             rightLegY = 17;
@@ -745,7 +787,8 @@ export class Level4Scene extends Scene
 
         this.tweens.add({
             targets: this.snakeVisual,
-            angle: 18,            scaleY: 0.55,
+            angle: 18,
+            scaleY: 0.55,
             alpha: 0,
             duration: 450,
             delay: 180,
@@ -954,8 +997,7 @@ export class Level4Scene extends Scene
         }
 
         this.health = Math.max(0, this.health - 10);
-        this.invulnerableUntil = this.time.now + 1000;
-        this.knockbackUntil = this.time.now + 120;
+        this.invulnerableUntil = this.time.now + 1000;        this.knockbackUntil = this.time.now + 120;
 
         const direction = this.player.x < this.carapana.x ? -1 : 1;
         this.player.body.setVelocityX(120 * direction);
@@ -994,7 +1036,8 @@ export class Level4Scene extends Scene
 
         this.carapanaHealth = Math.max(0, this.carapanaHealth - amount);
 
-        if (this.carapanaHealth <= 0)        {
+        if (this.carapanaHealth <= 0)
+        {
             this.defeatCarapana();
         }
     }
@@ -1051,12 +1094,20 @@ export class Level4Scene extends Scene
             this.player.body.setVelocity(0, 0);
             this.health = 100;
             this.hunger = 100;
+            this.stamina = this.maxStamina;
+            this.staminaRegenBlockedUntil = 0;
+            this.jumpsUsed = 0;
+            this.wasGrounded = false;
+            this.jumpBufferUntil = 0;
+            this.isDashing = false;
+            this.airDashUsed = false;
             this.nextHungerDrainAt = this.time.now + 2000;
             this.nextStarvationDamageAt = this.time.now + 2000;
             this.invulnerableUntil = this.time.now + 1000;
             this.isPlayerDead = false;
             this.updateHealthHud();
             this.updateHungerHud();
+            this.updateStaminaHud();
             this.playerVisual.setAlpha(1);
             this.resetUnstablePlatforms();
         });
@@ -1186,6 +1237,8 @@ export class Level4Scene extends Scene
         this.unstablePlatforms=[];
         const data=[
             {x:1505,y:510,w:145,h:24},
+            {x:2050,y:425,w:145,h:24},
+            {x:2860,y:545,w:150,h:24},
             {x:3320,y:505,w:150,h:24}
         ];
 
@@ -1216,9 +1269,17 @@ export class Level4Scene extends Scene
         item.triggered=true;
         item.sensor.body.enable=false;
 
+        // Aviso visual claro antes da queda: tremida + terra/folhas, sem reduzir a janela atual de reação.
+        for(let i=0;i<5;i++){
+            const debris=this.add.ellipse(item.x-item.w*.3+i*(item.w*.15),item.y+4,7,3,i%2?0x6b5439:0x547044,.62).setDepth(8);
+            this.tweens.add({targets:debris,y:debris.y+14,x:debris.x+(i%2?10:-8),angle:i*38,alpha:0,duration:360+i*28,onComplete:()=>debris.destroy()});
+        }
+
         this.tweens.add({
             targets:item.visual,
             x:item.x+3,
+            y:item.y+2,
+            angle:1.5,
             duration:55,
             yoyo:true,
             repeat:4,
@@ -1243,36 +1304,50 @@ export class Level4Scene extends Scene
             item.triggered=false;
             item.body.body.enable=true;
             item.sensor.body.enable=true;
-            item.visual.setPosition(item.x,item.y).setAngle(0).setAlpha(1);        });
+            item.visual.setPosition(item.x,item.y).setAngle(0).setAlpha(1);
+        });
     }
 
     createCompanionClue ()
     {
         const camp=this.add.graphics().setDepth(11);
 
-        // Barraca rasgada.
-        camp.fillStyle(0x50503d,.85);
-        camp.fillTriangle(2450,625,2520,525,2590,625);
-        camp.lineStyle(4,0x332b21,.95);
-        camp.beginPath();camp.moveTo(2520,525);camp.lineTo(2520,625);camp.strokePath();
-        camp.lineStyle(3,0x28241f,.9);
-        camp.beginPath();camp.moveTo(2505,555);camp.lineTo(2542,590);camp.strokePath();
+        // Barraca rasgada e inclinada: o acampamento foi abandonado às pressas.
+        camp.fillStyle(0x50503d,.85);camp.fillTriangle(2450,625,2520,525,2590,625);
+        camp.lineStyle(4,0x332b21,.95);camp.beginPath();camp.moveTo(2520,525);camp.lineTo(2520,625);camp.strokePath();
+        camp.lineStyle(3,0x28241f,.9);camp.beginPath();camp.moveTo(2497,552);camp.lineTo(2546,596);camp.strokePath();
+        camp.beginPath();camp.moveTo(2550,548);camp.lineTo(2510,600);camp.strokePath();
 
-        // Caixas, cordas e objetos espalhados.
-        camp.fillStyle(0x755337,.95);camp.fillRect(2600,590,62,48);camp.fillRect(2680,610,44,30);
+        // Caixa aberta, ferramenta caída e objetos espalhados.
+        camp.fillStyle(0x755337,.95);camp.fillRect(2600,590,62,48);camp.lineStyle(3,0x3d2c20,.9);camp.strokeRect(2600,590,62,48);
+        camp.fillStyle(0x6d4b31,.9);camp.fillRect(2596,572,68,12);camp.lineStyle(3,0x3d2c20,.85);camp.strokeRect(2596,572,68,12);
+        camp.fillStyle(0x755337,.8);camp.fillRect(2680,610,44,30);camp.fillRect(2735,625,26,14);
+        camp.lineStyle(5,0x6b4c31,.9);camp.beginPath();camp.moveTo(2695,596);camp.lineTo(2738,620);camp.strokePath();
+        camp.fillStyle(0x8f9690,.82);camp.fillRect(2686,589,28,9);
         camp.lineStyle(3,0x9a7a4c,.72);camp.beginPath();camp.moveTo(2550,640);camp.lineTo(2630,620);camp.lineTo(2705,642);camp.strokePath();
-        camp.fillStyle(0x8f9690,.78);camp.fillRect(2720,605,32,9);
 
-        // Uma pegada gigantesca misturada às humanas.
-        this.drawGiantFootprint(camp,2790,615,.72);
+        // Pegadas humanas se dispersam em direções diferentes.
+        camp.fillStyle(0x594635,.62);
+        [[2530,636],[2575,631],[2625,642],[2670,632],[2712,644]].forEach(([x,y],i)=>camp.fillEllipse(x,y-(i%2)*5,12,23));
+        // Uma presença impossível no meio do acampamento.
+        this.drawGiantFootprint(camp,2790,615,.78);
 
-        // Lenço preso a um galho.
-        this.companionScarf=this.add.rectangle(2815,495,34,15,0x9e3f52,.92).setAngle(-18).setDepth(14);
+        // Lenço destacado discretamente por halo, sem asset externo.
+        this.companionScarfGlow=this.add.ellipse(2815,495,62,38,0xd8b5ba,.08).setDepth(13);
+        this.companionScarf=this.add.rectangle(2815,495,34,15,0x9e3f52,.96).setAngle(-18).setDepth(14);
+        this.tweens.add({targets:[this.companionScarf,this.companionScarfGlow],alpha:{from:.7,to:1},duration:700,yoyo:true,repeat:-1,ease:'Sine.InOut'});
         this.tweens.add({targets:this.companionScarf,angle:{from:-21,to:-12},y:this.companionScarf.y-3,duration:700,yoyo:true,repeat:-1,ease:'Sine.InOut'});
 
         // Marca inequívoca feita por ela.
-        camp.lineStyle(5,0xc3a477,.92);
-        camp.beginPath();camp.moveTo(2860,520);camp.lineTo(2880,500);camp.lineTo(2900,520);camp.lineTo(2880,540);camp.closePath();camp.strokePath();
+        camp.lineStyle(5,0xc3a477,.92);camp.beginPath();camp.moveTo(2860,520);camp.lineTo(2880,500);camp.lineTo(2900,520);camp.lineTo(2880,540);camp.closePath();camp.strokePath();
+
+        // Trilha visual após a pista: pegadas/galhos/marcas orientam para a direita.
+        this.companionTrail=this.add.graphics().setDepth(10);
+        this.companionTrail.setAlpha(.28);
+        this.companionTrail.fillStyle(0x675140,.75);
+        [[2925,615],[2965,605],[3008,617]].forEach(([x,y],i)=>this.companionTrail.fillEllipse(x,y-(i%2)*6,11,22));
+        this.companionTrail.lineStyle(3,0x6d5539,.75);
+        [[2945,570,2975,552],[2990,560,3023,544]].forEach(([a,b,c,d])=>{this.companionTrail.beginPath();this.companionTrail.moveTo(a,b);this.companionTrail.lineTo(c,d);this.companionTrail.strokePath();});
 
         this.companionClueSensor=this.add.rectangle(2845,545,170,180,0x000000,0);
         this.physics.add.existing(this.companionClueSensor);
@@ -1287,18 +1362,23 @@ export class Level4Scene extends Scene
         this.companionClueFound=true;
         this.companionClueSensor.body.enable=false;
         this.player.body.setVelocityX(0);
-        this.knockbackUntil=this.time.now+1750;
+        this.knockbackUntil=this.time.now+1900;
 
-        const panel=this.add.rectangle(512,330,520,112,0x06100d,.92).setScrollFactor(0).setDepth(190);
+        // Pequena desaceleração narrativa: aproximação discreta e foco no lenço.
+        this.cameras.main.zoomTo(1.045,260,'Sine.easeInOut');
+        this.tweens.add({targets:this.companionScarfGlow,scale:1.35,alpha:.16,duration:320,yoyo:true,repeat:1});
+
+        const panel=this.add.rectangle(512,330,470,100,0x06100d,.92).setScrollFactor(0).setDepth(190);
         const text=this.add.text(512,330,'É dela.',{fontFamily:'Arial Black',fontSize:'28px',color:'#f1e1ae'}).setOrigin(.5).setScrollFactor(0).setDepth(191);
 
-        this.time.delayedCall(850,()=>{
+        this.time.delayedCall(900,()=>{
             text.setText('Ela esteve aqui recentemente.').setFontSize(24);
+            this.companionTrail.setAlpha(.72);
         });
-        this.time.delayedCall(1850,()=>{
+        this.time.delayedCall(1900,()=>{
             panel.destroy();text.destroy();
-            const hint=this.add.text(512,210,'Os rastros continuam.',{fontFamily:'Arial',fontSize:'20px',color:'#c8d8cc',backgroundColor:'#06100dcc',padding:{x:14,y:8}}).setOrigin(.5).setScrollFactor(0).setDepth(180);
-            this.time.delayedCall(1800,()=>hint.destroy());
+            this.cameras.main.zoomTo(1,320,'Sine.easeInOut');
+            this.tweens.add({targets:this.companionTrail,alpha:{from:.72,to:.42},duration:700});
         });
     }
 
@@ -1320,30 +1400,65 @@ export class Level4Scene extends Scene
         this.escapeTrigger.body.enable=false;
         this.spawnPoint={...this.escapeCheckpoint};
 
-        this.cameras.main.shake(240,.004);
-        this.showImpactBurst(3060,560);
-
-        this.mapinguariShadow.setVisible(true);
-        this.mapinguariEyes.forEach(e=>e.setVisible(true));
-        this.tweens.add({targets:[this.mapinguariShadow,...this.mapinguariEyes],alpha:{from:.12,to:.42},duration:350,yoyo:true,repeat:1});
-
-        // Árvore cai atrás e bloqueia retorno.
-        const fallen=this.add.rectangle(3000,520,260,30,0x4a3020,.96).setOrigin(.5).setDepth(12).setAngle(-72);
-        this.tweens.add({
-            targets:fallen,
-            angle:-8,
-            y:610,
-            duration:520,
-            ease:'Quad.In',
-            onComplete:()=>{
-                this.escapeBlocker=this.add.rectangle(2995,610,250,44,0x000000,0);
-                this.physics.add.existing(this.escapeBlocker,true);
-                this.physics.add.collider(this.player,this.escapeBlocker);
-            }
+        // SILÊNCIO -> vegetação reage -> impacto -> árvore cai -> sombra cruza o fundo.
+        this.mapinguariLeaves.forEach((leaf,i)=>{
+            this.tweens.add({targets:leaf,scaleX:1.18,angle:(i%2?14:-14),duration:120,yoyo:true,repeat:3,delay:i*35});
         });
 
-        this.time.delayedCall(650,()=>{this.cameras.main.shake(170,.003);this.showImpactBurst(3370,530);});
-        this.time.delayedCall(1250,()=>{this.cameras.main.shake(150,.0025);this.showImpactBurst(3600,500);});
+        this.time.delayedCall(260,()=>{
+            this.showImpactBurst(3060,560);
+            this.cameras.main.shake(210,.0038);
+        });
+
+        this.time.delayedCall(430,()=>{
+            this.mapinguariShadow.setVisible(true).setAlpha(.1).setX(3245);
+            this.mapinguariEyes.forEach(e=>e.setVisible(true).setAlpha(.16));
+            this.tweens.add({targets:this.mapinguariShadow,x:3335,alpha:.42,duration:520,ease:'Sine.InOut',yoyo:true});
+            this.tweens.add({targets:this.mapinguariEyes,alpha:.42,duration:240,yoyo:true,repeat:1});
+        });
+
+        this.time.delayedCall(520,()=>{
+            // Árvore cai atrás e bloqueia retorno.
+            const fallen=this.add.rectangle(3000,520,260,30,0x4a3020,.96).setOrigin(.5).setDepth(12).setAngle(-72);
+            this.tweens.add({
+                targets:fallen,angle:-8,y:610,duration:520,ease:'Quad.In',
+                onComplete:()=>{
+                    this.escapeBlocker=this.add.rectangle(2995,610,250,44,0x000000,0);
+                    this.physics.add.existing(this.escapeBlocker,true);
+                    this.physics.add.collider(this.player,this.escapeBlocker);
+                    this.showImpactBurst(3010,600);
+                }
+            });
+        });
+
+        this.time.delayedCall(900,()=>{this.cameras.main.shake(150,.0028);this.showImpactBurst(3370,530);});
+        this.time.delayedCall(980,()=>this.warnAndDropEscapeTree());
+        this.time.delayedCall(1380,()=>{this.cameras.main.shake(130,.0022);this.showImpactBurst(3600,500);});
+    }
+
+    warnAndDropEscapeTree ()
+    {
+        if(this.escapeSecondTree)return;
+        const warningLeaves=[];
+        for(let i=0;i<4;i++){
+            const leaf=this.add.ellipse(3520+i*18,330-i*10,11,5,0x526c43,.72).setDepth(20);
+            warningLeaves.push(leaf);
+            this.tweens.add({targets:leaf,x:leaf.x+(i%2?8:-8),angle:i%2?12:-12,duration:95,yoyo:true,repeat:3});
+        }
+        const tree=this.add.rectangle(3580,335,250,28,0x4a3020,.96).setOrigin(.5).setDepth(12).setAngle(-74);
+        this.escapeSecondTree=tree;
+        this.time.delayedCall(360,()=>{
+            warningLeaves.forEach(leaf=>this.tweens.add({targets:leaf,alpha:0,duration:160,onComplete:()=>leaf.destroy()}));
+            this.tweens.add({targets:tree,angle:-10,y:575,duration:470,ease:'Quad.In',onComplete:()=>{
+                this.showImpactBurst(3580,570);
+                this.cameras.main.shake(120,.0022);
+                if(!this.escapeSecondTreeBlocker){
+                    this.escapeSecondTreeBlocker=this.add.rectangle(3580,575,220,30,0x000000,0);
+                    this.physics.add.existing(this.escapeSecondTreeBlocker,true);
+                    this.physics.add.collider(this.player,this.escapeSecondTreeBlocker);
+                }
+            }});
+        });
     }
 
     showImpactBurst (x,y)
@@ -1361,11 +1476,21 @@ export class Level4Scene extends Scene
     {
         if(this.escapeCompleted)return;
         this.escapeCompleted=true;
-        const t=this.add.text(512,205,'NOVO RASTRO\\nSIGA PARA O TERRITÓRIO DO MAPINGUARI',{
-            fontFamily:'Arial Black',fontSize:'20px',color:'#f1e1ae',align:'center',
-            backgroundColor:'#06100dcc',padding:{x:16,y:10}
-        }).setOrigin(.5).setScrollFactor(0).setDepth(180);
-        this.time.delayedCall(2500,()=>t.destroy());
+
+        // A tensão cai de novo: presença some e o olhar é conduzido aos rastros finais.
+        if(this.mapinguariShadow)this.tweens.add({targets:this.mapinguariShadow,alpha:0,duration:500});
+        if(this.mapinguariEyes)this.tweens.add({targets:this.mapinguariEyes,alpha:0,duration:350});
+        this.cameras.main.shake(80,.0012);
+
+        const trail=this.add.graphics().setDepth(15);
+        this.drawGiantFootprint(trail,3890,420,.72);
+        trail.fillStyle(0x66513f,.78);trail.fillEllipse(3950,420,12,24);trail.fillEllipse(3980,410,12,24);
+
+        const line=this.add.text(512,214,'“Os rastros seguem juntos.”',{
+            fontFamily:'Arial',fontSize:'22px',color:'#d9dfd6',backgroundColor:'#06100dcc',padding:{x:16,y:9}
+        }).setOrigin(.5).setScrollFactor(0).setDepth(180).setAlpha(0);
+        this.tweens.add({targets:line,alpha:1,duration:500});
+        this.time.delayedCall(2100,()=>this.tweens.add({targets:line,alpha:0,duration:350,onComplete:()=>line.destroy()}));
     }
 
     tryDash ()
@@ -1373,10 +1498,12 @@ export class Level4Scene extends Scene
         if(!this.dashUnlocked||this.phaseCompleted||this.isPlayerDead||this.isDashing||this.time.now<this.nextDashAt)return;
         const grounded=this.player.body.blocked.down||this.player.body.touching.down;
         if(!grounded&&this.airDashUsed){this.showDashUnavailableFeedback();return;}
+        if(this.stamina<this.dashStaminaCost){this.showStaminaBlockedFeedback();return;}
         const left=this.cursors.left.isDown||this.keyA.isDown;
         const right=this.cursors.right.isDown||this.keyD.isDown;
         const direction=left&&!right?-1:right&&!left?1:(this.playerVisual.facing||1);
 
+        this.spendStamina(this.dashStaminaCost);
         this.isDashing=true;
         this.dashDirection=direction;
         this.dashEndsAt=this.time.now+this.dashDuration;
@@ -1424,7 +1551,7 @@ export class Level4Scene extends Scene
 
     updateDash (time,grounded)
     {
-        if(grounded&&this.airDashUsed){
+        if(grounded&&this.airDashUsed&&!this.wasGrounded){
             this.airDashUsed=false;
             this.showAirDashRechargeFeedback();
         }
@@ -1434,7 +1561,62 @@ export class Level4Scene extends Scene
         }
     }
 
-    performJump (isGrounded) { if(isGrounded)this.jumpsUsed=0;if(this.jumpsUsed===0&&isGrounded){this.player.body.setVelocityY(-520);this.jumpsUsed=1;return;}if(this.doubleJumpUnlocked&&this.jumpsUsed===1&&!isGrounded){this.player.body.setVelocityY(-500);this.jumpsUsed=2;this.showDoubleJumpBurst(false);} }
+    updateGroundedState (grounded)
+    {
+        if(grounded&&!this.wasGrounded)this.jumpsUsed=0;
+        this.wasGrounded=grounded;
+    }
+
+    queueJumpInput (time)
+    {
+        this.jumpBufferUntil=time+this.jumpBufferMs;
+    }
+
+    consumeJumpBuffer (grounded)
+    {
+        if(this.jumpBufferUntil<this.time.now||this.isDashing)return false;
+        if(this.jumpsUsed===0&&grounded){
+            this.player.body.setVelocityY(-520);
+            this.jumpsUsed=1;
+            this.jumpBufferUntil=0;
+            return true;
+        }
+        if(this.doubleJumpUnlocked&&this.jumpsUsed===1&&!grounded){
+            if(this.stamina<this.doubleJumpStaminaCost){this.showStaminaBlockedFeedback();this.jumpBufferUntil=0;return false;}
+            this.spendStamina(this.doubleJumpStaminaCost);
+            this.player.body.setVelocityY(-500);
+            this.jumpsUsed=2;
+            this.jumpBufferUntil=0;
+            this.showDoubleJumpBurst(false);
+            return true;
+        }
+        return false;
+    }
+
+    spendStamina (amount)
+    {
+        this.stamina=Math.max(0,this.stamina-amount);
+        this.staminaRegenBlockedUntil=this.time.now+this.staminaRegenDelay;
+        this.updateStaminaHud();
+    }
+
+    updateStamina (time,grounded)
+    {
+        const delta=Math.min(.05,Math.max(0,(time-this.lastStaminaUpdateAt)/1000));
+        this.lastStaminaUpdateAt=time;
+        if(this.phaseCompleted||this.isPlayerDead||time<this.staminaRegenBlockedUntil||this.stamina>=this.maxStamina)return;
+        const rate=grounded?this.staminaGroundRegen:this.staminaAirRegen;
+        this.stamina=Math.min(this.maxStamina,this.stamina+rate*delta);
+        this.updateStaminaHud();
+    }
+
+    showStaminaBlockedFeedback ()
+    {
+        if(!this.staminaHud||this.time.now<this.nextStaminaFeedbackAt)return;
+        this.nextStaminaFeedbackAt=this.time.now+220;
+        this.tweens.killTweensOf(this.staminaBar);
+        this.tweens.add({targets:this.staminaBar,alpha:.25,duration:70,yoyo:true,repeat:2,onComplete:()=>this.staminaBar.setAlpha(1)});
+    }
 
     showDoubleJumpBurst (isFirst = false)
     {
@@ -1492,7 +1674,8 @@ export class Level4Scene extends Scene
         this.finalZone.body.setImmovable(true);
         this.physics.add.overlap(this.player,this.finalZone,()=>this.completeLevel4());
 
-        const g=this.add.graphics().setDepth(9);        this.drawGiantFootprint(g,3920,405,.72);
+        const g=this.add.graphics().setDepth(9);
+        this.drawGiantFootprint(g,3920,405,.72);
         g.fillStyle(0x63503e,.72);
         g.fillEllipse(3970,405,12,24);
 
@@ -1512,14 +1695,22 @@ export class Level4Scene extends Scene
         this.isDashing=false;
         this.attackHitbox.body.enable=false;
 
-        this.add.rectangle(512,384,1024,768,0x020705,.94).setScrollFactor(0).setDepth(300);
-        this.add.text(512,190,'FASE 4 CONCLUÍDA',{fontFamily:'Arial Black',fontSize:'42px',color:'#f1e1ae'}).setOrigin(.5).setScrollFactor(0).setDepth(301);
-        this.add.text(512,260,'RASTROS NA MATA FERIDA',{fontFamily:'Arial Black',fontSize:'27px',color:'#c9b477'}).setOrigin(.5).setScrollFactor(0).setDepth(301);
-        this.add.text(512,350,'“Os rastros seguem juntos.”',{fontFamily:'Arial',fontSize:'24px',color:'#c8d8cc'}).setOrigin(.5).setScrollFactor(0).setDepth(301);
-        this.add.text(512,420,'TERRITÓRIO DO MAPINGUARI',{fontFamily:'Arial Black',fontSize:'28px',color:'#d6b56c'}).setOrigin(.5).setScrollFactor(0).setDepth(301);
+        const overlay=this.add.rectangle(512,384,1024,768,0x020705,.94).setScrollFactor(0).setDepth(300).setAlpha(0);
+        this.tweens.add({targets:overlay,alpha:1,duration:420});
 
-        const b=this.add.rectangle(512,545,280,64,0x8b5a2b).setStrokeStyle(3,0xd6b56c).setScrollFactor(0).setDepth(301).setInteractive({useHandCursor:true});
-        this.add.text(512,545,'CONTINUAR',{fontFamily:'Arial Black',fontSize:'23px',color:'#fff'}).setOrigin(.5).setScrollFactor(0).setDepth(302);
+        const phase=this.add.text(512,185,'FASE 4 CONCLUÍDA',{fontFamily:'Arial Black',fontSize:'42px',color:'#f1e1ae'}).setOrigin(.5).setScrollFactor(0).setDepth(301).setAlpha(0);
+        const name=this.add.text(512,255,'RASTROS NA MATA FERIDA',{fontFamily:'Arial Black',fontSize:'27px',color:'#c9b477'}).setOrigin(.5).setScrollFactor(0).setDepth(301).setAlpha(0);
+        const line=this.add.text(512,342,'“Os rastros seguem juntos.”',{fontFamily:'Arial',fontSize:'24px',color:'#c8d8cc'}).setOrigin(.5).setScrollFactor(0).setDepth(301).setAlpha(0);
+        const territory=this.add.text(512,425,'TERRITÓRIO DO MAPINGUARI',{fontFamily:'Arial Black',fontSize:'30px',color:'#d6b56c'}).setOrigin(.5).setScrollFactor(0).setDepth(301).setAlpha(0);
+
+        this.tweens.add({targets:phase,alpha:1,duration:360,delay:180});
+        this.tweens.add({targets:name,alpha:1,duration:380,delay:520});
+        this.tweens.add({targets:line,alpha:1,duration:400,delay:900});
+        this.tweens.add({targets:territory,alpha:1,scale:{from:.96,to:1},duration:520,delay:1400});
+
+        const b=this.add.rectangle(512,545,280,64,0x8b5a2b).setStrokeStyle(3,0xd6b56c).setScrollFactor(0).setDepth(301).setInteractive({useHandCursor:true}).setAlpha(0);
+        const bt=this.add.text(512,545,'CONTINUAR',{fontFamily:'Arial Black',fontSize:'23px',color:'#fff'}).setOrigin(.5).setScrollFactor(0).setDepth(302).setAlpha(0);
+        this.tweens.add({targets:[b,bt],alpha:1,duration:350,delay:1900});
         b.on('pointerdown',()=>this.scene.start('MainMenu'));
     }
 
@@ -1542,8 +1733,13 @@ export class Level4Scene extends Scene
         const time=this.time.now;
         const moveSpeed=260;
         const grounded=this.player.body.blocked.down||this.player.body.touching.down;
-        if(grounded)this.jumpsUsed=0;
+
         this.updateDash(time,grounded);
+        this.updateStamina(time,grounded);
+
+        const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown;
+        if(jumpDown&&!this.jumpWasDown)this.queueJumpInput(time);
+        this.jumpWasDown=jumpDown;
 
         if(!this.isPlayerDead&&!this.phaseCompleted){
             if(!this.isDashing&&time>=this.knockbackUntil){
@@ -1551,15 +1747,17 @@ export class Level4Scene extends Scene
                 const right=this.cursors.right.isDown||this.keyD.isDown;
                 this.player.body.setVelocityX(left?-moveSpeed:right?moveSpeed:0);
             }
-            const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown;
-            if(jumpDown&&!this.jumpWasDown&&!this.isDashing)this.performJump(grounded);
-            this.jumpWasDown=jumpDown;
+            this.updateGroundedState(grounded);
+            this.consumeJumpBuffer(grounded);
+        } else {
+            this.updateGroundedState(grounded);
         }
 
         if(this.player.y>760){
             this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);
             this.player.body.setVelocity(0,0);
             this.isDashing=false;
+            this.stamina=this.maxStamina; this.staminaRegenBlockedUntil=0; this.jumpsUsed=0; this.wasGrounded=false; this.jumpBufferUntil=0; this.airDashUsed=false; this.updateStaminaHud();
             this.resetUnstablePlatforms();
         }
 
@@ -1570,6 +1768,47 @@ export class Level4Scene extends Scene
         this.updateCarapana(time);
         this.updateFruits(time);
         this.updateHunger(time);
+    }
+
+    createStaminaHud ()
+    {
+        this.staminaHud = this.add.container(395, 138)
+            .setScrollFactor(0)
+            .setDepth(102);
+
+        const background = this.add.rectangle(0, 0, 235, 50, 0x06100d, 0.78)
+            .setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.35);
+
+        const label = this.add.text(12, 6, 'FÔLEGO', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#cfe5d2'
+        });
+
+        const barBack = this.add.rectangle(12, 26, 150, 14, 0x1d3025, 0.95)
+            .setOrigin(0);
+        barBack.setStrokeStyle(1, 0x668574, 0.65);
+
+        this.staminaBar = this.add.rectangle(12, 26, 150, 14, 0x72b58a, 1)
+            .setOrigin(0);
+
+        this.staminaText = this.add.text(172, 24, '100/100', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#ffffff'
+        });
+
+        this.staminaHud.add([background, label, barBack, this.staminaBar, this.staminaText]);
+        this.updateStaminaHud();
+    }
+
+    updateStaminaHud ()
+    {
+        if (!this.staminaBar || !this.staminaText) return;
+        const ratio = Math.max(0, Math.min(1, this.stamina / this.maxStamina));
+        this.staminaBar.width = 150 * ratio;
+        this.staminaText.setText(Math.round(this.stamina) + '/' + this.maxStamina);
     }
 
     createHealthHud ()

@@ -15,14 +15,16 @@ export class Level3Scene extends Scene
         this.player.body.setCollideWorldBounds(true); this.player.body.setMaxVelocity(260,900); this.player.body.setSize(45,70); this.physics.add.collider(this.player,this.platforms);
         this.playerVisual=this.createPlayerVisual(); this.syncPlayerVisual();
         this.maxHealth=100; this.health=100; this.maxHunger=100; this.hunger=100; this.nextHungerDrainAt=this.time.now+2000; this.nextStarvationDamageAt=this.time.now+2000; this.invulnerableUntil=0; this.knockbackUntil=0; this.isPlayerDead=false; this.phaseCompleted=false;
-        this.doubleJumpUnlocked=this.registry.get('doubleJumpUnlocked')===true; this.jumpsUsed=0; this.jumpWasDown=false;
+        this.doubleJumpUnlocked=this.registry.get('doubleJumpUnlocked')===true;
+        this.jumpsUsed=0; this.jumpWasDown=false; this.wasGrounded=false; this.jumpBufferUntil=0; this.jumpBufferMs=130;
+        this.maxStamina=100; this.stamina=100; this.doubleJumpStaminaCost=30; this.dashStaminaCost=25; this.staminaRegenDelay=350; this.staminaGroundRegen=40; this.staminaAirRegen=12; this.staminaRegenBlockedUntil=0; this.lastStaminaUpdateAt=this.time.now; this.nextStaminaFeedbackAt=0;
         this.dashUnlocked=this.registry.get('dashUnlocked')===true; this.isDashing=false; this.dashEndsAt=0; this.nextDashAt=0; this.airDashUsed=false; this.nextDashDeniedFeedbackAt=0; this.dashDirection=1; this.dashSpeed=520; this.dashDuration=190; this.dashCooldown=380;
         this.isAttacking=false; this.attackStartedAt=0; this.nextAttackAt=0; this.attackDirection=1; this.attackHitSnakeRegistered=false; this.attackHitCarapanaRegistered=false;
         this.createSnake(); this.createCarapana(); this.createAttackHitbox(); this.createFruits(); this.createCaboclinhoTrial(); this.createFinalZone();
         this.cursors=this.input.keyboard.createCursorKeys(); this.keyA=this.input.keyboard.addKey('A'); this.keyD=this.input.keyboard.addKey('D'); this.keyW=this.input.keyboard.addKey('W'); this.spaceKey=this.input.keyboard.addKey('SPACE'); this.keyJ=this.input.keyboard.addKey('J'); this.keyX=this.input.keyboard.addKey('X'); this.keyShift=this.input.keyboard.addKey('SHIFT');
         this.keyJ.on('down',()=>this.startAttack()); this.keyX.on('down',()=>this.startAttack()); this.keyShift.on('down',()=>this.tryDash());
         this.cameras.main.startFollow(this.player,true,0.08,0.08); this.cameras.main.setDeadzone(220,160);
-        this.createHud(); this.createHealthHud(); this.createHungerHud(); this.showLevelTitle(); this.spawnPoint={x:150,y:560};
+        this.createHud(); this.createHealthHud(); this.createHungerHud(); this.createStaminaHud(); this.showLevelTitle(); this.spawnPoint={x:150,y:560};
     }
 
     createHighForest ()
@@ -247,7 +249,8 @@ export class Level3Scene extends Scene
         else if (state === 'FALL')
         {
             bodyOffsetY = 1;
-            torsoY = -6;            torsoAngle = 2;
+            torsoY = -6;
+            torsoAngle = 2;
             headY = -33;
             hatY = -46;
             hatAngle = 2;
@@ -316,7 +319,6 @@ export class Level3Scene extends Scene
         } else {
             this.attackHitbox.body.enable = false;
         }
-
         if (elapsed >= 300) {
             this.isAttacking = false;
             this.attackHitbox.body.enable = false;
@@ -497,6 +499,7 @@ export class Level3Scene extends Scene
         this.snakeAlive = false;
         this.snake.body.setVelocity(0, 0);
         this.snake.body.enable = false;
+
         this.tweens.killTweensOf(this.snakeVisual);
 
         this.tweens.add({
@@ -615,8 +618,7 @@ export class Level3Scene extends Scene
         {
             this.carapanaReturning = true;
 
-            if (distance > 1)
-            {
+            if (distance > 1)            {
                 this.carapana.body.setVelocity(
                     (dx / distance) * patrol.chaseSpeed,
                     (dy / distance) * patrol.chaseSpeed
@@ -745,7 +747,8 @@ export class Level3Scene extends Scene
     damageCarapana (amount)
     {
         if (!this.carapanaAlive)
-        {            return;
+        {
+            return;
         }
 
         this.carapanaHealth = Math.max(0, this.carapanaHealth - amount);
@@ -808,12 +811,20 @@ export class Level3Scene extends Scene
             this.player.body.setVelocity(0, 0);
             this.health = 100;
             this.hunger = 100;
+            this.stamina = this.maxStamina;
+            this.staminaRegenBlockedUntil = 0;
+            this.jumpsUsed = 0;
+            this.wasGrounded = false;
+            this.jumpBufferUntil = 0;
+            this.isDashing = false;
+            this.airDashUsed = false;
             this.nextHungerDrainAt = this.time.now + 2000;
             this.nextStarvationDamageAt = this.time.now + 2000;
             this.invulnerableUntil = this.time.now + 1000;
             this.isPlayerDead = false;
             this.updateHealthHud();
             this.updateHungerHud();
+            this.updateStaminaHud();
             this.playerVisual.setAlpha(1);
         });
     }
@@ -914,8 +925,7 @@ export class Level3Scene extends Scene
             duration: 500,
             ease: 'Quad.Out',
             onComplete: () => {
-                feedback.destroy();
-            }
+                feedback.destroy();            }
         });
     }
 
@@ -987,14 +997,14 @@ export class Level3Scene extends Scene
         this.caboclinhoTrigger.body.enable = false;
         this.resetCaboclinhoTest();
 
-        const panel = this.add.rectangle(512, 355, 610, 108, 0x06100d, 0.9).setScrollFactor(0).setDepth(180);
-        const text = this.add.text(512, 355, '“Quem sobe a mata precisa saber voltar.”', {
+        const panel = this.add.rectangle(512, 355, 610, 108, 0x06100d, 0.9).setScrollFactor(0).setDepth(180);        const text = this.add.text(512, 355, '“Quem sobe a mata precisa saber voltar.”', {
             fontFamily: 'Arial', fontSize: '24px', color: '#f1e1ae'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(181);
 
         this.time.delayedCall(1500, () => {
             panel.destroy();
-            text.destroy();            this.enableCaboclinhoReachZone();
+            text.destroy();
+            this.enableCaboclinhoReachZone();
         });
     }
 
@@ -1224,11 +1234,16 @@ export class Level3Scene extends Scene
             this.showDashUnavailableFeedback();
             return;
         }
+        if (this.stamina < this.dashStaminaCost) {
+            this.showStaminaBlockedFeedback();
+            return;
+        }
 
         const left = this.cursors.left.isDown || this.keyA.isDown;
         const right = this.cursors.right.isDown || this.keyD.isDown;
         const direction = left && !right ? -1 : right && !left ? 1 : (this.playerVisual.facing || 1);
 
+        this.spendStamina(this.dashStaminaCost);
         this.isDashing = true;
         this.dashDirection = direction;
         this.dashEndsAt = this.time.now + this.dashDuration;
@@ -1243,7 +1258,8 @@ export class Level3Scene extends Scene
     showDashFeedback (direction)
     {
         const ghost = this.add.container(this.player.x - direction * 8, this.player.y).setDepth(17).setAlpha(0.22);
-        ghost.add([            this.add.rectangle(0, -4, 25, 38, 0xc7aa73, 0.55),
+        ghost.add([
+            this.add.rectangle(0, -4, 25, 38, 0xc7aa73, 0.55),
             this.add.circle(0, -31, 9, 0xb98155, 0.55),
             this.add.rectangle(direction * 11, 4, 7, 34, 0xb8c0ba, 0.45).setAngle(direction * -18)
         ]);
@@ -1300,7 +1316,7 @@ export class Level3Scene extends Scene
 
     updateDash (time, grounded)
     {
-        if (grounded && this.airDashUsed) {
+        if (grounded && this.airDashUsed && !this.wasGrounded) {
             this.airDashUsed = false;
             this.showAirDashRechargeFeedback();
         }
@@ -1311,7 +1327,71 @@ export class Level3Scene extends Scene
         }
     }
 
-    performJump (isGrounded) { if(isGrounded)this.jumpsUsed=0;if(this.jumpsUsed===0&&isGrounded){this.player.body.setVelocityY(-520);this.jumpsUsed=1;return;}if(this.doubleJumpUnlocked&&this.jumpsUsed===1&&!isGrounded){this.player.body.setVelocityY(-500);this.jumpsUsed=2;this.showDoubleJumpBurst(false);} }
+    updateGroundedState (grounded)
+    {
+        if (grounded && !this.wasGrounded) {
+            this.jumpsUsed = 0;
+        }
+        this.wasGrounded = grounded;
+    }
+
+    queueJumpInput (time)
+    {
+        this.jumpBufferUntil = time + this.jumpBufferMs;
+    }
+
+    consumeJumpBuffer (grounded)
+    {
+        if (this.jumpBufferUntil < this.time.now || this.isDashing) return false;
+
+        if (this.jumpsUsed === 0 && grounded) {
+            this.player.body.setVelocityY(-520);
+            this.jumpsUsed = 1;
+            this.jumpBufferUntil = 0;
+            return true;
+        }
+
+        if (this.doubleJumpUnlocked && this.jumpsUsed === 1 && !grounded) {
+            if (this.stamina < this.doubleJumpStaminaCost) {
+                this.showStaminaBlockedFeedback();
+                this.jumpBufferUntil = 0;
+                return false;
+            }
+            this.spendStamina(this.doubleJumpStaminaCost);
+            this.player.body.setVelocityY(-500);
+            this.jumpsUsed = 2;
+            this.jumpBufferUntil = 0;
+            this.showDoubleJumpBurst(false);
+            return true;
+        }
+
+        return false;
+    }
+
+    spendStamina (amount)
+    {
+        this.stamina = Math.max(0, this.stamina - amount);
+        this.staminaRegenBlockedUntil = this.time.now + this.staminaRegenDelay;
+        this.updateStaminaHud();
+    }
+
+    updateStamina (time, grounded)
+    {
+        const delta = Math.min(0.05, Math.max(0, (time - this.lastStaminaUpdateAt) / 1000));
+        this.lastStaminaUpdateAt = time;
+        if (this.phaseCompleted || this.isPlayerDead || time < this.staminaRegenBlockedUntil || this.stamina >= this.maxStamina) return;
+        const rate = grounded ? this.staminaGroundRegen : this.staminaAirRegen;
+        this.stamina = Math.min(this.maxStamina, this.stamina + rate * delta);
+        this.updateStaminaHud();
+    }
+
+    showStaminaBlockedFeedback ()
+    {
+        if (!this.staminaHud || this.time.now < this.nextStaminaFeedbackAt) return;
+        this.nextStaminaFeedbackAt = this.time.now + 220;
+        this.tweens.killTweensOf(this.staminaBar);
+        this.tweens.add({targets:this.staminaBar,alpha:.25,duration:70,yoyo:true,repeat:2,onComplete:()=>this.staminaBar.setAlpha(1)});
+    }
 
     showDoubleJumpBurst (isFirst = false)
     {
@@ -1374,10 +1454,78 @@ export class Level3Scene extends Scene
 
     update ()
     {
-        const time=this.time.now,moveSpeed=260,grounded=this.player.body.blocked.down||this.player.body.touching.down;if(grounded)this.jumpsUsed=0;this.updateDash(time,grounded);
-        if(!this.isPlayerDead&&!this.phaseCompleted){if(!this.isDashing&&time>=this.knockbackUntil){const left=this.cursors.left.isDown||this.keyA.isDown,right=this.cursors.right.isDown||this.keyD.isDown;this.player.body.setVelocityX(left?-moveSpeed:right?moveSpeed:0);}const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown;if(jumpDown&&!this.jumpWasDown&&!this.isDashing)this.performJump(grounded);this.jumpWasDown=jumpDown;}
-        if(this.player.y>760){this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);this.player.body.setVelocity(0,0);this.isDashing=false;if(this.caboclinhoTestActive&&!this.caboclinhoTestComplete)this.resetCaboclinhoTest();}
+        const time=this.time.now;
+        const moveSpeed=260;
+        const grounded=this.player.body.blocked.down||this.player.body.touching.down;
+
+        this.updateDash(time,grounded);
+        this.updateStamina(time,grounded);
+
+        const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown;
+        if(jumpDown&&!this.jumpWasDown)this.queueJumpInput(time);
+        this.jumpWasDown=jumpDown;
+
+        if(!this.isPlayerDead&&!this.phaseCompleted){
+            if(!this.isDashing&&time>=this.knockbackUntil){
+                const left=this.cursors.left.isDown||this.keyA.isDown;
+                const right=this.cursors.right.isDown||this.keyD.isDown;
+                this.player.body.setVelocityX(left?-moveSpeed:right?moveSpeed:0);
+            }
+            this.updateGroundedState(grounded);
+            this.consumeJumpBuffer(grounded);
+        } else {
+            this.updateGroundedState(grounded);
+        }
+
+        if(this.player.y>760){
+            this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);
+            this.player.body.setVelocity(0,0);
+            this.isDashing=false;
+            this.stamina=this.maxStamina; this.staminaRegenBlockedUntil=0; this.jumpsUsed=0; this.wasGrounded=false; this.jumpBufferUntil=0; this.airDashUsed=false; this.updateStaminaHud();
+            if(this.caboclinhoTestActive&&!this.caboclinhoTestComplete)this.resetCaboclinhoTest();
+        }
         this.syncPlayerVisual();this.animatePlayerVisual(time);this.updateAttack(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);
+    }
+
+    createStaminaHud ()
+    {
+        this.staminaHud = this.add.container(395, 138)
+            .setScrollFactor(0)
+            .setDepth(102);
+
+        const background = this.add.rectangle(0, 0, 235, 50, 0x06100d, 0.78)
+            .setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.35);
+
+        const label = this.add.text(12, 6, 'FÔLEGO', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#cfe5d2'
+        });
+
+        const barBack = this.add.rectangle(12, 26, 150, 14, 0x1d3025, 0.95)
+            .setOrigin(0);
+        barBack.setStrokeStyle(1, 0x668574, 0.65);
+
+        this.staminaBar = this.add.rectangle(12, 26, 150, 14, 0x72b58a, 1)
+            .setOrigin(0);
+
+        this.staminaText = this.add.text(172, 24, '100/100', {
+            fontFamily: 'Arial',
+            fontSize: '13px',
+            color: '#ffffff'
+        });
+
+        this.staminaHud.add([background, label, barBack, this.staminaBar, this.staminaText]);
+        this.updateStaminaHud();
+    }
+
+    updateStaminaHud ()
+    {
+        if (!this.staminaBar || !this.staminaText) return;
+        const ratio = Math.max(0, Math.min(1, this.stamina / this.maxStamina));
+        this.staminaBar.width = 150 * ratio;
+        this.staminaText.setText(Math.round(this.stamina) + '/' + this.maxStamina);
     }
 
     createHealthHud ()
@@ -1442,6 +1590,7 @@ export class Level3Scene extends Scene
 
         this.hungerBar = this.add.rectangle(12, 29, 150, 16, 0xd49a3a, 1)
             .setOrigin(0);
+
         this.hungerText = this.add.text(172, 27, '100/100', {
             fontFamily: 'Arial',
             fontSize: '14px',
