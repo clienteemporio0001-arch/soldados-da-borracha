@@ -2357,10 +2357,15 @@ export class Level3Scene extends Scene
         g.lineStyle(4,0x453023,.68);
         g.beginPath();g.moveTo(cx+2,y+105);g.lineTo(cx+(index%2?42:-46),y+68);g.strokePath();
 
-        // Área de sangria: painel raspado sutil + corte principal diagonal e cortes antigos.
+        // Painel raspado: a sangria desce do lado alto (direita) para o ponto baixo (esquerda).
         const cutY=y+trunkHeight*.5;
         const cutLeft=x+6;
         const cutRight=x+trunkWidth-6;
+        const cutHighX=cutRight;
+        const cutHighY=cutY-13;
+        const cutLowX=cutLeft;
+        const cutLowY=cutY+5;
+
         g.fillStyle(0xb88d67,.24);
         g.beginPath();
         g.moveTo(cutLeft,cutY-20);
@@ -2370,46 +2375,55 @@ export class Level3Scene extends Scene
         g.closePath();
         g.fillPath();
 
+        // Corte principal: leitura inequívoca de descida para o ponto de coleta.
         g.lineStyle(4.5,0xd0aa7d,.94);
-        g.beginPath();g.moveTo(cutLeft,cutY+5);g.lineTo(cutRight,cutY-13);g.strokePath();
+        g.beginPath();g.moveTo(cutHighX,cutHighY);g.lineTo(cutLowX,cutLowY);g.strokePath();
 
+        // Cortes secundários acompanham a mesma inclinação da sangria principal.
         g.lineStyle(1.5,0x8f6548,.58);
         [-17,-9,13,22].forEach((offset,mark)=>{
-            const startX=cutLeft+3+(mark%2)*2;
-            g.beginPath();g.moveTo(startX,cutY+offset);g.lineTo(cutRight-4,cutY+offset-11-(mark%2)*3);g.strokePath();
+            const highX=cutRight-3-(mark%2)*2;
+            const highY=cutY+offset-11-(mark%2)*3;
+            const lowX=cutLeft+3+(mark%2)*2;
+            const lowY=cutY+offset;
+            g.beginPath();g.moveTo(highX,highY);g.lineTo(lowX,lowY);g.strokePath();
         });
 
-        // Bica/canal: nasce exatamente no fim baixo do corte e conduz o látex ao coletor.
-        const channelX=x+trunkWidth*.58;
-        const cutOutletX=cutRight-1;
-        const cutOutletY=cutY-12;
-        const bowlY=cutY+61;
-        g.lineStyle(3,0x6d6257,.9);
-        g.beginPath();g.moveTo(cutOutletX,cutOutletY);g.lineTo(channelX+3,cutY+14);g.strokePath();
-        g.lineStyle(1.5,0xece8dc,.88);
-        g.beginPath();g.moveTo(cutOutletX-1,cutOutletY+1);g.lineTo(channelX+3,cutY+15);g.strokePath();
+        // A bica nasce exatamente na extremidade inferior da sangria.
+        const spoutX=cutLowX+2;
+        const spoutY=cutLowY+1;
+        const collectorX=x+trunkWidth*.3;
+        const bowlY=cutY+63;
 
-        // Fio visual curto de látex deixa clara a continuidade corte -> canal -> coletor.
-        const latexStartY=cutY+15;
-        const latexDropY=latexStartY+13;
-        g.lineStyle(1.5,0xf4f1e7,.72);
-        g.beginPath();g.moveTo(channelX+3,latexStartY);g.lineTo(channelX+3,latexDropY);g.strokePath();
-        g.fillStyle(0xf6f2e8,.84);g.fillCircle(channelX+3,latexDropY+1,2);
+        // Pequena bica inclinada para fora do tronco, terminando acima do coletor.
+        g.lineStyle(3,0x665b51,.94);
+        g.beginPath();g.moveTo(cutLowX,cutLowY);g.lineTo(spoutX+5,spoutY+5);g.strokePath();
+        g.lineStyle(1.5,0xd8d4ca,.72);
+        g.beginPath();g.moveTo(cutLowX+1,cutLowY);g.lineTo(spoutX+5,spoutY+5);g.strokePath();
 
-        // Coletor com suporte, borda, corpo e látex acumulado.
+        // Fio de látex sai da ponta da bica e cai verticalmente.
+        const latexX=spoutX+5;
+        const latexStartY=spoutY+5;
+        const latexDropY=latexStartY+14;
+        g.lineStyle(1.5,0xf4f1e7,.76);
+        g.beginPath();g.moveTo(latexX,latexStartY);g.lineTo(latexX,latexDropY);g.strokePath();
+        g.fillStyle(0xf6f2e8,.86);
+        g.fillCircle(latexX,latexDropY+1,2);
+
+        // Coletor preso ao tronco e alinhado com o escoamento.
         g.lineStyle(2,0x4d392a,.88);
-        g.beginPath();g.moveTo(x+3,bowlY-7);g.lineTo(x+trunkWidth-3,bowlY-7);g.strokePath();
-        g.beginPath();g.moveTo(channelX-16,bowlY-11);g.lineTo(channelX-13,bowlY+3);g.strokePath();
-        g.beginPath();g.moveTo(channelX+16,bowlY-11);g.lineTo(channelX+13,bowlY+3);g.strokePath();
+        g.beginPath();g.moveTo(x+4,bowlY-8);g.lineTo(x+trunkWidth-4,bowlY-8);g.strokePath();
+        g.beginPath();g.moveTo(collectorX-15,bowlY-12);g.lineTo(collectorX-13,bowlY+3);g.strokePath();
+        g.beginPath();g.moveTo(collectorX+15,bowlY-12);g.lineTo(collectorX+13,bowlY+3);g.strokePath();
 
         g.fillStyle(0x6b5948,.98);
-        g.fillEllipse(channelX,bowlY,36,16);
+        g.fillEllipse(collectorX,bowlY,36,17);
         g.fillStyle(0x3a3129,.94);
-        g.fillEllipse(channelX,bowlY+2,30,10);
-        g.fillStyle(0x8c7964,.86);
-        g.fillEllipse(channelX,bowlY-4,35,8);
+        g.fillEllipse(collectorX,bowlY+2,30,10);
+        g.fillStyle(0x8c7964,.88);
+        g.fillEllipse(collectorX,bowlY-4,35,8);
         g.fillStyle(0xf0ecdc,.92);
-        g.fillEllipse(channelX,bowlY-3,27,5);
+        g.fillEllipse(collectorX,bowlY-3,27,5);
 
         // Copa menos geométrica por sobreposição de massas.
         g.fillStyle(index%2?0x123e28:0x17482d,.95);
@@ -2424,7 +2438,7 @@ export class Level3Scene extends Scene
         g.fillEllipse(cx+68,crownY+2,61,34);
 
         this.rubberLatexPoints.push({
-            x:channelX+3,
+            x:latexX,
             startY:latexDropY+1,
             bowlY:bowlY-4,
             depth:depth+2,
