@@ -830,13 +830,13 @@ export class Game extends Scene
         const rightHand=this.add.circle(0,15,4,0xc08a62);
 
         const machete=this.add.container(3,17);
-        const macheteHandle=this.add.rectangle(0,0,5,14,0x3a2a1d).setOrigin(.5,.88);
-        const macheteGuard=this.add.rectangle(0,-11,10,3,0x665846,.9);
-        const macheteBlade=this.add.rectangle(1,-23,7,27,0xb8c0ba).setOrigin(.5,.9).setAngle(-3);
-        const macheteHighlight=this.add.rectangle(-1,-24,1.5,19,0xe4e8e3,.55).setOrigin(.5,.9).setAngle(-3);
-        const macheteTip=this.add.triangle(2,-39,-3,0,4,0,1,-9,0xcbd1cc).setOrigin(.5,1);
+        const macheteHandle=this.add.rectangle(0,0,5,14,0x3a2a1d).setOrigin(.5);
+        const macheteGuard=this.add.rectangle(0,-8,10,3,0x665846,.9);
+        const macheteBlade=this.add.rectangle(1,-22,7,25,0xb8c0ba).setAngle(-3);
+        const macheteHighlight=this.add.rectangle(-1,-22,1.5,19,0xe4e8e3,.55).setAngle(-3);
+        const macheteTip=this.add.triangle(2,-36,-3,0,4,0,1,-7,0xcbd1cc).setOrigin(.5,1);
         machete.add([macheteHandle,macheteGuard,macheteBlade,macheteHighlight,macheteTip]);
-        machete.setAngle(210);
+        machete.setAngle(145);
         rightForearm.add([rightForearmShape,rightHand]);
         rightArmRig.add([rightSleeve,rightArm,rightElbow,rightForearm]);
 
@@ -870,10 +870,10 @@ export class Game extends Scene
         poronga.add([porongaGlow,porongaBracket,porongaClamp,porongaFrame,porongaLamp,porongaCore]);
         hat.add([hatShadow,hatBrim,hatCrown,hatBand,hatTop,poronga]);
 
-        const sheathLoop=this.add.ellipse(13,11,8,5,0x453322,.9).setAngle(-25);
-        const sheathSleeve=this.add.rectangle(20,22,8,20,0x493a29,.93).setAngle(-30);
+        const sheathLoop=this.add.ellipse(25,17,9,6,0x453322,.95).setAngle(-35);
+        const sheathSleeve=this.add.rectangle(31,26,11,27,0x493a29,.98).setAngle(-35);
         container.add([silhouette,bag,leftLeg,rightLeg,torso,sheathLoop,leftArm,rightArmRig,head,hat,machete,sheathSleeve]);
-        machete.setPosition(13,11).setScale(.68);
+        machete.setPosition(25,17).setScale(.55);
 
         container.parts={
             silhouette,bag,bagBody,torso,shirtBody,head,hat,poronga,porongaGlow,
@@ -889,23 +889,55 @@ export class Game extends Scene
     {
         const parts=this.playerVisual.parts;
         const machete=parts.machete;
-        const elapsed=this.isAttacking?Math.max(0,time-this.attackStartedAt):0;
         const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
-        // Uma arma só, no espaço local do personagem: o container inteiro já espelha o facing.
-        const draw=this.isAttacking?smooth((elapsed-35)/55):0;
-        const returnToHip=this.isAttacking?smooth((elapsed-225)/75):1;
-        const held=draw*(1-returnToHip);
-        const walk=this.playerVisual.animationState==='WALK'?Math.sin(time*.011)*.7:0;
-        const hipX=13+walk*.25,hipY=11+walk*.25;
-        const arm=parts.rightArmRig.angle*Math.PI/180;
-        const forearm=arm+parts.rightForearm.angle*Math.PI/180;
-        // Pivô do ombro + antebraço + mão; sem trocar parent nem criar objetos por frame.
-        const handX=15-20*Math.sin(arm)-17*Math.sin(forearm)+3*Math.cos(forearm);
-        const handY=-15+20*Math.cos(arm)+17*Math.cos(forearm)+3*Math.sin(forearm);
+        const elapsed=this.isAttacking?Math.max(0,time-this.attackStartedAt):0;
+        const walk=this.playerVisual.animationState==='WALK'?Math.sin(time*.011)*.3:0;
+        const hipX=25+walk,hipY=17+walk*.25;
+        const restingArm=this.playerBaseRightArmAngle??-8;
+
+        if(!this.isAttacking){
+            machete.setPosition(hipX,hipY).setAngle(145).setScale(.55);
+            return;
+        }
+
+        // A mão alcança o cabo antes da arma se mover. A partir daí o punho segue
+        // o arco EXTERNO do braço, nunca uma linha reta através do torso/pernas.
+        let armAngle,bladeAngle;
+        if(elapsed<45){
+            const readyArm=Math.min(-8,restingArm);
+            armAngle=readyArm+(-20-readyArm)*smooth(elapsed/45);
+            bladeAngle=145;
+        }else if(elapsed<90){
+            const draw=smooth((elapsed-45)/45);
+            armAngle=-20-25*draw;
+            bladeAngle=145-120*draw;
+        }else if(elapsed<=210){
+            const swing=smooth((elapsed-90)/120);
+            armAngle=-45+25*swing;
+            bladeAngle=25+75*swing;
+        }else if(elapsed<260){
+            const recover=smooth((elapsed-210)/50);
+            armAngle=-20-12*recover;
+            bladeAngle=100+25*recover;
+        }else{
+            const sheath=smooth((elapsed-260)/40);
+            armAngle=-32+(restingArm+32)*sheath;
+            bladeAngle=125+20*sheath;
+        }
+        parts.rightArmRig.angle=armAngle;
+        parts.rightForearm.angle=-4;
+        const arm=armAngle*Math.PI/180;
+        const hand=arm-4*Math.PI/180;
+        // Pivô no centro da mão/cabo: ombro (15,-15), cotovelo (0,20), mão (0,15).
+        const handX=15-20*Math.sin(arm)-15*Math.sin(hand);
+        const handY=-15+20*Math.cos(arm)+15*Math.cos(hand);
+        const draw=smooth((elapsed-45)/15);
+        const sheath=smooth((elapsed-280)/20);
+        const held=draw*(1-sheath);
         machete.x=hipX+(handX-hipX)*held;
         machete.y=hipY+(handY-hipY)*held;
-        machete.angle=210+(parts.rightArmRig.angle+parts.rightForearm.angle+parts.macheteGripAngle-210)*held;
-        machete.setScale(.68+.32*held);
+        machete.angle=bladeAngle;
+        machete.setScale(.55+.45*smooth((elapsed-45)/45)*(1-smooth((elapsed-260)/40)));
     }
 
     syncPlayerVisual ()
@@ -1448,7 +1480,7 @@ export class Game extends Scene
         }
 
         if(this.playerVisual&&this.playerVisual.parts){
-            this.playerVisual.parts.macheteGripAngle=18;this.playerVisual.parts.machete.setPosition(13,11).setAngle(210).setScale(.68);
+            this.playerVisual.parts.macheteGripAngle=18;this.playerVisual.parts.machete.setPosition(25,17).setAngle(145).setScale(.55);
         }
 
         if('attackHitRegistered' in this)this.attackHitRegistered=false;
