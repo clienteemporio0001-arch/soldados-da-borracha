@@ -13,7 +13,10 @@ export class Level3Scene extends Scene
         this.createHighForest(); this.createRubberTreeAccents(); this.createPlatforms(); this.createCaboclinhoSigns();
         this.player=this.add.rectangle(150,560,45,70,0x000000,0); this.physics.add.existing(this.player);
         this.player.body.setCollideWorldBounds(true); this.player.body.setMaxVelocity(260,900); this.player.body.setSize(45,70); this.createEnvironmentalChallenges(); this.physics.add.collider(this.player,this.platforms);
-        this.playerVisual=this.createPlayerVisual(); this.syncPlayerVisual();
+        this.playerVisual=this.createPlayerVisual();
+        this.attackSprite=this.add.sprite(this.player.x,this.player.y+45,'seringueiroAttack',0)
+            .setOrigin(.5,480/512).setScale(.23).setDepth(20).setVisible(false);
+        this.syncPlayerVisual();
         this.maxHealth=100; this.health=100; this.maxHunger=100; this.hunger=100; this.nextHungerDrainAt=this.time.now+2000; this.nextStarvationDamageAt=this.time.now+2000; this.invulnerableUntil=0; this.knockbackUntil=0; this.isPlayerDead=false; this.phaseCompleted=false;
         this.doubleJumpUnlocked=this.registry.get('doubleJumpUnlocked')===true;
         this.jumpsUsed=0; this.jumpWasDown=false; this.wasGrounded=false; this.jumpBufferUntil=0; this.jumpBufferMs=130; this.coyoteTimeMs=100; this.coyoteUntil=0; this.lastAirVelocityY=0; this.fastFallActive=false; this.motionFx={scaleX:1,scaleY:1}; this.directionFx={lean:0}; this.lastMoveDirection=0;
@@ -674,6 +677,24 @@ export class Level3Scene extends Scene
         machete.y=hipY+(handY-hipY)*held;
         machete.angle=mix(from.blade,to.blade);
         machete.setScale(.55+.45*smooth((elapsed-30)/60)*(1-smooth((elapsed-265)/35)));
+    }
+
+    updateAttackSprite (time)
+    {
+        const active=this.isAttacking;
+        this.playerVisual.setVisible(!active);
+        this.attackSprite.setVisible(active);
+        if(!active)return;
+
+        // Os oito quadros seguem o relógio do ataque funcional (300 ms).
+        const elapsed=Math.max(0,time-this.attackStartedAt);
+        const starts=[0,30,60,90,125,175,210,245];
+        let frame=starts.length-1;
+        while(frame>0&&elapsed<starts[frame])frame--;
+        this.attackSprite.setFrame(frame);
+        this.attackSprite.setFlipX(this.attackDirection<0);
+        // A âncora é igual nos oito frames; nenhuma pose recebe compensação individual.
+        this.attackSprite.setPosition(this.playerVisual.x,this.playerVisual.y+45);
     }
 
     syncPlayerVisual ()
@@ -3146,7 +3167,7 @@ export class Level3Scene extends Scene
             if(this.caboclinhoTestActive&&!this.caboclinhoTestComplete)this.resetCaboclinhoTest();
             this.handlePlayerDeath();
         }
-        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();
+        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();
     }
 
     createStaminaHud ()

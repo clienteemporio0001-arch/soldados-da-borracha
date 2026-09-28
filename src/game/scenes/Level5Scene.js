@@ -23,6 +23,8 @@ export class Level5Scene extends Scene
         this.physics.add.collider(this.player, this.platforms);
 
         this.playerVisual = this.createPlayerVisual();
+        this.attackSprite=this.add.sprite(this.player.x,this.player.y+45,'seringueiroAttack',0)
+            .setOrigin(.5,480/512).setScale(.23).setDepth(20).setVisible(false);
         this.syncPlayerVisual();
 
         this.maxHealth = 100;
@@ -1554,6 +1556,24 @@ export class Level5Scene extends Scene
         machete.setScale(.55+.45*smooth((elapsed-30)/60)*(1-smooth((elapsed-265)/35)));
     }
 
+    updateAttackSprite (time)
+    {
+        const active=this.isAttacking;
+        this.playerVisual.setVisible(!active);
+        this.attackSprite.setVisible(active);
+        if(!active)return;
+
+        // Os oito quadros seguem o relógio do ataque funcional (300 ms).
+        const elapsed=Math.max(0,time-this.attackStartedAt);
+        const starts=[0,30,60,90,125,175,210,245];
+        let frame=starts.length-1;
+        while(frame>0&&elapsed<starts[frame])frame--;
+        this.attackSprite.setFrame(frame);
+        this.attackSprite.setFlipX(this.attackDirection<0);
+        // A âncora é igual nos oito frames; nenhuma pose recebe compensação individual.
+        this.attackSprite.setPosition(this.playerVisual.x,this.playerVisual.y+45);
+    }
+
     syncPlayerVisual () { this.playerVisual.setPosition(this.player.x,this.player.y); }
 
     animatePlayerVisual (time)
@@ -2820,6 +2840,6 @@ export class Level5Scene extends Scene
             this.handlePlayerDeath();
         }
 
-        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();
+        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();
     }
 }
