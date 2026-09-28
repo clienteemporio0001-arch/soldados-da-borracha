@@ -858,6 +858,21 @@ export class Level4Scene extends Scene
         container.add([silhouette,bag,leftLeg,rightLeg,torso,sheathLoop,leftArm,rightArmRig,head,hat,machete,sheathSleeve]);
         machete.setPosition(25,17).setScale(.55);
 
+        // Poses locais: repouso, busca, início do saque, guarda baixa,
+        // preparação, corte, continuação, recuperação e retorno à bainha.
+        container.attackPoseFrames=[
+            {time:0,arm:-8,forearm:-4,shoulderX:15,shoulderY:-15,blade:145,torso:0,freeArm:8,freeForearm:3,bag:0},
+            {time:30,arm:-20,forearm:-4,shoulderX:15,shoulderY:-15,blade:145,torso:-1,freeArm:14,freeForearm:2,bag:-1},
+            {time:60,arm:-35,forearm:-8,shoulderX:16,shoulderY:-15,blade:135,torso:-2,freeArm:18,freeForearm:0,bag:-2},
+            {time:90,arm:-45,forearm:-8,shoulderX:16,shoulderY:-15,blade:115,torso:-2,freeArm:19,freeForearm:-2,bag:-2},
+            {time:125,arm:-50,forearm:-5,shoulderX:15,shoulderY:-16,blade:-30,torso:-6,freeArm:25,freeForearm:-5,bag:-4},
+            {time:175,arm:-70,forearm:3,shoulderX:17,shoulderY:-14,blade:90,torso:7,freeArm:28,freeForearm:2,bag:2},
+            {time:210,arm:-55,forearm:2,shoulderX:17,shoulderY:-14,blade:110,torso:6,freeArm:25,freeForearm:2,bag:2},
+            {time:245,arm:-35,forearm:-4,shoulderX:16,shoulderY:-15,blade:125,torso:2,freeArm:16,freeForearm:1,bag:1},
+            {time:265,arm:-32,forearm:-4,shoulderX:15,shoulderY:-15,blade:125,torso:0,freeArm:13,freeForearm:2,bag:0},
+            {time:300,arm:-8,forearm:-4,shoulderX:15,shoulderY:-15,blade:145,torso:0,freeArm:8,freeForearm:3,bag:0}
+        ];
+
         container.parts={
             silhouette,bag,bagBody,torso,shirtBody,head,hat,poronga,porongaGlow,
             leftArm,leftForearm,rightArmRig,rightArm,rightForearm,machete,sheathLoop,sheathSleeve,macheteGripAngle:18,
@@ -870,57 +885,51 @@ export class Level4Scene extends Scene
 
     updateMacheteVisual (time)
     {
-        const parts=this.playerVisual.parts;
+        const visual=this.playerVisual;
+        const parts=visual.parts;
         const machete=parts.machete;
-        const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
-        const elapsed=this.isAttacking?Math.max(0,time-this.attackStartedAt):0;
-        const walk=this.playerVisual.animationState==='WALK'?Math.sin(time*.011)*.3:0;
+        const walk=visual.animationState==='WALK'?Math.sin(time*.011)*.3:0;
         const hipX=25+walk,hipY=17+walk*.25;
-        const restingArm=this.playerBaseRightArmAngle??-8;
-
         if(!this.isAttacking){
+            parts.rightArmRig.setPosition(15,-15);
             machete.setPosition(hipX,hipY).setAngle(145).setScale(.55);
             return;
         }
 
-        // A mão alcança o cabo antes da arma se mover. A partir daí o punho segue
-        // o arco EXTERNO do braço, nunca uma linha reta através do torso/pernas.
-        let armAngle,bladeAngle;
-        if(elapsed<45){
-            const readyArm=Math.min(-8,restingArm);
-            armAngle=readyArm+(-20-readyArm)*smooth(elapsed/45);
-            bladeAngle=145;
-        }else if(elapsed<90){
-            const draw=smooth((elapsed-45)/45);
-            armAngle=-20-25*draw;
-            bladeAngle=145-120*draw;
-        }else if(elapsed<=210){
-            const swing=smooth((elapsed-90)/120);
-            armAngle=-45+25*swing;
-            bladeAngle=25+75*swing;
-        }else if(elapsed<260){
-            const recover=smooth((elapsed-210)/50);
-            armAngle=-20-12*recover;
-            bladeAngle=100+25*recover;
-        }else{
-            const sheath=smooth((elapsed-260)/40);
-            armAngle=-32+(restingArm+32)*sheath;
-            bladeAngle=125+20*sheath;
-        }
-        parts.rightArmRig.angle=armAngle;
-        parts.rightForearm.angle=-4;
-        const arm=armAngle*Math.PI/180;
-        const hand=arm-4*Math.PI/180;
-        // Pivô no centro da mão/cabo: ombro (15,-15), cotovelo (0,20), mão (0,15).
-        const handX=15-20*Math.sin(arm)-15*Math.sin(hand);
-        const handY=-15+20*Math.cos(arm)+15*Math.cos(hand);
-        const draw=smooth((elapsed-45)/15);
-        const sheath=smooth((elapsed-280)/20);
-        const held=draw*(1-sheath);
+        const elapsed=Math.max(0,Math.min(300,time-this.attackStartedAt));
+        const frames=visual.attackPoseFrames;
+        let index=0;
+        while(index<frames.length-2&&elapsed>frames[index+1].time)index++;
+        const from=frames[index],to=frames[index+1];
+        let t=(elapsed-from.time)/(to.time-from.time);
+        t=Math.max(0,Math.min(1,t));
+        t=t*t*(3-2*t);
+        const mix=(a,b)=>a+(b-a)*t;
+        const restingArm=this.playerBaseRightArmAngle??-8;
+        const arm=mix(from.time===0?Math.min(-8,restingArm):from.arm,to.time===300?restingArm:to.arm);
+        const forearm=mix(from.forearm,to.forearm);
+        const shoulderX=mix(from.shoulderX,to.shoulderX);
+        const shoulderY=mix(from.shoulderY,to.shoulderY);
+        parts.rightArmRig.setPosition(shoulderX,shoulderY).setAngle(arm);
+        parts.rightForearm.angle=forearm;
+        parts.leftArm.angle=mix(from.freeArm,to.freeArm);
+        parts.leftForearm.angle=mix(from.freeForearm,to.freeForearm);
+        parts.torso.angle=(this.playerBaseTorsoAngle??0)+mix(from.torso,to.torso);
+        parts.bag.angle=-3+mix(from.bag,to.bag);
+
+        const upper=arm*Math.PI/180;
+        const lower=(arm+forearm)*Math.PI/180;
+        // A arma tem pivô no cabo: sua origem coincide com a mão do rig.
+        const handX=shoulderX-20*Math.sin(upper)-15*Math.sin(lower);
+        const handY=shoulderY+20*Math.cos(upper)+15*Math.cos(lower);
+        const smooth=value=>{value=Math.max(0,Math.min(1,value));return value*value*(3-2*value);};
+        // No saque e no retorno, a mão já está no cabo junto à bainha.
+        // O próprio braço leva ambos pelo lado externo da silhueta.
+        const held=smooth((elapsed-30)/15)*(1-smooth((elapsed-285)/15));
         machete.x=hipX+(handX-hipX)*held;
         machete.y=hipY+(handY-hipY)*held;
-        machete.angle=bladeAngle;
-        machete.setScale(.55+.45*smooth((elapsed-45)/45)*(1-smooth((elapsed-260)/40)));
+        machete.angle=mix(from.blade,to.blade);
+        machete.setScale(.55+.45*smooth((elapsed-30)/60)*(1-smooth((elapsed-265)/35)));
     }
 
     syncPlayerVisual ()
