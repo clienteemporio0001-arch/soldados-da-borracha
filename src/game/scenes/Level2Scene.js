@@ -14,7 +14,7 @@ export class Level2Scene extends Scene
 
         this.physics.world.setBounds(0, 0, this.worldWidth, worldHeight);
         this.cameras.main.setBounds(0, 0, this.worldWidth, worldHeight);
-        this.cameras.main.setBackgroundColor('#04110e');
+        this.cameras.main.setBackgroundColor('#355f50');
 
         this.createDeepForest();
         this.createPlatforms();
@@ -110,31 +110,32 @@ export class Level2Scene extends Scene
         this.staminaHud.setVisible(false);
         this.showLevelTitle();
         this.createLivingAtmosphere();
+        this.createPorongaLightSystem();
 
         this.spawnPoint = { x: 150, y: 560 };
     }
 
     createDeepForest ()
     {
-        // Mesmo vocabulário visual da Fase 1, porém mais fechado e úmido.
+        // Meio-dia sob copa fechada: luz natural forte, mas filtrada pela mata.
         const sky = this.add.graphics().setDepth(-50).setScrollFactor(0);
-        sky.fillStyle(0x04110e, 1);
-        sky.fillRect(0, 0, 1024, 768);
-        sky.fillStyle(0x08201b, 0.62);
-        sky.fillRect(0, 185, 1024, 300);
-        sky.fillStyle(0x0d2a23, 0.25);
-        sky.fillRect(0, 455, 1024, 313);
+        sky.fillStyle(0x355f50,1);
+        sky.fillRect(0,0,1024,768);
+        sky.fillStyle(0x477462,.56);
+        sky.fillRect(0,175,1024,315);
+        sky.fillStyle(0x64816c,.22);
+        sky.fillRect(0,465,1024,303);
 
-        // Lua parcialmente encoberta para comunicar mata mais profunda.
-        this.add.circle(810, 126, 86, 0xc9d7c9, 0.055)
+        // Claridade alta filtrada por uma massa de copa.
+        this.add.circle(810,104,74,0xf1eacb,.08)
             .setDepth(-49)
-            .setScrollFactor(0.035);
-        this.add.circle(810, 126, 50, 0xdce4d5, 0.52)
+            .setScrollFactor(.035);
+        this.add.circle(810,104,34,0xf3ebcb,.34)
             .setDepth(-48)
-            .setScrollFactor(0.035);
-        this.add.ellipse(790, 124, 125, 48, 0x0b261d, 0.42)
+            .setScrollFactor(.035);
+        this.add.ellipse(790,108,135,52,0x1a4735,.34)
             .setDepth(-47)
-            .setScrollFactor(0.04);
+            .setScrollFactor(.04);
 
         // FUNDO: silhuetas irregulares, sem formar uma parede contínua.
         const distant = this.add.graphics().setDepth(-40).setScrollFactor(0.12);
@@ -206,11 +207,11 @@ export class Level2Scene extends Scene
         this.createOrganicFogMass(1940,548,2200,135,0xd5e0d7,.045,-16,.38,5);
         this.createOrganicFogMass(2510,520,760,175,0xc8d8ce,.07,-11,.68,7);
 
-        // Pequenas manchas de luar ajudam a quebrar o escuro contínuo.
-        this.add.ellipse(790, 572, 330, 78, 0xb9cab7, 0.025)
+        // Clareiras de luz natural atravessam a copa fechada.
+        this.add.ellipse(790, 572, 330, 78, 0xd6dfbd, 0.042)
             .setDepth(-9)
             .setScrollFactor(0.72);
-        this.add.ellipse(2140, 548, 410, 92, 0xb9cab7, 0.024)
+        this.add.ellipse(2140, 548, 410, 92, 0xd6dfbd, 0.038)
             .setDepth(-9)
             .setScrollFactor(0.72);
 
@@ -3054,9 +3055,86 @@ export class Level2Scene extends Scene
         if(this.rubberLatexPoints)this.rubberLatexPoints.length=0;
     }
 
+    createPorongaLightSystem ()
+    {
+        this.porongaLightPhase=2;
+
+        this.porongaLightHalo=this.add.ellipse(0,0,76,58,0xf1bd62,0)
+            .setDepth(18);
+        this.porongaLightCone=this.add.triangle(0,0,0,-19,108,0,0,19,0xf1bd62,0)
+            .setDepth(17);
+        this.porongaLightFront=this.add.ellipse(0,0,98,30,0xe6a94f,0)
+            .setDepth(16);
+
+        this.porongaLightVisuals=[
+            this.porongaLightHalo,
+            this.porongaLightCone,
+            this.porongaLightFront
+        ];
+
+        this.updatePorongaLight();
+
+        this.events.once('shutdown',()=>{
+            if(!this.porongaLightVisuals)return;
+            this.porongaLightVisuals.forEach(light=>{
+                if(light&&light.active)light.destroy();
+            });
+            this.porongaLightVisuals.length=0;
+        });
+    }
+
+    updatePorongaLight ()
+    {
+        if(!this.playerVisual||!this.playerVisual.parts||!this.porongaLightHalo)return;
+
+        const phase=this.porongaLightPhase;
+        const facing=this.playerVisual.facing||1;
+        const x=this.playerVisual.x;
+        const y=this.playerVisual.y-39;
+        const clamp=value=>Math.max(0,Math.min(1,value));
+
+        let intensity=0;
+        let decorativeGlow=.012;
+
+        if(phase===3){
+            const late=clamp((this.player.x-2950)/620);
+            decorativeGlow=.012+late*.026;
+        }
+        else if(phase===4){
+            const twilight=clamp((this.player.x-1700)/1500);
+            intensity=clamp((twilight-.38)/.62);
+            decorativeGlow=.015+intensity*.12;
+
+            if(this.timeTwilightVeil)this.timeTwilightVeil.setAlpha(.02+twilight*.22);
+            if(this.timeCelestialHalo)this.timeCelestialHalo.setAlpha(.075*(1-twilight));
+            if(this.timeCelestialCore)this.timeCelestialCore.setAlpha(.3*(1-twilight));
+        }
+        else if(phase===5){
+            intensity=1;
+            decorativeGlow=.16;
+        }
+
+        if(this.playerVisual.parts.porongaGlow){
+            this.playerVisual.parts.porongaGlow.setAlpha(decorativeGlow);
+        }
+
+        this.porongaLightHalo
+            .setPosition(x,y)
+            .setAlpha(.075*intensity);
+
+        this.porongaLightCone
+            .setPosition(x+facing*18,y+2)
+            .setScale(facing,1)
+            .setAlpha(.045*intensity);
+
+        this.porongaLightFront
+            .setPosition(x+facing*48,y+7)
+            .setAlpha(.028*intensity);
+    }
+
     createLivingAtmosphere ()
     {
-        this.livingAtmosphereProfile={"phase":2,"worldWidth":3300,"farScroll":0.065,"farAlpha":0.62,"farColor":399121,"farStep":235,"farHeight":215,"farHeightStep":38,"farTrunk":21,"farCrown":68,"lowCanopy":false,"lowCanopyColor":465940,"fogColor":11190196,"fogBackAlpha":0.065,"fogMidAlpha":0.052,"fogFrontAlpha":0.028,"rayColor":13359298,"rays":[{"x":820,"y":150,"w":90,"h":430,"alpha":0.025,"angle":-12,"scroll":0.5},{"x":1760,"y":170,"w":105,"h":410,"alpha":0.02,"angle":9,"scroll":0.56}],"swayColor":1194788,"sway":[{"x":650,"y":620,"w":100,"h":30,"alpha":0.3},{"x":1450,"y":617,"w":95,"h":28,"alpha":0.28},{"x":2180,"y":620,"w":88,"h":26,"alpha":0.26}],"vignetteAlpha":0,"toneColor":463631,"leafDelay":3500,"moteDelay":3300,"birdDelay":14500,"shadowDelay":13000,"maxLeaves":6,"maxMotes":7,"maxBirds":2,"initialMotes":3,"verticalLeaves":false,"largeLeaves":false,"leafColorA":5403460,"leafColorB":4153658,"leafAlpha":0.5,"leafDepth":15,"moteColor":14081993,"moteAlpha":0.2,"moteDepth":10,"dustMotes":false,"birdColor":990743,"birdAlpha":0.58,"shadows":true,"shadowW":110,"shadowH":32,"shadowColor":594446,"shadowAlpha":0.08,"region1":1650,"region2":2300};
+        this.livingAtmosphereProfile={"phase":2,"worldWidth":3300,"farScroll":0.065,"farAlpha":0.55,"farColor":1064237,"farStep":235,"farHeight":215,"farHeightStep":38,"farTrunk":21,"farCrown":68,"lowCanopy":false,"lowCanopyColor":465940,"fogColor":13162701,"fogBackAlpha":0.055,"fogMidAlpha":0.045,"fogFrontAlpha":0.024,"rayColor":15656381,"rays":[{"x":820,"y":150,"w":90,"h":430,"alpha":0.043,"angle":-12,"scroll":0.5},{"x":1760,"y":170,"w":105,"h":410,"alpha":0.038,"angle":9,"scroll":0.56}],"swayColor":1194788,"sway":[{"x":650,"y":620,"w":100,"h":30,"alpha":0.3},{"x":1450,"y":617,"w":95,"h":28,"alpha":0.28},{"x":2180,"y":620,"w":88,"h":26,"alpha":0.26}],"vignetteAlpha":0,"toneColor":5142110,"leafDelay":3500,"moteDelay":3300,"birdDelay":14500,"shadowDelay":13000,"maxLeaves":6,"maxMotes":7,"maxBirds":2,"initialMotes":3,"verticalLeaves":false,"largeLeaves":false,"leafColorA":5403460,"leafColorB":4153658,"leafAlpha":0.5,"leafDepth":15,"moteColor":15131076,"moteAlpha":0.21,"moteDepth":10,"dustMotes":false,"birdColor":990743,"birdAlpha":0.58,"shadows":true,"shadowW":110,"shadowH":32,"shadowColor":594446,"shadowAlpha":0.08,"region1":1650,"region2":2300};
         this.livingAtmosphereTimers=[];
         this.livingAtmospherePermanent=[];
         this.livingAtmosphereLeaves=[];
@@ -3676,6 +3754,7 @@ export class Level2Scene extends Scene
 
         this.syncPlayerVisual();
         this.animatePlayerVisual(time);
+        this.updatePorongaLight();
         this.updateAttack(time);
         this.updateSnake(time);
         this.updateCarapana(time);

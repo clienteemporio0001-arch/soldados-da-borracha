@@ -14,7 +14,7 @@ export class Game extends Scene
 
         this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
         this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
-        this.cameras.main.setBackgroundColor('#071714');
+        this.cameras.main.setBackgroundColor('#42685d');
 
         this.createAmazonAtmosphere(worldWidth, worldHeight);
 
@@ -124,32 +124,33 @@ export class Game extends Scene
         this.createHungerHud();
         this.showPlayerNameIntro();
         this.createLivingAtmosphere();
+        this.createPorongaLightSystem();
 
         this.spawnPoint = { x: 150, y: 560 };
     }
 
     createAmazonAtmosphere (worldWidth, worldHeight)
     {
-        // Céu verde-azulado escuro com faixas discretas de luminosidade.
+        // Manhã úmida: céu verde-azulado claro sem lavar a floresta.
         const sky = this.add.graphics().setDepth(-50).setScrollFactor(0);
-        sky.fillStyle(0x071714, 1);
-        sky.fillRect(0, 0, 1024, 768);
-        sky.fillStyle(0x0b2420, 0.55);
-        sky.fillRect(0, 220, 1024, 260);
-        sky.fillStyle(0x102e27, 0.28);
-        sky.fillRect(0, 470, 1024, 298);
+        sky.fillStyle(0x42685d,1);
+        sky.fillRect(0,0,1024,768);
+        sky.fillStyle(0x5e8171,.58);
+        sky.fillRect(0,190,1024,300);
+        sky.fillStyle(0x78927b,.24);
+        sky.fillRect(0,470,1024,298);
 
-        // Lua e halo fixados ao fundo para criar atmosfera cinematográfica.
-        this.add.circle(825, 125, 78, 0xc9d7c9, 0.08)
+        // Sol suave da manhã, sem leitura de lua noturna.
+        this.add.circle(825,118,72,0xf0e6c2,.1)
             .setDepth(-48)
-            .setScrollFactor(0.04);
-        this.add.circle(825, 125, 52, 0xdce4d5, 0.78)
+            .setScrollFactor(.04);
+        this.add.circle(825,118,38,0xf5eac9,.48)
             .setDepth(-47)
-            .setScrollFactor(0.04);
+            .setScrollFactor(.04);
 
         // Camada 1: silhuetas distantes.
         const distant = this.add.graphics().setDepth(-40).setScrollFactor(0.12);
-        distant.fillStyle(0x0b211b, 0.96);
+        distant.fillStyle(0x173b30, 0.96);
         distant.fillRect(-300, 500, worldWidth + 900, 300);
 
         const distantTrees = [
@@ -163,9 +164,9 @@ export class Game extends Scene
         ];
 
         distantTrees.forEach(([x, y, trunkW, trunkH, crown]) => {
-            distant.fillStyle(0x102a21, 0.9);
+            distant.fillStyle(0x214b3a, 0.9);
             distant.fillRect(x, y, trunkW, trunkH);
-            distant.fillStyle(0x0b261d, 0.96);
+            distant.fillStyle(0x174332, 0.96);
             distant.fillCircle(x + trunkW / 2, y - 5, crown);
             distant.fillCircle(x - crown * 0.35, y + 20, crown * 0.72);
             distant.fillCircle(x + crown * 0.5, y + 24, crown * 0.78);
@@ -223,11 +224,11 @@ export class Game extends Scene
             });
         });
 
-        // Manchas suaves de luar.
-        this.add.ellipse(760, 570, 360, 90, 0xb9cab7, 0.035)
+        // Clareiras suaves de luz matinal.
+        this.add.ellipse(760, 570, 360, 90, 0xd7e2c9, 0.042)
             .setDepth(-10)
             .setScrollFactor(0.7);
-        this.add.ellipse(2050, 545, 420, 100, 0xb9cab7, 0.03)
+        this.add.ellipse(2050, 545, 420, 100, 0xd7e2c9, 0.036)
             .setDepth(-10)
             .setScrollFactor(0.7);
 
@@ -2638,9 +2639,86 @@ export class Game extends Scene
         if(this.rubberLatexPoints)this.rubberLatexPoints.length=0;
     }
 
+    createPorongaLightSystem ()
+    {
+        this.porongaLightPhase=1;
+
+        this.porongaLightHalo=this.add.ellipse(0,0,76,58,0xf1bd62,0)
+            .setDepth(18);
+        this.porongaLightCone=this.add.triangle(0,0,0,-19,108,0,0,19,0xf1bd62,0)
+            .setDepth(17);
+        this.porongaLightFront=this.add.ellipse(0,0,98,30,0xe6a94f,0)
+            .setDepth(16);
+
+        this.porongaLightVisuals=[
+            this.porongaLightHalo,
+            this.porongaLightCone,
+            this.porongaLightFront
+        ];
+
+        this.updatePorongaLight();
+
+        this.events.once('shutdown',()=>{
+            if(!this.porongaLightVisuals)return;
+            this.porongaLightVisuals.forEach(light=>{
+                if(light&&light.active)light.destroy();
+            });
+            this.porongaLightVisuals.length=0;
+        });
+    }
+
+    updatePorongaLight ()
+    {
+        if(!this.playerVisual||!this.playerVisual.parts||!this.porongaLightHalo)return;
+
+        const phase=this.porongaLightPhase;
+        const facing=this.playerVisual.facing||1;
+        const x=this.playerVisual.x;
+        const y=this.playerVisual.y-39;
+        const clamp=value=>Math.max(0,Math.min(1,value));
+
+        let intensity=0;
+        let decorativeGlow=.012;
+
+        if(phase===3){
+            const late=clamp((this.player.x-2950)/620);
+            decorativeGlow=.012+late*.026;
+        }
+        else if(phase===4){
+            const twilight=clamp((this.player.x-1700)/1500);
+            intensity=clamp((twilight-.38)/.62);
+            decorativeGlow=.015+intensity*.12;
+
+            if(this.timeTwilightVeil)this.timeTwilightVeil.setAlpha(.02+twilight*.22);
+            if(this.timeCelestialHalo)this.timeCelestialHalo.setAlpha(.075*(1-twilight));
+            if(this.timeCelestialCore)this.timeCelestialCore.setAlpha(.3*(1-twilight));
+        }
+        else if(phase===5){
+            intensity=1;
+            decorativeGlow=.16;
+        }
+
+        if(this.playerVisual.parts.porongaGlow){
+            this.playerVisual.parts.porongaGlow.setAlpha(decorativeGlow);
+        }
+
+        this.porongaLightHalo
+            .setPosition(x,y)
+            .setAlpha(.075*intensity);
+
+        this.porongaLightCone
+            .setPosition(x+facing*18,y+2)
+            .setScale(facing,1)
+            .setAlpha(.045*intensity);
+
+        this.porongaLightFront
+            .setPosition(x+facing*48,y+7)
+            .setAlpha(.028*intensity);
+    }
+
     createLivingAtmosphere ()
     {
-        this.livingAtmosphereProfile={"phase":1,"worldWidth":3000,"farScroll":0.07,"farAlpha":0.55,"farColor":531479,"farStep":260,"farHeight":190,"farHeightStep":34,"farTrunk":18,"farCrown":62,"lowCanopy":false,"lowCanopyColor":730652,"fogColor":12110783,"fogBackAlpha":0.045,"fogMidAlpha":0.032,"fogFrontAlpha":0.022,"rayColor":14542543,"rays":[{"x":780,"y":155,"w":95,"h":420,"alpha":0.035,"angle":-13,"scroll":0.52},{"x":2050,"y":180,"w":120,"h":390,"alpha":0.028,"angle":11,"scroll":0.58}],"swayColor":1722155,"sway":[{"x":720,"y":620,"w":95,"h":28,"alpha":0.32},{"x":1510,"y":618,"w":88,"h":25,"alpha":0.28},{"x":2480,"y":616,"w":100,"h":30,"alpha":0.3}],"vignetteAlpha":0,"toneColor":733225,"leafDelay":3200,"moteDelay":3000,"birdDelay":11500,"shadowDelay":20000,"maxLeaves":6,"maxMotes":8,"maxBirds":2,"initialMotes":4,"verticalLeaves":false,"largeLeaves":false,"leafColorA":6653519,"leafColorB":5207365,"leafAlpha":0.55,"leafDepth":16,"moteColor":15067325,"moteAlpha":0.24,"moteDepth":11,"dustMotes":false,"birdColor":1320477,"birdAlpha":0.68,"shadows":false,"shadowW":90,"shadowH":28,"shadowColor":1253401,"shadowAlpha":0.08,"region1":1100,"region2":2200};
+        this.livingAtmosphereProfile={"phase":1,"worldWidth":3000,"farScroll":0.07,"farAlpha":0.48,"farColor":1523504,"farStep":260,"farHeight":190,"farHeightStep":34,"farTrunk":18,"farCrown":62,"lowCanopy":false,"lowCanopyColor":730652,"fogColor":13885396,"fogBackAlpha":0.04,"fogMidAlpha":0.029,"fogFrontAlpha":0.018,"rayColor":15655865,"rays":[{"x":780,"y":155,"w":95,"h":420,"alpha":0.045,"angle":-13,"scroll":0.52},{"x":2050,"y":180,"w":120,"h":390,"alpha":0.038,"angle":11,"scroll":0.58}],"swayColor":1722155,"sway":[{"x":720,"y":620,"w":95,"h":28,"alpha":0.32},{"x":1510,"y":618,"w":88,"h":25,"alpha":0.28},{"x":2480,"y":616,"w":100,"h":30,"alpha":0.3}],"vignetteAlpha":0,"toneColor":7311999,"leafDelay":3200,"moteDelay":3000,"birdDelay":11500,"shadowDelay":20000,"maxLeaves":6,"maxMotes":8,"maxBirds":2,"initialMotes":4,"verticalLeaves":false,"largeLeaves":false,"leafColorA":6653519,"leafColorB":5207365,"leafAlpha":0.55,"leafDepth":16,"moteColor":15657160,"moteAlpha":0.23,"moteDepth":11,"dustMotes":false,"birdColor":1320477,"birdAlpha":0.68,"shadows":false,"shadowW":90,"shadowH":28,"shadowColor":1253401,"shadowAlpha":0.08,"region1":1100,"region2":2200};
         this.livingAtmosphereTimers=[];
         this.livingAtmospherePermanent=[];
         this.livingAtmosphereLeaves=[];
@@ -3284,6 +3362,7 @@ export class Game extends Scene
 
         this.syncPlayerVisual();
         this.animatePlayerVisual(time);
+        this.updatePorongaLight();
         this.updateAttack(time);
         this.updateSnake(time);
         this.updateCarapana(time);

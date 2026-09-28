@@ -9,7 +9,7 @@ export class Level5Scene extends Scene
         this.worldWidth = 4000;
         this.physics.world.setBounds(0, 0, this.worldWidth, 768);
         this.cameras.main.setBounds(0, 0, this.worldWidth, 768);
-        this.cameras.main.setBackgroundColor('#040907');
+        this.cameras.main.setBackgroundColor('#07100f');
 
         this.createTerritory();
         this.createRubberTreeAccents();
@@ -128,6 +128,7 @@ export class Level5Scene extends Scene
         this.createBossHud();
         this.showLevelTitle();
         this.createLivingAtmosphere();
+        this.createPorongaLightSystem();
 
         this.spawnPoint = { x: 150, y: 530 };
     }
@@ -135,15 +136,16 @@ export class Level5Scene extends Scene
     createTerritory ()
     {
         const sky = this.add.graphics().setDepth(-60).setScrollFactor(0);
-        sky.fillStyle(0x020806, 1);
-        sky.fillRect(0, 0, 1024, 768);
-        sky.fillStyle(0x07130f, 0.86);
-        sky.fillRect(0, 180, 1024, 410);
-        sky.fillStyle(0x101711, 0.34);
-        sky.fillRect(0, 520, 1024, 248);
+        sky.fillStyle(0x07100f,1);
+        sky.fillRect(0,0,1024,768);
+        sky.fillStyle(0x0a1a18,.9);
+        sky.fillRect(0,175,1024,415);
+        sky.fillStyle(0x101b18,.32);
+        sky.fillRect(0,520,1024,248);
 
-        this.add.circle(850, 115, 70, 0xbac7bb, 0.025).setDepth(-59).setScrollFactor(0.025);
-        this.add.circle(850, 115, 34, 0xc8d0c7, 0.14).setDepth(-58).setScrollFactor(0.025);
+        // Lua discreta: agora é o único elemento celeste claramente noturno.
+        this.add.circle(850,112,68,0xb8c9c7,.035).setDepth(-59).setScrollFactor(.025);
+        this.add.circle(850,112,32,0xc8d6d2,.18).setDepth(-58).setScrollFactor(.025);
 
         const distant = this.add.graphics().setDepth(-48).setScrollFactor(0.12);
         distant.fillStyle(0x05120d, 1);
@@ -2089,9 +2091,86 @@ export class Level5Scene extends Scene
         if(this.rubberLatexPoints)this.rubberLatexPoints.length=0;
     }
 
+    createPorongaLightSystem ()
+    {
+        this.porongaLightPhase=5;
+
+        this.porongaLightHalo=this.add.ellipse(0,0,76,58,0xf1bd62,0)
+            .setDepth(18);
+        this.porongaLightCone=this.add.triangle(0,0,0,-19,108,0,0,19,0xf1bd62,0)
+            .setDepth(17);
+        this.porongaLightFront=this.add.ellipse(0,0,98,30,0xe6a94f,0)
+            .setDepth(16);
+
+        this.porongaLightVisuals=[
+            this.porongaLightHalo,
+            this.porongaLightCone,
+            this.porongaLightFront
+        ];
+
+        this.updatePorongaLight();
+
+        this.events.once('shutdown',()=>{
+            if(!this.porongaLightVisuals)return;
+            this.porongaLightVisuals.forEach(light=>{
+                if(light&&light.active)light.destroy();
+            });
+            this.porongaLightVisuals.length=0;
+        });
+    }
+
+    updatePorongaLight ()
+    {
+        if(!this.playerVisual||!this.playerVisual.parts||!this.porongaLightHalo)return;
+
+        const phase=this.porongaLightPhase;
+        const facing=this.playerVisual.facing||1;
+        const x=this.playerVisual.x;
+        const y=this.playerVisual.y-39;
+        const clamp=value=>Math.max(0,Math.min(1,value));
+
+        let intensity=0;
+        let decorativeGlow=.012;
+
+        if(phase===3){
+            const late=clamp((this.player.x-2950)/620);
+            decorativeGlow=.012+late*.026;
+        }
+        else if(phase===4){
+            const twilight=clamp((this.player.x-1700)/1500);
+            intensity=clamp((twilight-.38)/.62);
+            decorativeGlow=.015+intensity*.12;
+
+            if(this.timeTwilightVeil)this.timeTwilightVeil.setAlpha(.02+twilight*.22);
+            if(this.timeCelestialHalo)this.timeCelestialHalo.setAlpha(.075*(1-twilight));
+            if(this.timeCelestialCore)this.timeCelestialCore.setAlpha(.3*(1-twilight));
+        }
+        else if(phase===5){
+            intensity=1;
+            decorativeGlow=.16;
+        }
+
+        if(this.playerVisual.parts.porongaGlow){
+            this.playerVisual.parts.porongaGlow.setAlpha(decorativeGlow);
+        }
+
+        this.porongaLightHalo
+            .setPosition(x,y)
+            .setAlpha(.075*intensity);
+
+        this.porongaLightCone
+            .setPosition(x+facing*18,y+2)
+            .setScale(facing,1)
+            .setAlpha(.045*intensity);
+
+        this.porongaLightFront
+            .setPosition(x+facing*48,y+7)
+            .setAlpha(.028*intensity);
+    }
+
     createLivingAtmosphere ()
     {
-        this.livingAtmosphereProfile={"phase":5,"worldWidth":4000,"farScroll":0.05,"farAlpha":0.7,"farColor":199432,"farStep":220,"farHeight":260,"farHeightStep":46,"farTrunk":28,"farCrown":78,"lowCanopy":false,"lowCanopyColor":398093,"fogColor":11452085,"fogBackAlpha":0.07,"fogMidAlpha":0.06,"fogFrontAlpha":0.034,"rayColor":13094574,"rays":[{"x":820,"y":170,"w":100,"h":360,"alpha":0.014,"angle":-10,"scroll":0.5}],"swayColor":1320986,"sway":[{"x":920,"y":620,"w":110,"h":30,"alpha":0.24},{"x":1960,"y":618,"w":120,"h":31,"alpha":0.22},{"x":2710,"y":616,"w":125,"h":32,"alpha":0.2}],"vignetteAlpha":0.04,"toneColor":132613,"leafDelay":3300,"moteDelay":3900,"birdDelay":18000,"shadowDelay":10500,"maxLeaves":7,"maxMotes":5,"maxBirds":1,"initialMotes":2,"verticalLeaves":false,"largeLeaves":true,"leafColorA":4153917,"leafColorB":3099953,"leafAlpha":0.5,"leafDepth":15,"moteColor":13226160,"moteAlpha":0.14,"moteDepth":10,"dustMotes":false,"birdColor":593676,"birdAlpha":0.4,"shadows":true,"shadowW":180,"shadowH":48,"shadowColor":132356,"shadowAlpha":0.12,"region1":1900,"region2":2800};
+        this.livingAtmosphereProfile={"phase":5,"worldWidth":4000,"farScroll":0.05,"farAlpha":0.72,"farColor":466967,"farStep":220,"farHeight":260,"farHeightStep":46,"farTrunk":28,"farCrown":78,"lowCanopy":false,"lowCanopyColor":398093,"fogColor":10466739,"fogBackAlpha":0.072,"fogMidAlpha":0.062,"fogFrontAlpha":0.034,"rayColor":11451315,"rays":[{"x":820,"y":170,"w":100,"h":360,"alpha":0.008,"angle":-10,"scroll":0.5}],"swayColor":1320986,"sway":[{"x":920,"y":620,"w":110,"h":30,"alpha":0.24},{"x":1960,"y":618,"w":120,"h":31,"alpha":0.22},{"x":2710,"y":616,"w":125,"h":32,"alpha":0.2}],"vignetteAlpha":0.04,"toneColor":465701,"leafDelay":3300,"moteDelay":3900,"birdDelay":18000,"shadowDelay":10500,"maxLeaves":7,"maxMotes":5,"maxBirds":1,"initialMotes":2,"verticalLeaves":false,"largeLeaves":true,"leafColorA":4153917,"leafColorB":3099953,"leafAlpha":0.5,"leafDepth":15,"moteColor":12762534,"moteAlpha":0.12,"moteDepth":10,"dustMotes":false,"birdColor":593676,"birdAlpha":0.4,"shadows":true,"shadowW":180,"shadowH":48,"shadowColor":132356,"shadowAlpha":0.12,"region1":1900,"region2":2800};
         this.livingAtmosphereTimers=[];
         this.livingAtmospherePermanent=[];
         this.livingAtmosphereLeaves=[];
@@ -2380,9 +2459,9 @@ export class Level5Scene extends Scene
             if(region===2){back*=1.05;mid*=1.3;front*=1.1;tone=.055;rayScale=.2;}
         }
         else if(p.phase===5){
-            if(region===1){back*=1.18;mid*=1.2;front*=1.08;tone=.035;rayScale=.45;}
-            if(region===2){back*=1.35;mid*=1.32;front*=1.12;tone=.065;rayScale=.22;}
-            if(region===3){back*=1.4;mid*=1.38;front*=.82;tone=.072;rayScale=.1;}
+            if(region===1){back*=1.16;mid*=1.2;front*=1.07;tone=.045;rayScale=.16;}
+            if(region===2){back*=1.3;mid*=1.3;front*=1.1;tone=.065;rayScale=.08;}
+            if(region===3){back*=1.34;mid*=1.34;front*=.82;tone=.075;rayScale=.04;}
         }
 
         [
@@ -2647,6 +2726,6 @@ export class Level5Scene extends Scene
             this.handlePlayerDeath();
         }
 
-        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updateAttack(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();
+        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();
     }
 }
