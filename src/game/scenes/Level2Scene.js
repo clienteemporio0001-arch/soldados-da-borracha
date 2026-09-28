@@ -270,6 +270,91 @@ export class Level2Scene extends Scene
         graphics.fillEllipse(cx+38,cy+8,72*crownScale,50*crownScale);
     }
 
+    decorateGroundVisual (g,segments,phase=1)
+    {
+        const palettes={
+            1:{top:0x315d34,top2:0x244c2d,dark:0x34251c,mid:0x5b3e27,light:0x765035,stone:0x50554d,moss:0x35613a,leaf:0x806b43,wet:0x22372d},
+            2:{top:0x274f31,top2:0x1c4229,dark:0x30231b,mid:0x533924,light:0x68482e,stone:0x444a43,moss:0x2d5734,leaf:0x665b3d,wet:0x1d3028},
+            3:{top:0x2d6138,top2:0x214f30,dark:0x34241b,mid:0x5b3d26,light:0x755137,stone:0x4b514a,moss:0x3c6d3f,leaf:0x73804d,wet:0x20372e},
+            4:{top:0x394430,top2:0x333923,dark:0x34261e,mid:0x59402d,light:0x72513a,stone:0x56534a,moss:0x46553a,leaf:0x8a7045,wet:0x3d3429},
+            5:{top:0x203d29,top2:0x173321,dark:0x281e18,mid:0x493327,light:0x604434,stone:0x424640,moss:0x294c2f,leaf:0x4e5a39,wet:0x172922}
+        };
+        const p=palettes[phase]||palettes[1];
+
+        segments.forEach(([x,y,w,h],segmentIndex)=>{
+            // Camadas internas dão profundidade sem tocar no collider.
+            g.fillStyle(p.dark,.82);
+            g.fillRect(x,y+20,w,Math.max(18,h-20));
+            g.fillStyle(p.mid,.54);
+            g.fillRect(x,y+22,w,20);
+            g.fillStyle(p.light,.24);
+            g.fillRect(x,y+45,w,16);
+
+            // Borda superior irregular, sempre dentro da área sólida.
+            for(let px=x+20,n=0;px<x+w-18;px+=62+(segmentIndex%3)*7,n++){
+                const moundW=34+((n+segmentIndex)%3)*10;
+                const moundH=7+((n*2+segmentIndex)%3)*3;
+                g.fillStyle((n+segmentIndex)%2?p.top:p.top2,.98);
+                g.fillEllipse(px,y+3-((n+segmentIndex)%2)*2,moundW,moundH);
+            }
+
+            // Manchas de terra e umidade.
+            for(let px=x+42,n=0;px<x+w-35;px+=145+(segmentIndex%2)*18,n++){
+                g.fillStyle(n%2?p.wet:p.light,n%2?.18:.22);
+                g.fillEllipse(px,y+34+(n%3)*24,55+(n%2)*22,10+(n%3)*3);
+            }
+
+            // Raízes visuais curtas e determinísticas.
+            g.lineStyle(4,p.dark,.68);
+            const rx=x+95+(segmentIndex%3)*28;
+            if(rx<x+w-75){
+                g.beginPath();
+                g.moveTo(rx,y+5);
+                g.lineTo(rx+24,y+19);
+                g.lineTo(rx+52,y+28);
+                g.strokePath();
+                g.lineStyle(2,p.light,.45);
+                g.beginPath();
+                g.moveTo(rx+25,y+19);
+                g.lineTo(rx+39,y+38);
+                g.strokePath();
+            }
+
+            // Pedras decorativas, sem física.
+            for(let px=x+70,n=0;px<x+w-45;px+=190+(segmentIndex%2)*15,n++){
+                const sw=18+((n+segmentIndex)%3)*6;
+                g.fillStyle(p.stone,.72);
+                g.fillTriangle(px-sw*.5,y+9,px,y-2-(n%2)*2,px+sw*.55,y+9);
+                g.fillStyle(p.moss,.48);
+                g.fillEllipse(px-2,y+1,sw*.62,4);
+            }
+
+            // Folhas e pequenos brotos no solo.
+            for(let px=x+32,n=0;px<x+w-25;px+=108+(segmentIndex%2)*9,n++){
+                g.fillStyle(p.leaf,.48);
+                g.fillEllipse(px,y+7,12+(n%2)*4,5);
+                g.fillEllipse(px+10,y+9,10,4);
+                if((n+segmentIndex)%3===0){
+                    g.lineStyle(2,p.moss,.72);
+                    g.beginPath();g.moveTo(px+18,y+7);g.lineTo(px+14,y-10);g.strokePath();
+                    g.beginPath();g.moveTo(px+18,y+2);g.lineTo(px+27,y-7);g.strokePath();
+                }
+            }
+
+            // Bordas do terreno: terra quebrada, pedras e raízes expostas.
+            const left=x,right=x+w;
+            g.fillStyle(p.mid,.95);
+            g.fillTriangle(left,y+3,left+17,y+3,left+6,y+16);
+            g.fillTriangle(right,y+3,right-18,y+3,right-7,y+18);
+            g.fillStyle(p.stone,.72);
+            g.fillEllipse(left+12,y+8,12,7);
+            g.fillEllipse(right-13,y+9,13,7);
+            g.lineStyle(3,p.dark,.78);
+            g.beginPath();g.moveTo(left+8,y+9);g.lineTo(left-7,y+24);g.lineTo(left+2,y+34);g.strokePath();
+            g.beginPath();g.moveTo(right-8,y+10);g.lineTo(right+8,y+25);g.lineTo(right-1,y+37);g.strokePath();
+        });
+    }
+
     createPlatforms ()
     {
         this.platforms = this.physics.add.staticGroup();
@@ -304,11 +389,8 @@ export class Level2Scene extends Scene
         ground.forEach(([x, y, w, h], i) => {
             terrain.fillStyle(i % 2 === 0 ? 0x4b3423 : 0x513824, 1);
             terrain.fillRect(x, y, w, h);
-            terrain.fillStyle(0x284f2d, 1);
-            terrain.fillRect(x, y, w, 12);
-            terrain.fillStyle(0x173823, 0.92);
-            terrain.fillRect(x, y + 12, w, 9);
         });
+        this.decorateGroundVisual(terrain,ground,2);
 
         // Barro, manchas, pedras e raízes: detalhe puramente visual.
         terrain.fillStyle(0x6a4a2d, 0.52);
@@ -342,33 +424,24 @@ export class Level2Scene extends Scene
 
     drawLevel2NaturalPlatform (graphics, x, y, width, height, type)
     {
-        if (type === 'log') {
-            graphics.fillStyle(0x49311f, 1);
-            graphics.fillRoundedRect(x, y, width, height, 12);
-            graphics.fillStyle(0x6b4a2b, 0.72);
-            graphics.fillRect(x + 10, y + 5, width - 20, 5);
-            graphics.fillStyle(0x2d5932, 0.92);
-            graphics.fillRect(x + 8, y - 4, width - 16, 6);
-            graphics.fillStyle(0x7b5a3d, 0.45);
-            graphics.fillCircle(x + width - 12, y + height / 2, Math.min(10, height * 0.32));
-        } else if (type === 'root') {
-            graphics.fillStyle(0x4b3422, 1);
-            graphics.fillRoundedRect(x, y + 7, width, Math.max(18, height - 7), 10);
-            graphics.lineStyle(7, 0x5e4229, 0.95);
-            graphics.beginPath();
-            graphics.moveTo(x + 5, y + height - 3);
-            graphics.lineTo(x + width * 0.42, y + 3);
-            graphics.lineTo(x + width - 4, y + height - 5);
-            graphics.strokePath();
-            graphics.fillStyle(0x2b5530, 0.88);
-            graphics.fillRect(x + 10, y, width - 20, 6);
-        } else {
-            graphics.fillStyle(0x5a3c25, 1);
-            graphics.fillRoundedRect(x, y, width, height, 8);
-            graphics.fillStyle(0x315d34, 0.96);
-            graphics.fillRect(x, y, width, 7);
-            graphics.fillStyle(0x714d2e, 0.48);
-            graphics.fillEllipse(x + width * 0.56, y + height * 0.68, width * 0.46, height * 0.32);
+        if(type==='log'){
+            graphics.fillStyle(0x49311f,1);graphics.fillRoundedRect(x+4,y+2,width-8,height-3,12);
+            graphics.fillStyle(0x68492f,.68);graphics.fillEllipse(x+width*.48,y+height*.42,width-18,8);
+            graphics.lineStyle(2,0x2c2119,.58);[.24,.48,.7].forEach((r,i)=>{graphics.beginPath();graphics.moveTo(x+width*r,y+4);graphics.lineTo(x+width*r+10+(i%2)*5,y+height-5);graphics.strokePath();});
+            graphics.fillStyle(0x2d5932,.9);graphics.fillEllipse(x+width*.35,y+1,width*.45,7);graphics.fillEllipse(x+width*.7,y+2,width*.34,6);
+            graphics.fillStyle(0x7b5a3d,.58);graphics.fillCircle(x+width-7,y+height*.52,Math.min(9,height*.31));
+            graphics.lineStyle(2,0x4e3826,.65);graphics.strokeCircle(x+width-7,y+height*.52,Math.min(5,height*.18));
+        }else if(type==='root'){
+            graphics.lineStyle(Math.max(12,height*.62),0x4b3422,.98);
+            graphics.beginPath();graphics.moveTo(x+4,y+height-5);graphics.lineTo(x+width*.34,y+8);graphics.lineTo(x+width*.62,y+height*.45);graphics.lineTo(x+width-4,y+height-6);graphics.strokePath();
+            graphics.lineStyle(5,0x68472d,.8);graphics.beginPath();graphics.moveTo(x+width*.34,y+9);graphics.lineTo(x+width*.25,y-3);graphics.strokePath();
+            graphics.beginPath();graphics.moveTo(x+width*.62,y+height*.44);graphics.lineTo(x+width*.76,y+3);graphics.strokePath();
+            graphics.fillStyle(0x2b5530,.84);graphics.fillEllipse(x+width*.42,y+3,width*.48,7);graphics.fillEllipse(x+width*.72,y+5,width*.27,6);
+        }else{
+            graphics.fillStyle(0x553923,1);graphics.fillRoundedRect(x+2,y+5,width-4,height-5,8);
+            graphics.fillStyle(0x315d34,.92);graphics.fillEllipse(x+width*.26,y+2,width*.48,8);graphics.fillEllipse(x+width*.7,y+3,width*.4,7);
+            graphics.fillStyle(0x434a43,.65);graphics.fillTriangle(x+width*.18,y+height-2,x+width*.32,y+height*.26,x+width*.44,y+height-2);
+            graphics.fillStyle(0x714d2e,.4);graphics.fillEllipse(x+width*.68,y+height*.68,width*.34,height*.28);
         }
     }
 

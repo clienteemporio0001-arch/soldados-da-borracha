@@ -206,6 +206,91 @@ export class Level4Scene extends Scene
         this.createRubberTreeVisual(1480,340,38,252,0,7,1);
     }
 
+    decorateGroundVisual (g,segments,phase=1)
+    {
+        const palettes={
+            1:{top:0x315d34,top2:0x244c2d,dark:0x34251c,mid:0x5b3e27,light:0x765035,stone:0x50554d,moss:0x35613a,leaf:0x806b43,wet:0x22372d},
+            2:{top:0x274f31,top2:0x1c4229,dark:0x30231b,mid:0x533924,light:0x68482e,stone:0x444a43,moss:0x2d5734,leaf:0x665b3d,wet:0x1d3028},
+            3:{top:0x2d6138,top2:0x214f30,dark:0x34241b,mid:0x5b3d26,light:0x755137,stone:0x4b514a,moss:0x3c6d3f,leaf:0x73804d,wet:0x20372e},
+            4:{top:0x394430,top2:0x333923,dark:0x34261e,mid:0x59402d,light:0x72513a,stone:0x56534a,moss:0x46553a,leaf:0x8a7045,wet:0x3d3429},
+            5:{top:0x203d29,top2:0x173321,dark:0x281e18,mid:0x493327,light:0x604434,stone:0x424640,moss:0x294c2f,leaf:0x4e5a39,wet:0x172922}
+        };
+        const p=palettes[phase]||palettes[1];
+
+        segments.forEach(([x,y,w,h],segmentIndex)=>{
+            // Camadas internas dão profundidade sem tocar no collider.
+            g.fillStyle(p.dark,.82);
+            g.fillRect(x,y+20,w,Math.max(18,h-20));
+            g.fillStyle(p.mid,.54);
+            g.fillRect(x,y+22,w,20);
+            g.fillStyle(p.light,.24);
+            g.fillRect(x,y+45,w,16);
+
+            // Borda superior irregular, sempre dentro da área sólida.
+            for(let px=x+20,n=0;px<x+w-18;px+=62+(segmentIndex%3)*7,n++){
+                const moundW=34+((n+segmentIndex)%3)*10;
+                const moundH=7+((n*2+segmentIndex)%3)*3;
+                g.fillStyle((n+segmentIndex)%2?p.top:p.top2,.98);
+                g.fillEllipse(px,y+3-((n+segmentIndex)%2)*2,moundW,moundH);
+            }
+
+            // Manchas de terra e umidade.
+            for(let px=x+42,n=0;px<x+w-35;px+=145+(segmentIndex%2)*18,n++){
+                g.fillStyle(n%2?p.wet:p.light,n%2?.18:.22);
+                g.fillEllipse(px,y+34+(n%3)*24,55+(n%2)*22,10+(n%3)*3);
+            }
+
+            // Raízes visuais curtas e determinísticas.
+            g.lineStyle(4,p.dark,.68);
+            const rx=x+95+(segmentIndex%3)*28;
+            if(rx<x+w-75){
+                g.beginPath();
+                g.moveTo(rx,y+5);
+                g.lineTo(rx+24,y+19);
+                g.lineTo(rx+52,y+28);
+                g.strokePath();
+                g.lineStyle(2,p.light,.45);
+                g.beginPath();
+                g.moveTo(rx+25,y+19);
+                g.lineTo(rx+39,y+38);
+                g.strokePath();
+            }
+
+            // Pedras decorativas, sem física.
+            for(let px=x+70,n=0;px<x+w-45;px+=190+(segmentIndex%2)*15,n++){
+                const sw=18+((n+segmentIndex)%3)*6;
+                g.fillStyle(p.stone,.72);
+                g.fillTriangle(px-sw*.5,y+9,px,y-2-(n%2)*2,px+sw*.55,y+9);
+                g.fillStyle(p.moss,.48);
+                g.fillEllipse(px-2,y+1,sw*.62,4);
+            }
+
+            // Folhas e pequenos brotos no solo.
+            for(let px=x+32,n=0;px<x+w-25;px+=108+(segmentIndex%2)*9,n++){
+                g.fillStyle(p.leaf,.48);
+                g.fillEllipse(px,y+7,12+(n%2)*4,5);
+                g.fillEllipse(px+10,y+9,10,4);
+                if((n+segmentIndex)%3===0){
+                    g.lineStyle(2,p.moss,.72);
+                    g.beginPath();g.moveTo(px+18,y+7);g.lineTo(px+14,y-10);g.strokePath();
+                    g.beginPath();g.moveTo(px+18,y+2);g.lineTo(px+27,y-7);g.strokePath();
+                }
+            }
+
+            // Bordas do terreno: terra quebrada, pedras e raízes expostas.
+            const left=x,right=x+w;
+            g.fillStyle(p.mid,.95);
+            g.fillTriangle(left,y+3,left+17,y+3,left+6,y+16);
+            g.fillTriangle(right,y+3,right-18,y+3,right-7,y+18);
+            g.fillStyle(p.stone,.72);
+            g.fillEllipse(left+12,y+8,12,7);
+            g.fillEllipse(right-13,y+9,13,7);
+            g.lineStyle(3,p.dark,.78);
+            g.beginPath();g.moveTo(left+8,y+9);g.lineTo(left-7,y+24);g.lineTo(left+2,y+34);g.strokePath();
+            g.beginPath();g.moveTo(right-8,y+10);g.lineTo(right+8,y+25);g.lineTo(right-1,y+37);g.strokePath();
+        });
+    }
+
     createPlatforms ()
     {
         this.platforms = this.physics.add.staticGroup();
@@ -239,10 +324,11 @@ export class Level4Scene extends Scene
         add(3990,425,180,30);
 
         const g=this.add.graphics().setDepth(5);
-        [[0,592,600,116],[1360,592,360,116],[2690,592,340,116]].forEach(([x,y,w,h],i)=>{
+        const ground=[[0,592,600,116],[1360,592,360,116],[2690,592,340,116]];
+        ground.forEach(([x,y,w,h],i)=>{
             g.fillStyle(i===2?0x4a3728:0x4b3423,1);g.fillRect(x,y,w,h);
-            g.fillStyle(i===2?0x394430:0x285331,1);g.fillRect(x,y,w,12);
         });
+        this.decorateGroundVisual(g,ground,4);
 
         const naturals=[
             [675,556,170,28,'root'],[925,486,170,28,'log'],[1175,570,190,30,'bank'],
@@ -266,16 +352,22 @@ export class Level4Scene extends Scene
     drawNaturalPlatform (g,x,y,w,h,t)
     {
         if(t==='log'){
-            g.fillStyle(0x4a321f,1);g.fillRoundedRect(x,y,w,h,12);
-            g.fillStyle(0x6b4a2b,.72);g.fillRect(x+10,y+5,w-20,5);
-            g.fillStyle(0x2d5c34,.9);g.fillRect(x+8,y-4,w-16,6);
-        } else if(t==='root'){
-            g.fillStyle(0x4b3422,1);g.fillRoundedRect(x,y+6,w,Math.max(18,h-6),10);
-            g.lineStyle(7,0x68472d,.95);g.beginPath();
-            g.moveTo(x+5,y+h-3);g.lineTo(x+w*.45,y+3);g.lineTo(x+w-4,y+h-5);g.strokePath();
-        } else {
-            g.fillStyle(0x5b3d25,1);g.fillRoundedRect(x,y,w,h,8);
-            g.fillStyle(0x315d34,1);g.fillRect(x,y,w,7);
+            g.fillStyle(0x49311f,1);g.fillRoundedRect(x+4,y+2,w-8,h-3,11);
+            g.fillStyle(0x76523a,.62);g.fillEllipse(x+w*.48,y+h*.42,w-18,8);
+            g.lineStyle(2,0x2e221b,.62);[.22,.46,.7].forEach((r,i)=>{g.beginPath();g.moveTo(x+w*r,y+4);g.lineTo(x+w*r+12+(i%2)*6,y+h-4);g.strokePath();});
+            g.fillStyle(0x46553a,.72);g.fillEllipse(x+w*.34,y+1,w*.4,6);
+            g.fillStyle(0xa57a51,.48);g.fillCircle(x+w-7,y+h*.52,Math.min(9,h*.3));
+            g.lineStyle(3,0x3a281f,.8);g.beginPath();g.moveTo(x+w*.18,y+h-2);g.lineTo(x+w*.08,y+h+11);g.strokePath();
+        }else if(t==='root'){
+            g.lineStyle(Math.max(12,h*.6),0x4b3422,.98);g.beginPath();
+            g.moveTo(x+4,y+h-5);g.lineTo(x+w*.3,y+7);g.lineTo(x+w*.52,y+h*.5);g.lineTo(x+w*.74,y+6);g.lineTo(x+w-4,y+h-5);g.strokePath();
+            g.lineStyle(4,0x68472d,.78);g.beginPath();g.moveTo(x+w*.3,y+8);g.lineTo(x+w*.2,y-4);g.strokePath();
+            g.fillStyle(0x46553a,.66);g.fillEllipse(x+w*.48,y+3,w*.45,7);
+        }else{
+            g.fillStyle(0x543a27,1);g.fillRoundedRect(x+2,y+5,w-4,h-5,8);
+            g.fillStyle(0x394430,.86);g.fillEllipse(x+w*.28,y+2,w*.44,7);g.fillEllipse(x+w*.72,y+3,w*.36,6);
+            g.fillStyle(0x5a5145,.62);g.fillTriangle(x+w*.18,y+h-2,x+w*.31,y+h*.25,x+w*.43,y+h-2);
+            g.fillStyle(0x795239,.34);g.fillEllipse(x+w*.68,y+h*.7,w*.38,h*.3);
         }
     }
 
@@ -283,40 +375,57 @@ export class Level4Scene extends Scene
     {
         const g=this.add.graphics().setDepth(9);
 
-        // Destruição humana: cortes retos, repetição organizada e objetos deixados para trás.
-        [[1470,535,42,120],[1560,558,34,92]].forEach(([x,y,w,h])=>{
-            g.fillStyle(0x63462f,1);g.fillRect(x,y,w,h);
+        // Tocos serrados com anéis, lascas e serragem.
+        [[1470,535,42,120],[1560,558,34,92]].forEach(([x,y,w,h],i)=>{
+            g.fillStyle(0x63462f,1);g.fillRoundedRect(x,y,w,h,5);
             g.fillStyle(0xa57a51,.92);g.fillEllipse(x+w/2,y,w+2,14);
-            g.lineStyle(2,0x69472f,.8);g.strokeEllipse(x+w/2,y,w*.7,8);
+            g.lineStyle(2,0x69472f,.8);g.strokeEllipse(x+w/2,y,w*.72,8);
+            g.strokeEllipse(x+w/2,y,w*.38,4);
+            g.fillStyle(0x9b744e,.42);
+            g.fillTriangle(x+w*.18,y+4,x-7,y+15,x+w*.34,y+13);
+            g.fillTriangle(x+w*.72,y+5,x+w+9,y+18,x+w*.58,y+15);
+            for(let s=0;s<4;s++)g.fillEllipse(x-10+s*12,y+h-2-(s%2)*3,8+s,3);
         });
 
-        // Madeira cortada e empilhada em linhas regulares.
-        g.fillStyle(0x755337,.94);
-        [[1650,612,78,12],[1670,596,76,11],[1692,580,72,10],[1735,613,58,11]].forEach(([x,y,w,h])=>g.fillRect(x,y,w,h));
-        g.fillStyle(0xa57a51,.75);
-        [1650,1735].forEach(x=>{g.fillEllipse(x+6,618,11,11);});
+        // Madeira cortada: casca, rachaduras e extremidades visíveis.
+        [[1650,612,78,12],[1670,596,76,11],[1692,580,72,10],[1735,613,58,11]].forEach(([x,y,w,h],i)=>{
+            g.fillStyle(0x755337,.94);g.fillRoundedRect(x,y,w,h,5);
+            g.fillStyle(0x9a704b,.42);g.fillEllipse(x+5,y+h*.5,10,h-1);
+            g.lineStyle(1,0x4c3528,.7);g.beginPath();g.moveTo(x+w*.35,y+2);g.lineTo(x+w*.48,y+h-2);g.strokePath();
+        });
 
-        // Corda enrolada e caixa fechada: sinais de trabalho organizado.
+        // Corda enrolada com voltas sobrepostas.
         g.lineStyle(4,0x9a7a4c,.82);
-        g.strokeCircle(1608,610,18);g.strokeCircle(1618,610,13);
-        g.fillStyle(0x725437,.95);g.fillRect(1790,596,58,46);g.lineStyle(3,0x3d2c20,.9);g.strokeRect(1790,596,58,46);
-        g.beginPath();g.moveTo(1819,596);g.lineTo(1819,642);g.strokePath();
+        [18,14,10].forEach((r,i)=>g.strokeCircle(1610+i*5,610,r));
 
-        // Ferramentas dispostas/abandonadas.
+        // Caixa com tábuas, tampa e sombra.
+        g.fillStyle(0x33271e,.25);g.fillEllipse(1819,644,72,13);
+        g.fillStyle(0x725437,.96);g.fillRoundedRect(1790,596,58,46,3);
+        g.lineStyle(3,0x3d2c20,.9);g.strokeRect(1790,596,58,46);
+        g.lineStyle(2,0x8d6742,.82);
+        [607,620,633].forEach(y=>{g.beginPath();g.moveTo(1793,y);g.lineTo(1845,y);g.strokePath();});
+        g.fillStyle(0x66472f,.95);g.fillRect(1786,591,66,9);
+        g.lineStyle(2,0x3d2c20,.8);g.strokeRect(1786,591,66,9);
+
+        // Ferramentas: cabo e parte metálica separáveis visualmente.
         g.lineStyle(5,0x6b4c31,.95);g.beginPath();g.moveTo(1870,615);g.lineTo(1910,578);g.strokePath();
-        g.fillStyle(0x9aa09a,.9);g.fillRect(1905,568,28,10);
-        g.lineStyle(4,0x6b4c31,.8);g.beginPath();g.moveTo(1945,620);g.lineTo(1964,585);g.strokePath();
+        g.fillStyle(0xa3aaa5,.9);g.fillRoundedRect(1903,568,31,10,3);
+        g.lineStyle(4,0x6b4c31,.85);g.beginPath();g.moveTo(1945,620);g.lineTo(1964,585);g.strokePath();
+        g.fillStyle(0x8f9690,.84);g.fillTriangle(1957,581,1972,576,1968,590);
 
-        // Fogueira apagada com pedras em círculo.
-        g.fillStyle(0x5a5145,.75);
-        for(let i=0;i<8;i++){const a=Math.PI*2*i/8;g.fillCircle(2025+Math.cos(a)*29,625+Math.sin(a)*10,5);}
+        // Fogueira apagada: pedras, carvão e cinza.
+        g.fillStyle(0x5a5145,.78);
+        for(let i=0;i<9;i++){const a=Math.PI*2*i/9;g.fillEllipse(2025+Math.cos(a)*30,625+Math.sin(a)*11,11,7);}
+        g.fillStyle(0x888276,.24);g.fillEllipse(2025,627,58,15);
         g.lineStyle(6,0x453024,.95);g.beginPath();g.moveTo(2006,628);g.lineTo(2044,603);g.strokePath();g.beginPath();g.moveTo(2042,628);g.lineTo(2008,603);g.strokePath();
-        g.fillStyle(0x1d1c18,.88);g.fillEllipse(2025,628,62,16);
+        g.fillStyle(0x1d1c18,.88);g.fillEllipse(2025,628,52,12);
         this.add.ellipse(2025,575,64,92,0xb9b7a5,.04).setDepth(8);
 
-        // Pegadas humanas relativamente alinhadas, conduzindo ao acampamento.
+        // Marcas de arrasto e pegadas humanas.
+        g.lineStyle(4,0x5c4635,.42);
+        [[2070,642,2200,630],[2140,648,2260,638]].forEach(([a,b,c,d])=>{g.beginPath();g.moveTo(a,b);g.lineTo(c,d);g.strokePath();});
         g.fillStyle(0x594635,.68);
-        for(let i=0;i<7;i++) g.fillEllipse(2090+i*58,630-(i%2)*7,12,23);
+        for(let i=0;i<7;i++)g.fillEllipse(2090+i*58,630-(i%2)*7,12,23);
     }
 
     createMapinguariSigns ()
@@ -372,11 +481,17 @@ export class Level4Scene extends Scene
 
     drawGiantFootprint (g,x,y,scale=1)
     {
-        g.fillStyle(0x2e241d,.62);
-        g.fillEllipse(x,y,42*scale,62*scale);
+        g.fillStyle(0x1f1915,.26);g.fillEllipse(x+2*scale,y+4*scale,60*scale,76*scale);
+        g.fillStyle(0x2e241d,.7);g.fillEllipse(x,y,43*scale,62*scale);
         g.fillEllipse(x-20*scale,y-32*scale,16*scale,24*scale);
         g.fillEllipse(x,y-38*scale,16*scale,25*scale);
         g.fillEllipse(x+20*scale,y-31*scale,16*scale,23*scale);
+        g.fillStyle(0x7a6247,.24);
+        g.fillEllipse(x-31*scale,y+8*scale,15*scale,6*scale);
+        g.fillEllipse(x+30*scale,y-2*scale,18*scale,6*scale);
+        g.fillStyle(0x806b43,.35);
+        g.fillEllipse(x-34*scale,y-13*scale,12*scale,5*scale);
+        g.fillEllipse(x+34*scale,y+14*scale,10*scale,4*scale);
     }
 
     createAttackHitbox ()
@@ -1638,9 +1753,11 @@ export class Level4Scene extends Scene
 
         // Barraca rasgada e inclinada: o acampamento foi abandonado às pressas.
         camp.fillStyle(0x50503d,.85);camp.fillTriangle(2450,625,2520,525,2590,625);
-        camp.lineStyle(4,0x332b21,.95);camp.beginPath();camp.moveTo(2520,525);camp.lineTo(2520,625);camp.strokePath();
+        camp.fillStyle(0x383a30,.28);camp.fillTriangle(2460,621,2520,538,2578,621);
+        camp.lineStyle(5,0x332b21,.95);camp.beginPath();camp.moveTo(2520,525);camp.lineTo(2520,625);camp.strokePath();
         camp.lineStyle(3,0x28241f,.9);camp.beginPath();camp.moveTo(2497,552);camp.lineTo(2546,596);camp.strokePath();
         camp.beginPath();camp.moveTo(2550,548);camp.lineTo(2510,600);camp.strokePath();
+        camp.lineStyle(2,0x757561,.42);camp.beginPath();camp.moveTo(2472,610);camp.lineTo(2518,541);camp.lineTo(2570,611);camp.strokePath();
 
         // Caixa aberta, ferramenta caída e objetos espalhados.
         camp.fillStyle(0x755337,.95);camp.fillRect(2600,590,62,48);camp.lineStyle(3,0x3d2c20,.9);camp.strokeRect(2600,590,62,48);

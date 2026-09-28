@@ -267,6 +267,91 @@ export class Game extends Scene
         graphics.fillEllipse(cx+34,cy+4,76*crownScale,52*crownScale);
     }
 
+    decorateGroundVisual (g,segments,phase=1)
+    {
+        const palettes={
+            1:{top:0x315d34,top2:0x244c2d,dark:0x34251c,mid:0x5b3e27,light:0x765035,stone:0x50554d,moss:0x35613a,leaf:0x806b43,wet:0x22372d},
+            2:{top:0x274f31,top2:0x1c4229,dark:0x30231b,mid:0x533924,light:0x68482e,stone:0x444a43,moss:0x2d5734,leaf:0x665b3d,wet:0x1d3028},
+            3:{top:0x2d6138,top2:0x214f30,dark:0x34241b,mid:0x5b3d26,light:0x755137,stone:0x4b514a,moss:0x3c6d3f,leaf:0x73804d,wet:0x20372e},
+            4:{top:0x394430,top2:0x333923,dark:0x34261e,mid:0x59402d,light:0x72513a,stone:0x56534a,moss:0x46553a,leaf:0x8a7045,wet:0x3d3429},
+            5:{top:0x203d29,top2:0x173321,dark:0x281e18,mid:0x493327,light:0x604434,stone:0x424640,moss:0x294c2f,leaf:0x4e5a39,wet:0x172922}
+        };
+        const p=palettes[phase]||palettes[1];
+
+        segments.forEach(([x,y,w,h],segmentIndex)=>{
+            // Camadas internas dão profundidade sem tocar no collider.
+            g.fillStyle(p.dark,.82);
+            g.fillRect(x,y+20,w,Math.max(18,h-20));
+            g.fillStyle(p.mid,.54);
+            g.fillRect(x,y+22,w,20);
+            g.fillStyle(p.light,.24);
+            g.fillRect(x,y+45,w,16);
+
+            // Borda superior irregular, sempre dentro da área sólida.
+            for(let px=x+20,n=0;px<x+w-18;px+=62+(segmentIndex%3)*7,n++){
+                const moundW=34+((n+segmentIndex)%3)*10;
+                const moundH=7+((n*2+segmentIndex)%3)*3;
+                g.fillStyle((n+segmentIndex)%2?p.top:p.top2,.98);
+                g.fillEllipse(px,y+3-((n+segmentIndex)%2)*2,moundW,moundH);
+            }
+
+            // Manchas de terra e umidade.
+            for(let px=x+42,n=0;px<x+w-35;px+=145+(segmentIndex%2)*18,n++){
+                g.fillStyle(n%2?p.wet:p.light,n%2?.18:.22);
+                g.fillEllipse(px,y+34+(n%3)*24,55+(n%2)*22,10+(n%3)*3);
+            }
+
+            // Raízes visuais curtas e determinísticas.
+            g.lineStyle(4,p.dark,.68);
+            const rx=x+95+(segmentIndex%3)*28;
+            if(rx<x+w-75){
+                g.beginPath();
+                g.moveTo(rx,y+5);
+                g.lineTo(rx+24,y+19);
+                g.lineTo(rx+52,y+28);
+                g.strokePath();
+                g.lineStyle(2,p.light,.45);
+                g.beginPath();
+                g.moveTo(rx+25,y+19);
+                g.lineTo(rx+39,y+38);
+                g.strokePath();
+            }
+
+            // Pedras decorativas, sem física.
+            for(let px=x+70,n=0;px<x+w-45;px+=190+(segmentIndex%2)*15,n++){
+                const sw=18+((n+segmentIndex)%3)*6;
+                g.fillStyle(p.stone,.72);
+                g.fillTriangle(px-sw*.5,y+9,px,y-2-(n%2)*2,px+sw*.55,y+9);
+                g.fillStyle(p.moss,.48);
+                g.fillEllipse(px-2,y+1,sw*.62,4);
+            }
+
+            // Folhas e pequenos brotos no solo.
+            for(let px=x+32,n=0;px<x+w-25;px+=108+(segmentIndex%2)*9,n++){
+                g.fillStyle(p.leaf,.48);
+                g.fillEllipse(px,y+7,12+(n%2)*4,5);
+                g.fillEllipse(px+10,y+9,10,4);
+                if((n+segmentIndex)%3===0){
+                    g.lineStyle(2,p.moss,.72);
+                    g.beginPath();g.moveTo(px+18,y+7);g.lineTo(px+14,y-10);g.strokePath();
+                    g.beginPath();g.moveTo(px+18,y+2);g.lineTo(px+27,y-7);g.strokePath();
+                }
+            }
+
+            // Bordas do terreno: terra quebrada, pedras e raízes expostas.
+            const left=x,right=x+w;
+            g.fillStyle(p.mid,.95);
+            g.fillTriangle(left,y+3,left+17,y+3,left+6,y+16);
+            g.fillTriangle(right,y+3,right-18,y+3,right-7,y+18);
+            g.fillStyle(p.stone,.72);
+            g.fillEllipse(left+12,y+8,12,7);
+            g.fillEllipse(right-13,y+9,13,7);
+            g.lineStyle(3,p.dark,.78);
+            g.beginPath();g.moveTo(left+8,y+9);g.lineTo(left-7,y+24);g.lineTo(left+2,y+34);g.strokePath();
+            g.beginPath();g.moveTo(right-8,y+10);g.lineTo(right+8,y+25);g.lineTo(right-1,y+37);g.strokePath();
+        });
+    }
+
     createTerrainVisuals ()
     {
         const terrain = this.add.graphics().setDepth(5);
@@ -281,11 +366,8 @@ export class Game extends Scene
         groundSegments.forEach(([x, y, width, height], index) => {
             terrain.fillStyle(index % 2 === 0 ? 0x4b3423 : 0x513824, 1);
             terrain.fillRect(x, y, width, height);
-            terrain.fillStyle(0x284f2d, 1);
-            terrain.fillRect(x, y, width, 12);
-            terrain.fillStyle(0x173823, 0.95);
-            terrain.fillRect(x, y + 12, width, 10);
         });
+        this.decorateGroundVisual(terrain,groundSegments,1);
 
         // Detalhes de barro, pedras e raízes sem física adicional.
         terrain.fillStyle(0x6a4a2d, 0.6);
@@ -314,32 +396,41 @@ export class Game extends Scene
 
     drawNaturalPlatform (graphics, x, y, width, height, type)
     {
-        if (type === 'log')
-        {
-            graphics.fillStyle(0x4a321f, 1);
-            graphics.fillRoundedRect(x, y, width, height, 12);
-            graphics.fillStyle(0x6b4a2b, 0.75);
-            graphics.fillRect(x + 10, y + 5, width - 20, 5);
-            graphics.fillStyle(0x2c5a31, 0.9);
-            graphics.fillRect(x + 8, y - 4, width - 16, 6);
-        }
-        else if (type === 'rock')
-        {
-            graphics.fillStyle(0x4b5148, 1);
-            graphics.fillTriangle(x, y + height, x + width * 0.45, y, x + width, y + height);
-            graphics.fillStyle(0x647065, 0.5);
-            graphics.fillTriangle(x + 18, y + height - 6, x + width * 0.46, y + 8, x + width - 12, y + height - 8);
-            graphics.fillStyle(0x2a5430, 0.85);
-            graphics.fillRect(x + 8, y + 2, width - 16, 6);
-        }
-        else
-        {
-            graphics.fillStyle(0x5b3d25, 1);
-            graphics.fillRect(x, y, width, height);
-            graphics.fillStyle(0x315d34, 1);
-            graphics.fillRect(x, y, width, 7);
-            graphics.fillStyle(0x714d2e, 0.5);
-            graphics.fillEllipse(x + width * 0.55, y + height * 0.65, width * 0.45, height * 0.35);
+        if(type==='log'){
+            graphics.fillStyle(0x49311f,1);
+            graphics.fillRoundedRect(x+4,y+2,width-8,height-3,Math.min(12,height*.42));
+            graphics.fillStyle(0x65472d,.72);
+            graphics.fillEllipse(x+width*.5,y+height*.42,width-18,8);
+            graphics.lineStyle(2,0x2d2119,.55);
+            [0.28,0.52,0.74].forEach((r,i)=>{graphics.beginPath();graphics.moveTo(x+width*r,y+5);graphics.lineTo(x+width*r+8+(i%2)*6,y+height-5);graphics.strokePath();});
+            graphics.fillStyle(0x315d34,.88);
+            graphics.fillEllipse(x+width*.38,y+1,width*.48,7);
+            graphics.fillEllipse(x+width*.7,y+2,width*.32,6);
+            graphics.lineStyle(4,0x463022,.78);
+            graphics.beginPath();graphics.moveTo(x+width*.18,y+height-2);graphics.lineTo(x+width*.1,y+height+10);graphics.strokePath();
+            graphics.fillStyle(0x76563a,.72);
+            graphics.fillCircle(x+width-7,y+height*.52,Math.min(9,height*.3));
+            graphics.lineStyle(2,0x4e3826,.7);
+            graphics.strokeCircle(x+width-7,y+height*.52,Math.min(5,height*.18));
+        }else if(type==='rock'){
+            graphics.fillStyle(0x4b5148,1);
+            graphics.fillTriangle(x+2,y+height,x+width*.38,y+2,x+width-2,y+height);
+            graphics.fillStyle(0x667069,.42);
+            graphics.fillTriangle(x+15,y+height-4,x+width*.42,y+8,x+width*.78,y+height-6);
+            graphics.fillStyle(0x315d34,.76);
+            graphics.fillEllipse(x+width*.48,y+4,width*.62,7);
+            graphics.lineStyle(2,0x353b36,.55);
+            graphics.beginPath();graphics.moveTo(x+width*.55,y+8);graphics.lineTo(x+width*.68,y+height*.62);graphics.strokePath();
+        }else{
+            graphics.fillStyle(0x523722,1);
+            graphics.fillRoundedRect(x+2,y+5,width-4,height-5,9);
+            graphics.fillStyle(0x65462c,.45);
+            graphics.fillEllipse(x+width*.55,y+height*.68,width*.5,height*.32);
+            graphics.fillStyle(0x315d34,.94);
+            graphics.fillEllipse(x+width*.28,y+2,width*.5,8);
+            graphics.fillEllipse(x+width*.72,y+3,width*.42,7);
+            graphics.fillStyle(0x4a5149,.58);
+            graphics.fillTriangle(x+width*.12,y+height-2,x+width*.26,y+height*.28,x+width*.38,y+height-2);
         }
     }
 
@@ -387,88 +478,85 @@ export class Game extends Scene
 
     createLevelStartDetails ()
     {
-        const start = this.add.container(185, 618).setDepth(12);
+        const start=this.add.container(185,618).setDepth(12);
 
-        const crate = this.add.rectangle(-48, 8, 34, 30, 0x6a482b);
-        crate.setStrokeStyle(2, 0x3d2a1b, 0.9);
-        const crateLineA = this.add.rectangle(-48, 1, 28, 3, 0x3d2a1b, 0.9);
-        const crateLineB = this.add.rectangle(-48, 14, 28, 3, 0x3d2a1b, 0.9);
+        const crate=this.add.rectangle(-48,8,38,31,0x6a482b).setAngle(-2);
+        crate.setStrokeStyle(2,0x3d2a1b,.9);
+        const board1=this.add.rectangle(-48,-1,32,4,0x805b38,.9).setAngle(-2);
+        const board2=this.add.rectangle(-48,10,32,4,0x563a25,.9).setAngle(-2);
+        const brace=this.add.rectangle(-48,8,4,27,0x3d2a1b,.72).setAngle(14);
 
-        const stump = this.add.rectangle(8, 12, 28, 25, 0x5b3d27);
-        const stumpTop = this.add.ellipse(8, 0, 28, 9, 0x806044);
-        const log = this.add.rectangle(48, 14, 56, 16, 0x4a3322)
-            .setAngle(-7);
-        const logEnd = this.add.circle(73, 11, 8, 0x76563a);
+        const bucketBody=this.add.ellipse(-8,13,25,18,0x6f604d,.9);
+        const bucketTop=this.add.ellipse(-8,5,25,7,0xaaa18f,.72);
+        const bucketLatex=this.add.ellipse(-8,5,17,4,0xe8e4d8,.72);
 
-        const postLeft = this.add.rectangle(-84, -6, 7, 56, 0x4c3524)
-            .setOrigin(0.5, 1);
-        const postRight = this.add.rectangle(-16, -6, 7, 48, 0x4c3524)
-            .setOrigin(0.5, 1);
-        const crossBeam = this.add.rectangle(-50, -57, 78, 7, 0x5c4028)
-            .setAngle(3);
+        const stump=this.add.rectangle(25,12,27,25,0x5b3d27).setAngle(2);
+        const stumpTop=this.add.ellipse(25,0,29,10,0x806044);
+        const stumpRing=this.add.ellipse(25,0,18,6,0x5e422f,.55);
 
-        start.add([
-            crate,
-            crateLineA,
-            crateLineB,
-            stump,
-            stumpTop,
-            log,
-            logEnd,
-            postLeft,
-            postRight,
-            crossBeam
-        ]);
+        const log=this.add.rectangle(58,14,58,16,0x4a3322).setAngle(-7);
+        const logEnd=this.add.circle(84,11,8,0x76563a);
+        const logRing=this.add.circle(84,11,4,0x4c3728,.7);
+
+        const postLeft=this.add.rectangle(-90,-6,7,58,0x4c3524).setOrigin(.5,1).setAngle(-2);
+        const postRight=this.add.rectangle(-18,-6,7,51,0x4c3524).setOrigin(.5,1).setAngle(2);
+        const crossBeam=this.add.rectangle(-54,-59,82,7,0x5c4028).setAngle(3);
+        const toolHandle=this.add.rectangle(4,-11,5,48,0x6b4c31).setAngle(19);
+        const toolBlade=this.add.rectangle(12,-31,20,7,0x939992,.85).setAngle(19);
+
+        start.add([crate,board1,board2,brace,bucketBody,bucketTop,bucketLatex,stump,stumpTop,stumpRing,log,logEnd,logRing,postLeft,postRight,crossBeam,toolHandle,toolBlade]);
+
+        const pathG=this.add.graphics().setDepth(6);
+        pathG.fillStyle(0x705039,.18);
+        pathG.fillEllipse(280,634,260,28);
+        pathG.fillEllipse(520,636,210,24);
+        pathG.fillStyle(0x806b43,.32);
+        [[112,640],[145,635],[236,642],[310,637],[470,640]].forEach(([x,y],i)=>pathG.fillEllipse(x,y-(i%2)*3,11+(i%3)*3,5));
     }
 
     createLevelEnd ()
     {
-        const tapiri = this.add.container(2845, 650).setDepth(11);
+        const tapiri=this.add.container(2845,650).setDepth(11);
 
-        const floor = this.add.rectangle(0, -14, 190, 16, 0x5a3d27);
-        const leftPost = this.add.rectangle(-72, -82, 12, 140, 0x4a3221);
-        const rightPost = this.add.rectangle(72, -82, 12, 140, 0x4a3221);
+        const floor=this.add.rectangle(0,-14,194,16,0x5a3d27).setAngle(-1);
+        const floorBoardA=this.add.rectangle(-46,-19,88,5,0x725035,.75).setAngle(1);
+        const floorBoardB=this.add.rectangle(47,-17,82,5,0x443025,.68).setAngle(-1);
 
-        const wallLeft = this.add.rectangle(-42, -77, 48, 112, 0x6a4a2e);
-        const wallRight = this.add.rectangle(42, -77, 48, 112, 0x6a4a2e);
-        const doorway = this.add.rectangle(0, -62, 38, 82, 0x141b16);
+        const leftPost=this.add.rectangle(-73,-82,12,142,0x4a3221).setAngle(-2);
+        const rightPost=this.add.rectangle(71,-82,12,140,0x4a3221).setAngle(2);
+        const backPost=this.add.rectangle(24,-88,8,130,0x3f2d21,.72).setAngle(1);
+        const crossA=this.add.rectangle(0,-112,160,8,0x5c4028).setAngle(2);
 
-        const roof = this.add.triangle(
-            0,
-            -160,
-            -112, 42,
-            0, -25,
-            112, 42,
-            0x4b3422
-        );
-        const roofEdge = this.add.rectangle(0, -126, 220, 8, 0x2d2118)
-            .setAngle(1);
+        const wallLeft=this.add.rectangle(-43,-76,47,110,0x66472d).setAngle(-1);
+        const wallRight=this.add.rectangle(43,-77,47,112,0x6d4b2e).setAngle(1);
+        const wallSlat1=this.add.rectangle(-43,-76,5,104,0x4d3525,.52).setAngle(4);
+        const wallSlat2=this.add.rectangle(43,-76,5,104,0x4d3525,.52).setAngle(-4);
+        const doorway=this.add.rectangle(0,-60,39,84,0x111813);
 
-        const doorGlow = this.add.ellipse(0, -42, 52, 28, 0xd7a85d, 0.09);
+        const roofBase=this.add.triangle(0,-158,-116,43,0,-28,116,43,0x4b3422);
+        const roofShade=this.add.triangle(4,-154,-105,37,3,-23,108,39,0x35271e,.7);
+        const thatch=[];
+        for(let i=-5;i<=5;i++){
+            thatch.push(this.add.rectangle(i*19,-132+Math.abs(i)*3,27,5,i%2?0x6e5936:0x7b653e,.86).setAngle(i*2));
+        }
+        const roofEdge=this.add.rectangle(0,-125,224,8,0x2d2118).setAngle(1);
+        const doorGlow=this.add.ellipse(0,-42,52,28,0xd7a85d,.09);
 
-        tapiri.add([
-            floor,
-            leftPost,
-            rightPost,
-            wallLeft,
-            wallRight,
-            doorway,
-            roof,
-            roofEdge,
-            doorGlow
-        ]);
+        const bench=this.add.rectangle(105,-20,58,8,0x5f4129).setAngle(-3);
+        const benchLegA=this.add.rectangle(88,-7,5,23,0x493222);
+        const benchLegB=this.add.rectangle(122,-7,5,23,0x493222);
+        const pot=this.add.ellipse(-108,-10,25,15,0x4f463a,.88);
+        const potLip=this.add.ellipse(-108,-17,26,7,0x847664,.72);
 
-        const clearing = this.add.ellipse(2810, 635, 390, 54, 0xc2c79a, 0.055)
-            .setDepth(6);
+        tapiri.add([floor,floorBoardA,floorBoardB,leftPost,rightPost,backPost,crossA,wallLeft,wallRight,wallSlat1,wallSlat2,doorway,roofBase,roofShade,...thatch,roofEdge,doorGlow,bench,benchLegA,benchLegB,pot,potLip]);
 
-        this.tweens.add({
-            targets: doorGlow,
-            alpha: { from: 0.05, to: 0.14 },
-            duration: 1600,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.InOut'
-        });
+        this.add.ellipse(2810,635,390,54,0xc2c79a,.055).setDepth(6);
+        const useArea=this.add.graphics().setDepth(7);
+        useArea.fillStyle(0x6f5238,.28);useArea.fillEllipse(2765,634,170,22);
+        useArea.fillStyle(0x806b43,.38);
+        [[2710,637],[2740,633],[2865,638],[2900,632]].forEach(([x,y],i)=>useArea.fillEllipse(x,y-(i%2)*2,13,5));
+
+        this.tweens.add({targets:doorGlow,alpha:{from:.05,to:.14},duration:1600,yoyo:true,repeat:-1,ease:'Sine.InOut'});
     }
 
     createCompletionZone ()
