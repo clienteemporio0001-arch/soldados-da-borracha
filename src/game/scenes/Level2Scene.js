@@ -493,16 +493,23 @@ export class Level2Scene extends Scene
 
         const silhouette=this.add.ellipse(0,-3,37,65,0x07100c,.11);
 
-        // Saco de borracha / embornal: mantém leitura rural e fica claramente atrás do torso.
+        // Jamanxim de palha atrás dos ombros; o container conserva o balanço já existente.
         const bag=this.add.container(-13,-8);
-        const bagBody=this.add.ellipse(0,7,19,27,0x72533a,.96);
-        const bagShade=this.add.ellipse(-3,9,10,21,0x493827,.5);
-        const bagFold=this.add.ellipse(2,-4,13,6,0x8a6847,.7);
-        const bagTie=this.add.rectangle(3,-8,9,3,0x4a3525,.9).setAngle(-5);
+        const bagBody=this.add.ellipse(-3,3,29,39,0x8d6740,.98);
+        const bagShade=this.add.ellipse(-9,5,13,32,0x493827,.44);
+        const bagFold=this.add.ellipse(-3,-16,25,7,0xb08958,.95);
+        const bagTie=this.add.rectangle(0,-19,12,3,0x58412b,.9).setAngle(-5);
+        const bagWeave=this.add.graphics();
+        bagWeave.lineStyle(1,0x4d3927,.56);
+        for(let y=-12;y<=18;y+=5){bagWeave.beginPath();bagWeave.moveTo(-15,y);bagWeave.lineTo(9,y+2);bagWeave.strokePath();}
+        bagWeave.lineStyle(1,0xd1a877,.45);
+        for(let x=-12;x<=7;x+=6){bagWeave.beginPath();bagWeave.moveTo(x,-13);bagWeave.lineTo(x+2,19);bagWeave.strokePath();}
         const bagStrap=this.add.graphics();
-        bagStrap.lineStyle(3,0x5b432f,.88);
-        bagStrap.beginPath();bagStrap.moveTo(-4,-13);bagStrap.lineTo(7,10);bagStrap.strokePath();
-        bag.add([bagBody,bagShade,bagFold,bagTie,bagStrap]);
+        bagStrap.lineStyle(3,0x61432c,.95);
+        bagStrap.beginPath();bagStrap.moveTo(-5,-18);bagStrap.lineTo(9,11);bagStrap.strokePath();
+        bagStrap.lineStyle(1,0xc09b68,.68);
+        bagStrap.beginPath();bagStrap.moveTo(-3,-16);bagStrap.lineTo(10,10);bagStrap.strokePath();
+        bag.add([bagBody,bagShade,bagWeave,bagFold,bagTie,bagStrap]);
 
         const leftLeg=this.add.container(-7,9);
         const leftThigh=this.add.rectangle(0,0,10,17,0x2b2c24).setOrigin(.5,.08);
@@ -525,35 +532,35 @@ export class Level2Scene extends Scene
         rightLeg.add([rightThigh,rightKnee,rightLowerLeg]);
 
         const torso=this.add.container(0,-7);
-        const shirtBody=this.add.rectangle(0,0,29,31,0xc7aa73).setOrigin(.5);
-        const shirtShade=this.add.rectangle(-8,1,7,27,0xa98d60,.3).setOrigin(.5);
-        const shoulderLeft=this.add.ellipse(-13,-10,10,9,0xc7aa73);
-        const shoulderRight=this.add.ellipse(13,-10,10,9,0xc7aa73);
-        const collarLeft=this.add.triangle(-4,-12,-5,-3,1,-3,4,5,0xe0c99a,.72);
-        const collarRight=this.add.triangle(4,-12,-4,-3,2,-3,5,5,0xb99a67,.64);
+        const shirtBody=this.add.rectangle(0,0,29,31,0xd8c397).setOrigin(.5);
+        const shirtShade=this.add.rectangle(-8,1,7,27,0xb8a275,.3).setOrigin(.5);
+        const shoulderLeft=this.add.ellipse(-13,-10,10,9,0xd8c397);
+        const shoulderRight=this.add.ellipse(13,-10,10,9,0xd8c397);
+        const collarLeft=this.add.triangle(-4,-12,-5,-3,1,-3,4,5,0xeee0ba,.72);
+        const collarRight=this.add.triangle(4,-12,-4,-3,2,-3,5,5,0xb6a076,.64);
         const shirtFold=this.add.rectangle(5,4,2,20,0x8f754f,.28).setAngle(2);
         const waist=this.add.rectangle(0,15,28,4,0x514333,.6);
         torso.add([shirtBody,shirtShade,shoulderLeft,shoulderRight,collarLeft,collarRight,shirtFold,waist]);
 
         // Braço livre: pivô afastado do torso para evitar cruzamento no ar.
         const leftArm=this.add.container(-15,-15);
-        const leftSleeve=this.add.rectangle(0,1,10,11,0xb99b68).setOrigin(.5,.12);
-        const leftUpperArm=this.add.rectangle(0,9,8,13,0xb98155).setOrigin(.5,.05);
-        const leftElbow=this.add.circle(0,20,4,0xa86f4c);
+        const leftSleeve=this.add.rectangle(0,1,10,11,0xd4bb8e).setOrigin(.5,.12);
+        const leftUpperArm=this.add.rectangle(0,9,8,13,0xd4bb8e).setOrigin(.5,.05);
+        const leftElbow=this.add.circle(0,20,4,0xcab083);
         const leftForearm=this.add.container(0,20);
-        const leftForearmShape=this.add.rectangle(0,2,7,13,0xb98155).setOrigin(.5,.08);
-        const leftHand=this.add.circle(0,15,4,0xc08a62);
+        const leftForearmShape=this.add.rectangle(0,2,8,13,0xd4bb8e).setOrigin(.5,.08);
+        const leftHand=this.add.circle(0,15,4,0xb98155);
         leftForearm.add([leftForearmShape,leftHand]);
         leftArm.add([leftSleeve,leftUpperArm,leftElbow,leftForearm]);
 
         // Braço principal do facão: leitura limpa e facão à frente do corpo.
         const rightArmRig=this.add.container(15,-15);
-        const rightSleeve=this.add.rectangle(0,1,10,11,0xb99b68).setOrigin(.5,.12);
-        const rightArm=this.add.rectangle(0,9,8,13,0xb98155).setOrigin(.5,.05);
-        const rightElbow=this.add.circle(0,20,4,0xa86f4c);
+        const rightSleeve=this.add.rectangle(0,1,10,11,0xd4bb8e).setOrigin(.5,.12);
+        const rightArm=this.add.rectangle(0,9,8,13,0xd4bb8e).setOrigin(.5,.05);
+        const rightElbow=this.add.circle(0,20,4,0xcab083);
         const rightForearm=this.add.container(0,20);
-        const rightForearmShape=this.add.rectangle(0,2,7,13,0xb98155).setOrigin(.5,.08);
-        const rightHand=this.add.circle(0,15,4,0xc08a62);
+        const rightForearmShape=this.add.rectangle(0,2,8,13,0xd4bb8e).setOrigin(.5,.08);
+        const rightHand=this.add.circle(0,15,4,0xb98155);
 
         const machete=this.add.container(3,17);
         const macheteHandle=this.add.rectangle(0,0,5,14,0x3a2a1d).setOrigin(.5);
@@ -571,18 +578,26 @@ export class Level2Scene extends Scene
         const face=this.add.ellipse(0,0,19,23,0xb98155);
         const faceShade=this.add.ellipse(-5,2,7,17,0x8f6045,.26);
         const nose=this.add.triangle(9,1,-2,-3,4,0,0,4,0xc48d64,.82);
+        const beard=this.add.ellipse(1,8,14,9,0x3c2b20,.9);
+        const chin=this.add.ellipse(5,7,5,4,0xb98155);
+        const eye=this.add.circle(6,-3,1.1,0x251c17);
         const neck=this.add.rectangle(0,12,8,6,0xa86f4c);
-        head.add([neck,hair,face,faceShade,nose]);
+        head.add([neck,hair,face,faceShade,beard,chin,nose,eye]);
 
         // Chapéu e poronga formam um conjunto único: clamp preso à faixa, haste e lampião.
         const hat=this.add.container(0,-47);
-        const hatShadow=this.add.ellipse(1,3,30,7,0x2d251c,.42);
-        const hatBrim=this.add.ellipse(0,0,36,7,0x5a432b);
-        const hatCrown=this.add.ellipse(-1,-6,22,13,0x6a5033);
-        const hatBand=this.add.rectangle(-1,-3,21,3,0x443322,.72);
-        const hatTop=this.add.ellipse(-2,-11,17,5,0x765a3a,.72);
+        const hatShadow=this.add.ellipse(1,3,35,8,0x2d251c,.42);
+        const hatBrim=this.add.ellipse(0,0,43,9,0x9b7746);
+        const hatBrimEdge=this.add.ellipse(0,2,42,3,0x5e452c,.83);
+        const hatCrown=this.add.ellipse(-1,-7,26,16,0xb08a51);
+        const hatBand=this.add.rectangle(-1,-3,25,3,0x55402a,.85);
+        const hatTop=this.add.ellipse(-2,-13,20,5,0xc39e61,.8);
+        const straw=this.add.graphics();
+        straw.lineStyle(1,0xe4bd7b,.63);
+        for(let x=-10;x<=10;x+=5){straw.beginPath();straw.moveTo(x,-12);straw.lineTo(x+3,-5);straw.strokePath();}
+        straw.beginPath();straw.moveTo(-19,-1);straw.lineTo(-13,-2);straw.moveTo(14,-2);straw.lineTo(20,-1);straw.strokePath();
 
-        const poronga=this.add.container(8,-3);
+        const poronga=this.add.container(12,-3);
         const porongaBracket=this.add.graphics();
         porongaBracket.lineStyle(3,0x3c3025,.95);
         porongaBracket.beginPath();porongaBracket.moveTo(-8,0);porongaBracket.lineTo(-2,0);porongaBracket.lineTo(1,4);porongaBracket.strokePath();
@@ -593,12 +608,15 @@ export class Level2Scene extends Scene
         const porongaGlow=this.add.circle(5,5,6,0xe7a84d,.09);
         const porongaLamp=this.add.ellipse(5,5,7,6,0xe0a249,.9);
         const porongaCore=this.add.circle(6,5,2,0xffd88a,.86);
-        poronga.add([porongaGlow,porongaBracket,porongaClamp,porongaFrame,porongaLamp,porongaCore]);
-        hat.add([hatShadow,hatBrim,hatCrown,hatBand,hatTop,poronga]);
+        const flame=this.add.triangle(6,-2,-2,4,0,-3,2,4,0xffd485,.87);
+        const flameCore=this.add.circle(6,0,1.2,0xfff1b0,.9);
+        poronga.add([porongaGlow,porongaBracket,porongaClamp,porongaFrame,porongaLamp,porongaCore,flame,flameCore]);
+        hat.add([hatShadow,hatBrim,hatBrimEdge,hatCrown,hatBand,hatTop,straw,poronga]);
 
         const sheathLoop=this.add.ellipse(25,17,9,6,0x453322,.95).setAngle(-35);
         const sheathSleeve=this.add.rectangle(31,26,11,27,0x493a29,.98).setAngle(-35);
-        container.add([silhouette,bag,leftLeg,rightLeg,torso,sheathLoop,leftArm,rightArmRig,head,hat,machete,sheathSleeve]);
+        const sheathRim=this.add.rectangle(24,16,12,4,0x725339,.98).setAngle(-35);
+        container.add([silhouette,bag,leftLeg,rightLeg,torso,sheathLoop,leftArm,rightArmRig,head,hat,machete,sheathSleeve,sheathRim]);
         machete.setPosition(25,17).setScale(.55);
 
         // Poses locais: repouso, busca, início do saque, guarda baixa,
@@ -618,7 +636,7 @@ export class Level2Scene extends Scene
 
         container.parts={
             silhouette,bag,bagBody,torso,shirtBody,head,hat,poronga,porongaGlow,
-            leftArm,leftForearm,rightArmRig,rightArm,rightForearm,machete,sheathLoop,sheathSleeve,macheteGripAngle:18,
+            leftArm,leftForearm,rightArmRig,rightArm,rightForearm,machete,sheathLoop,sheathSleeve,sheathRim,macheteGripAngle:18,
             leftLeg,leftLowerLeg,rightLeg,rightLowerLeg,leftBoot,rightBoot
         };
         container.animationState='IDLE';
@@ -634,6 +652,7 @@ export class Level2Scene extends Scene
         const walk=visual.animationState==='WALK'?Math.sin(time*.011)*.3:0;
         const hipX=25+walk,hipY=17+walk*.25;
         if(!this.isAttacking){
+            if(visual.weaponDrawn){visual.bringToTop(parts.sheathSleeve);visual.bringToTop(parts.sheathRim);visual.weaponDrawn=false;}
             parts.rightArmRig.setPosition(15,-15);
             machete.setPosition(hipX,hipY).setAngle(145).setScale(.55);
             return;
@@ -669,6 +688,13 @@ export class Level2Scene extends Scene
         // No saque e no retorno, a mão já está no cabo junto à bainha.
         // O próprio braço leva ambos pelo lado externo da silhueta.
         const held=smooth((elapsed-30)/15)*(1-smooth((elapsed-285)/15));
+        // A bainha cobre a lâmina apenas em repouso; o mesmo terçado passa à frente no saque.
+        const drawn=elapsed>=45&&elapsed<285;
+        if(drawn!==visual.weaponDrawn){
+            if(drawn)visual.bringToTop(machete);
+            else{visual.bringToTop(parts.sheathSleeve);visual.bringToTop(parts.sheathRim);}
+            visual.weaponDrawn=drawn;
+        }
         machete.x=hipX+(handX-hipX)*held;
         machete.y=hipY+(handY-hipY)*held;
         machete.angle=mix(from.blade,to.blade);
