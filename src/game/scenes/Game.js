@@ -836,8 +836,8 @@ export class Game extends Scene
         const macheteHighlight=this.add.rectangle(-1,-24,1.5,19,0xe4e8e3,.55).setOrigin(.5,.9).setAngle(-3);
         const macheteTip=this.add.triangle(2,-39,-3,0,4,0,1,-9,0xcbd1cc).setOrigin(.5,1);
         machete.add([macheteHandle,macheteGuard,macheteBlade,macheteHighlight,macheteTip]);
-        machete.setAngle(18);
-        rightForearm.add([rightForearmShape,rightHand,machete]);
+        machete.setAngle(210);
+        rightForearm.add([rightForearmShape,rightHand]);
         rightArmRig.add([rightSleeve,rightArm,rightElbow,rightForearm]);
 
         const head=this.add.container(0,-33);
@@ -870,16 +870,42 @@ export class Game extends Scene
         poronga.add([porongaGlow,porongaBracket,porongaClamp,porongaFrame,porongaLamp,porongaCore]);
         hat.add([hatShadow,hatBrim,hatCrown,hatBand,hatTop,poronga]);
 
-        container.add([silhouette,bag,leftLeg,rightLeg,torso,leftArm,rightArmRig,head,hat]);
+        const sheathLoop=this.add.ellipse(13,11,8,5,0x453322,.9).setAngle(-25);
+        const sheathSleeve=this.add.rectangle(20,22,8,20,0x493a29,.93).setAngle(-30);
+        container.add([silhouette,bag,leftLeg,rightLeg,torso,sheathLoop,leftArm,rightArmRig,head,hat,machete,sheathSleeve]);
+        machete.setPosition(13,11).setScale(.68);
 
         container.parts={
             silhouette,bag,bagBody,torso,shirtBody,head,hat,poronga,porongaGlow,
-            leftArm,leftForearm,rightArmRig,rightArm,rightForearm,machete,
+            leftArm,leftForearm,rightArmRig,rightArm,rightForearm,machete,sheathLoop,sheathSleeve,macheteGripAngle:18,
             leftLeg,leftLowerLeg,rightLeg,rightLowerLeg,leftBoot,rightBoot
         };
         container.animationState='IDLE';
         container.facing=1;
         return container;
+    }
+
+    updateMacheteVisual (time)
+    {
+        const parts=this.playerVisual.parts;
+        const machete=parts.machete;
+        const elapsed=this.isAttacking?Math.max(0,time-this.attackStartedAt):0;
+        const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+        // Uma arma só, no espaço local do personagem: o container inteiro já espelha o facing.
+        const draw=this.isAttacking?smooth((elapsed-35)/55):0;
+        const returnToHip=this.isAttacking?smooth((elapsed-225)/75):1;
+        const held=draw*(1-returnToHip);
+        const walk=this.playerVisual.animationState==='WALK'?Math.sin(time*.011)*.7:0;
+        const hipX=13+walk*.25,hipY=11+walk*.25;
+        const arm=parts.rightArmRig.angle*Math.PI/180;
+        const forearm=arm+parts.rightForearm.angle*Math.PI/180;
+        // Pivô do ombro + antebraço + mão; sem trocar parent nem criar objetos por frame.
+        const handX=15-20*Math.sin(arm)-17*Math.sin(forearm)+3*Math.cos(forearm);
+        const handY=-15+20*Math.cos(arm)+17*Math.cos(forearm)+3*Math.sin(forearm);
+        machete.x=hipX+(handX-hipX)*held;
+        machete.y=hipY+(handY-hipY)*held;
+        machete.angle=210+(parts.rightArmRig.angle+parts.rightForearm.angle+parts.macheteGripAngle-210)*held;
+        machete.setScale(.68+.32*held);
     }
 
     syncPlayerVisual ()
@@ -1076,7 +1102,7 @@ export class Game extends Scene
                 const t=elapsed/70;
                 leftArmAngle=10+10*t;
                 leftForearmAngle=2-5*t;
-                rightForearmAngle=-6-10*t;
+                rightForearmAngle=-4-21*t;
                 bagX=-13.5;
                 bagAngle=-3-2*t;
                 headAngle=-.5*t;
@@ -1084,6 +1110,7 @@ export class Game extends Scene
                 porongaAngle+=.15*t;
             }else if(elapsed<=210){
                 const swing=Math.sin(((elapsed-70)/140)*Math.PI);
+                rightForearmAngle=elapsed<90?-25+21*((elapsed-70)/20):-4;
                 leftArmAngle=20+7*swing;
                 leftForearmAngle=-3+3*swing;
                 rightForearmAngle=-16+8*swing;
@@ -1130,7 +1157,7 @@ export class Game extends Scene
         parts.leftLeg.y=lerp(parts.leftLeg.y,leftLegY,.24);
         parts.rightLeg.y=lerp(parts.rightLeg.y,rightLegY,.24);
 
-        parts.machete.angle=macheteAngle;
+        parts.macheteGripAngle=macheteAngle;
         this.playerBaseRightArmAngle=rightArmAngle;
         this.playerBaseTorsoAngle=torsoAngle;
     }
@@ -1421,7 +1448,7 @@ export class Game extends Scene
         }
 
         if(this.playerVisual&&this.playerVisual.parts){
-            this.playerVisual.parts.machete.angle=18;
+            this.playerVisual.parts.macheteGripAngle=18;this.playerVisual.parts.machete.setPosition(13,11).setAngle(210).setScale(.68);
         }
 
         if('attackHitRegistered' in this)this.attackHitRegistered=false;
@@ -1476,15 +1503,15 @@ export class Game extends Scene
 
         if(elapsed<70){
             const prep=Math.max(0,elapsed/70);
-            parts.rightArmRig.angle=baseArm-(variant===0?28:22)*prep;
-            parts.machete.angle=18-(variant===0?32:22)*prep;
+            parts.rightArmRig.angle=baseArm+(variant===0?28:22)*prep;
+            parts.macheteGripAngle=18-(variant===0?32:22)*prep;
             parts.torso.angle=baseTorso-(variant===0?5:3)*prep;
         } else if(elapsed<90){
             const release=(elapsed-70)/20;
             const armStart=variant===0?12:8;
             const bladeStart=variant===0?28:23;
-            parts.rightArmRig.angle=baseArm-(variant===0?28:22)+(armStart+(variant===0?28:22))*release;
-            parts.machete.angle=(variant===0?-14:-4)+(bladeStart-(variant===0?-14:-4))*release;
+            parts.rightArmRig.angle=baseArm+(variant===0?28:22)+(armStart-(variant===0?28:22))*release;
+            parts.macheteGripAngle=(variant===0?-14:-4)+(bladeStart-(variant===0?-14:-4))*release;
             parts.torso.angle=baseTorso-(variant===0?5:3)+(variant===0?7:4)*release;
         } else if(elapsed<=210){
             const active=(elapsed-90)/120;
@@ -1492,7 +1519,7 @@ export class Game extends Scene
             const armStart=variant===0?12:8;
             const bladeStart=variant===0?28:23;
             parts.rightArmRig.angle=baseArm+armStart+(variant===0?48:40)*swing;
-            parts.machete.angle=bladeStart+(variant===0?40:30)*swing;
+            parts.macheteGripAngle=bladeStart+(variant===0?40:30)*swing;
             parts.torso.angle=baseTorso+(variant===0?2:1)+(variant===0?6:4)*swing;
 
             this.attackHitbox.body.enable=true;
@@ -1511,14 +1538,14 @@ export class Game extends Scene
             const armStart=variant===0?12:8;
             const bladeStart=variant===0?28:23;
             parts.rightArmRig.angle=baseArm+armStart*(1-recovery);
-            parts.machete.angle=bladeStart+(18-bladeStart)*recovery;
+            parts.macheteGripAngle=bladeStart+(18-bladeStart)*recovery;
             parts.torso.angle=baseTorso+(variant===0?2:1)*(1-recovery);
         }
 
         if(elapsed>=300){
             this.isAttacking=false;
             this.attackHitbox.body.enable=false;
-            parts.machete.angle=18;
+            parts.macheteGripAngle=18;
         }
     }
 
@@ -3363,7 +3390,7 @@ export class Game extends Scene
         this.syncPlayerVisual();
         this.animatePlayerVisual(time);
         this.updatePorongaLight();
-        this.updateAttack(time);
+        this.updateAttack(time);this.updateMacheteVisual(time);
         this.updateSnake(time);
         this.updateCarapana(time);
         this.updateFruits(time);
