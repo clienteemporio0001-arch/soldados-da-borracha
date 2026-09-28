@@ -29,8 +29,11 @@ export class Level2Scene extends Scene
         this.physics.add.collider(this.player, this.platforms);
 
         this.playerVisual = this.createPlayerVisual();
+        this.playerVisual.setVisible(false);
         this.attackSprite=this.add.sprite(this.player.x,this.player.y+45,'seringueiroAttack',0)
-            .setOrigin(.5,480/512).setScale(.23).setDepth(20).setVisible(false);
+            .setOrigin(.5,480/512).setScale(.23).setDepth(20).setVisible(true)
+            .setFlipX(this.playerVisual.facing<0);
+        this.idleVisualStartedAt=null;
         this.syncPlayerVisual();
 
         this.maxHealth = 100;
@@ -706,10 +709,34 @@ export class Level2Scene extends Scene
     updateAttackSprite (time)
     {
         const active=this.isAttacking;
-        this.playerVisual.setVisible(!active);
-        this.attackSprite.setVisible(active);
-        if(!active)return;
+        this.playerVisual.setVisible(false);
+        this.attackSprite.setVisible(true);
+        // A mesma âncora acompanha o corpo em todos os estados, sem compensação por frame.
+        this.attackSprite.setPosition(this.playerVisual.x,this.playerVisual.y+45);
+        if(!active)
+        {
+            const body=this.player.body;
+            const grounded=body.blocked.down||body.touching.down;
+            const idle=grounded&&Math.abs(body.velocity.x)<1&&Math.abs(body.velocity.y)<1;
+            if(idle)
+            {
+                if(this.idleVisualStartedAt===null)this.idleVisualStartedAt=time;
+                if(this.attackSprite.texture.key!=='seringueiroIdle')this.attackSprite.setTexture('seringueiroIdle',0);
+                // Respiração a 5 FPS, sem timer ou tween adicional.
+                this.attackSprite.setFrame(Math.floor(Math.max(0,time-this.idleVisualStartedAt)/200)%4);
+            }
+            else
+            {
+                this.idleVisualStartedAt=null;
+                if(this.attackSprite.texture.key!=='seringueiroAttack')this.attackSprite.setTexture('seringueiroAttack',0);
+                this.attackSprite.setFrame(0);
+            }
+            this.attackSprite.setFlipX(this.playerVisual.facing<0);
+            return;
+        }
 
+        this.idleVisualStartedAt=null;
+        if(this.attackSprite.texture.key!=='seringueiroAttack')this.attackSprite.setTexture('seringueiroAttack',0);
         // Os oito quadros seguem o relógio do ataque funcional (300 ms).
         const elapsed=Math.max(0,time-this.attackStartedAt);
         const starts=[0,30,60,90,125,175,210,245];
@@ -717,8 +744,6 @@ export class Level2Scene extends Scene
         while(frame>0&&elapsed<starts[frame])frame--;
         this.attackSprite.setFrame(frame);
         this.attackSprite.setFlipX(this.attackDirection<0);
-        // A âncora é igual nos oito frames; nenhuma pose recebe compensação individual.
-        this.attackSprite.setPosition(this.playerVisual.x,this.playerVisual.y+45);
     }
 
     syncPlayerVisual ()
