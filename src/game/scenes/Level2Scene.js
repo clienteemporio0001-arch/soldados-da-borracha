@@ -282,15 +282,10 @@ export class Level2Scene extends Scene
         const p=palettes[phase]||palettes[1];
 
         segments.forEach(([x,y,w,h],segmentIndex)=>{
-            // Camadas internas dão profundidade sem tocar no collider.
-            g.fillStyle(p.dark,.82);
-            g.fillRect(x,y+20,w,Math.max(18,h-20));
-            g.fillStyle(p.mid,.54);
-            g.fillRect(x,y+22,w,20);
-            g.fillStyle(p.light,.24);
-            g.fillRect(x,y+45,w,16);
+            g.fillStyle(p.dark,.82);g.fillRect(x,y+20,w,Math.max(18,h-20));
+            g.fillStyle(p.mid,.54);g.fillRect(x,y+22,w,20);
+            g.fillStyle(p.light,.24);g.fillRect(x,y+45,w,16);
 
-            // Borda superior irregular, sempre dentro da área sólida.
             for(let px=x+20,n=0;px<x+w-18;px+=62+(segmentIndex%3)*7,n++){
                 const moundW=34+((n+segmentIndex)%3)*10;
                 const moundH=7+((n*2+segmentIndex)%3)*3;
@@ -298,29 +293,24 @@ export class Level2Scene extends Scene
                 g.fillEllipse(px,y+3-((n+segmentIndex)%2)*2,moundW,moundH);
             }
 
-            // Manchas de terra e umidade.
             for(let px=x+42,n=0;px<x+w-35;px+=145+(segmentIndex%2)*18,n++){
                 g.fillStyle(n%2?p.wet:p.light,n%2?.18:.22);
                 g.fillEllipse(px,y+34+(n%3)*24,55+(n%2)*22,10+(n%3)*3);
             }
 
-            // Raízes visuais curtas e determinísticas.
-            g.lineStyle(4,p.dark,.68);
-            const rx=x+95+(segmentIndex%3)*28;
-            if(rx<x+w-75){
+            // Raízes superficiais menores integram troncos/solo sem criar física.
+            g.lineStyle(3,p.dark,.62);
+            for(let px=x+88,n=0;px<x+w-70;px+=230+(segmentIndex%2)*20,n++){
                 g.beginPath();
-                g.moveTo(rx,y+5);
-                g.lineTo(rx+24,y+19);
-                g.lineTo(rx+52,y+28);
+                g.moveTo(px,y+5);
+                g.lineTo(px+18,y+11+(n%2)*3);
+                g.lineTo(px+37,y+7+(n%3)*4);
                 g.strokePath();
-                g.lineStyle(2,p.light,.45);
-                g.beginPath();
-                g.moveTo(rx+25,y+19);
-                g.lineTo(rx+39,y+38);
-                g.strokePath();
+                g.lineStyle(1.5,p.light,.34);
+                g.beginPath();g.moveTo(px+19,y+11);g.lineTo(px+27,y+22);g.strokePath();
+                g.lineStyle(3,p.dark,.62);
             }
 
-            // Pedras decorativas, sem física.
             for(let px=x+70,n=0;px<x+w-45;px+=190+(segmentIndex%2)*15,n++){
                 const sw=18+((n+segmentIndex)%3)*6;
                 g.fillStyle(p.stone,.72);
@@ -329,11 +319,14 @@ export class Level2Scene extends Scene
                 g.fillEllipse(px-2,y+1,sw*.62,4);
             }
 
-            // Folhas e pequenos brotos no solo.
-            for(let px=x+32,n=0;px<x+w-25;px+=108+(segmentIndex%2)*9,n++){
-                g.fillStyle(p.leaf,.48);
+            // Matéria orgânica: folhas, gravetos e pequenas manchas de serrapilheira.
+            for(let px=x+32,n=0;px<x+w-25;px+=102+(segmentIndex%2)*9,n++){
+                g.fillStyle(p.leaf,.46);
                 g.fillEllipse(px,y+7,12+(n%2)*4,5);
                 g.fillEllipse(px+10,y+9,10,4);
+                g.fillEllipse(px-8,y+10,8+(n%3)*2,3.5);
+                g.lineStyle(1.5,p.dark,.45);
+                g.beginPath();g.moveTo(px+4,y+9);g.lineTo(px+18,y+5-(n%2)*3);g.strokePath();
                 if((n+segmentIndex)%3===0){
                     g.lineStyle(2,p.moss,.72);
                     g.beginPath();g.moveTo(px+18,y+7);g.lineTo(px+14,y-10);g.strokePath();
@@ -341,7 +334,6 @@ export class Level2Scene extends Scene
                 }
             }
 
-            // Bordas do terreno: terra quebrada, pedras e raízes expostas.
             const left=x,right=x+w;
             g.fillStyle(p.mid,.95);
             g.fillTriangle(left,y+3,left+17,y+3,left+6,y+16);
@@ -498,21 +490,19 @@ export class Level2Scene extends Scene
     {
         const container=this.add.container(this.player.x,this.player.y).setDepth(20);
 
-        // Sombra local discreta ajuda a silhueta nas fases mais escuras sem iluminar o cenário.
-        const silhouette=this.add.ellipse(0,-3,38,66,0x07100c,.13);
+        const silhouette=this.add.ellipse(0,-3,37,65,0x07100c,.11);
 
-        // Saco de borracha / embornal: volume simples, terroso e preso por correia.
-        const bag=this.add.container(-12,-8);
-        const bagBody=this.add.ellipse(0,7,20,28,0x72533a,.96);
-        const bagShade=this.add.ellipse(-3,9,11,22,0x493827,.52);
-        const bagFold=this.add.ellipse(3,-4,14,6,0x8a6847,.72);
+        // Saco de borracha / embornal: mantém leitura rural e fica claramente atrás do torso.
+        const bag=this.add.container(-13,-8);
+        const bagBody=this.add.ellipse(0,7,19,27,0x72533a,.96);
+        const bagShade=this.add.ellipse(-3,9,10,21,0x493827,.5);
+        const bagFold=this.add.ellipse(2,-4,13,6,0x8a6847,.7);
         const bagTie=this.add.rectangle(3,-8,9,3,0x4a3525,.9).setAngle(-5);
         const bagStrap=this.add.graphics();
-        bagStrap.lineStyle(3,0x5b432f,.9);
+        bagStrap.lineStyle(3,0x5b432f,.88);
         bagStrap.beginPath();bagStrap.moveTo(-4,-13);bagStrap.lineTo(7,10);bagStrap.strokePath();
         bag.add([bagBody,bagShade,bagFold,bagTie,bagStrap]);
 
-        // Pernas articuladas: quadril -> coxa -> joelho -> canela -> bota.
         const leftLeg=this.add.container(-7,9);
         const leftThigh=this.add.rectangle(0,0,10,17,0x2b2c24).setOrigin(.5,.08);
         const leftKnee=this.add.circle(0,15,4.5,0x24251f);
@@ -533,7 +523,6 @@ export class Level2Scene extends Scene
         rightLowerLeg.add([rightShin,rightBoot,rightSole]);
         rightLeg.add([rightThigh,rightKnee,rightLowerLeg]);
 
-        // Camisa de trabalho: ombros, corpo, gola e separação da calça.
         const torso=this.add.container(0,-7);
         const shirtBody=this.add.rectangle(0,0,29,31,0xc7aa73).setOrigin(.5);
         const shirtShade=this.add.rectangle(-8,1,7,27,0xa98d60,.3).setOrigin(.5);
@@ -545,7 +534,7 @@ export class Level2Scene extends Scene
         const waist=this.add.rectangle(0,15,28,4,0x514333,.6);
         torso.add([shirtBody,shirtShade,shoulderLeft,shoulderRight,collarLeft,collarRight,shirtFold,waist]);
 
-        // Braço livre articulado.
+        // Braço livre: pivô afastado do torso para evitar cruzamento no ar.
         const leftArm=this.add.container(-15,-15);
         const leftSleeve=this.add.rectangle(0,1,10,11,0xb99b68).setOrigin(.5,.12);
         const leftUpperArm=this.add.rectangle(0,9,8,13,0xb98155).setOrigin(.5,.05);
@@ -556,7 +545,7 @@ export class Level2Scene extends Scene
         leftForearm.add([leftForearmShape,leftHand]);
         leftArm.add([leftSleeve,leftUpperArm,leftElbow,leftForearm]);
 
-        // Braço do facão articulado.
+        // Braço principal do facão: leitura limpa e facão à frente do corpo.
         const rightArmRig=this.add.container(15,-15);
         const rightSleeve=this.add.rectangle(0,1,10,11,0xb99b68).setOrigin(.5,.12);
         const rightArm=this.add.rectangle(0,9,8,13,0xb98155).setOrigin(.5,.05);
@@ -565,7 +554,6 @@ export class Level2Scene extends Scene
         const rightForearmShape=this.add.rectangle(0,2,7,13,0xb98155).setOrigin(.5,.08);
         const rightHand=this.add.circle(0,15,4,0xc08a62);
 
-        // Facão mantém comprimento visual próximo do atual e não altera alcance/hitbox.
         const machete=this.add.container(3,17);
         const macheteHandle=this.add.rectangle(0,0,5,14,0x3a2a1d).setOrigin(.5,.88);
         const macheteGuard=this.add.rectangle(0,-11,10,3,0x665846,.9);
@@ -577,7 +565,6 @@ export class Level2Scene extends Scene
         rightForearm.add([rightForearmShape,rightHand,machete]);
         rightArmRig.add([rightSleeve,rightArm,rightElbow,rightForearm]);
 
-        // Cabeça menos circular, mantendo leitura simples.
         const head=this.add.container(0,-33);
         const hair=this.add.ellipse(-2,-8,17,7,0x2d241d,.88);
         const face=this.add.ellipse(0,0,19,23,0xb98155);
@@ -586,7 +573,7 @@ export class Level2Scene extends Scene
         const neck=this.add.rectangle(0,12,8,6,0xa86f4c);
         head.add([neck,hair,face,faceShade,nose]);
 
-        // Chapéu tradicional estilizado + poronga visual integrada.
+        // Chapéu e poronga formam um conjunto único: clamp preso à faixa, haste e lampião.
         const hat=this.add.container(0,-47);
         const hatShadow=this.add.ellipse(1,3,30,7,0x2d251c,.42);
         const hatBrim=this.add.ellipse(0,0,36,7,0x5a432b);
@@ -594,53 +581,29 @@ export class Level2Scene extends Scene
         const hatBand=this.add.rectangle(-1,-3,21,3,0x443322,.72);
         const hatTop=this.add.ellipse(-2,-11,17,5,0x765a3a,.72);
 
-        const poronga=this.add.container(11,-1);
-        const porongaSupport=this.add.rectangle(-4,-1,8,2,0x3c3025,.92).setAngle(-12);
-        const porongaFrame=this.add.rectangle(1,-1,5,9,0x665440,.9).setAngle(8);
-        const porongaGlow=this.add.circle(5,1,7,0xe7a84d,.1);
-        const porongaLamp=this.add.ellipse(5,1,7,6,0xe0a249,.88);
-        const porongaCore=this.add.circle(6,1,2,0xffd88a,.85);
-        poronga.add([porongaGlow,porongaSupport,porongaFrame,porongaLamp,porongaCore]);
+        const poronga=this.add.container(8,-3);
+        const porongaBracket=this.add.graphics();
+        porongaBracket.lineStyle(3,0x3c3025,.95);
+        porongaBracket.beginPath();porongaBracket.moveTo(-8,0);porongaBracket.lineTo(-2,0);porongaBracket.lineTo(1,4);porongaBracket.strokePath();
+        porongaBracket.lineStyle(2,0x766047,.8);
+        porongaBracket.beginPath();porongaBracket.moveTo(-7,-2);porongaBracket.lineTo(-1,-2);porongaBracket.strokePath();
+        const porongaClamp=this.add.rectangle(-6,-1,5,5,0x4b3c2d,.95).setAngle(-5);
+        const porongaFrame=this.add.rectangle(2,4,5,9,0x665440,.92).setAngle(3);
+        const porongaGlow=this.add.circle(5,5,6,0xe7a84d,.09);
+        const porongaLamp=this.add.ellipse(5,5,7,6,0xe0a249,.9);
+        const porongaCore=this.add.circle(6,5,2,0xffd88a,.86);
+        poronga.add([porongaGlow,porongaBracket,porongaClamp,porongaFrame,porongaLamp,porongaCore]);
         hat.add([hatShadow,hatBrim,hatCrown,hatBand,hatTop,poronga]);
 
-        container.add([
-            silhouette,
-            bag,
-            leftLeg,
-            rightLeg,
-            torso,
-            leftArm,
-            rightArmRig,
-            head,
-            hat
-        ]);
+        container.add([silhouette,bag,leftLeg,rightLeg,torso,leftArm,rightArmRig,head,hat]);
 
         container.parts={
-            silhouette,
-            bag,
-            bagBody,
-            torso,
-            shirtBody,
-            head,
-            hat,
-            poronga,
-            porongaGlow,
-            leftArm,
-            leftForearm,
-            rightArmRig,
-            rightArm,
-            rightForearm,
-            machete,
-            leftLeg,
-            leftLowerLeg,
-            rightLeg,
-            rightLowerLeg,
-            leftBoot,
-            rightBoot
+            silhouette,bag,bagBody,torso,shirtBody,head,hat,poronga,porongaGlow,
+            leftArm,leftForearm,rightArmRig,rightArm,rightForearm,machete,
+            leftLeg,leftLowerLeg,rightLeg,rightLowerLeg,leftBoot,rightBoot
         };
         container.animationState='IDLE';
         container.facing=1;
-
         return container;
     }
 
@@ -664,222 +627,202 @@ export class Level2Scene extends Scene
         if(dashActive)state='DASH';
         else if(!grounded)state=velocityY<0?'JUMP':'FALL';
         else if(moving)state='WALK';
-
         visual.animationState=state;
 
         if(velocityX>1)visual.facing=1;
         else if(velocityX<-1)visual.facing=-1;
 
-        visual.setScale(
-            visual.facing*this.motionFx.scaleX,
-            this.motionFx.scaleY
-        );
+        visual.setScale(visual.facing*this.motionFx.scaleX,this.motionFx.scaleY);
 
         const seconds=time*.001;
         const lerp=(current,target,amount=.2)=>current+(target-current)*amount;
 
-        let bodyOffsetY=0;
-        let torsoAngle=0;
-        let torsoY=-7;
-        let headY=-33;
-        let headAngle=0;
-        let hatY=-47;
-        let hatAngle=0;
-        let porongaAngle=0;
-
-        let bagX=-12;
-        let bagY=-8;
-        let bagAngle=-4;
-        let bagScaleX=1;
-        let bagScaleY=1;
-
-        let leftArmAngle=5;
-        let leftForearmAngle=2;
-        let rightArmAngle=-5;
-        let rightForearmAngle=-2;
-
-        let leftLegAngle=0;
-        let rightLegAngle=0;
-        let leftLowerLegAngle=0;
-        let rightLowerLegAngle=0;
-        let leftLegY=9;
-        let rightLegY=9;
+        let bodyOffsetY=0,torsoAngle=0,torsoY=-7,headY=-33,headAngle=0,hatY=-47,hatAngle=0,porongaAngle=0;
+        let bagX=-13,bagY=-8,bagAngle=-3,bagScaleX=1,bagScaleY=1;
+        let leftArmAngle=8,leftForearmAngle=3,rightArmAngle=-8,rightForearmAngle=-4;
+        let leftLegAngle=0,rightLegAngle=0,leftLowerLegAngle=0,rightLowerLegAngle=0,leftLegY=9,rightLegY=9;
         let macheteAngle=18;
 
         if(state==='IDLE'){
             const breath=Math.sin(seconds*2.05);
-            const slow=Math.sin(seconds*1.35);
-            bodyOffsetY=breath*.45;
-            torsoY=-7+breath*.55;
-            headY=-33+breath*.32;
-            hatY=-47+breath*.32;
-            hatAngle=slow*.55;
-            porongaAngle=-slow*.35;
-            leftArmAngle=5+slow*1.6;
-            rightArmAngle=-5-slow*1.4;
-            leftForearmAngle=2-slow*.8;
-            rightForearmAngle=-2+slow*.8;
-            bagY=-8+Math.sin(seconds*1.55-.55)*.55;
-            bagAngle=-4+Math.sin(seconds*1.25-.8)*1.1;
+            const slow=Math.sin(seconds*1.3);
+            bodyOffsetY=breath*.42;
+            torsoY=-7+breath*.5;
+            headY=-33+breath*.28;
+            hatY=-47+breath*.28;
+            hatAngle=slow*.45;
+            porongaAngle=-slow*.18;
+            leftArmAngle=8+slow*1.2;
+            rightArmAngle=-8-slow*1.1;
+            leftForearmAngle=3-slow*.5;
+            rightForearmAngle=-4+slow*.5;
+            bagY=-8+Math.sin(seconds*1.48-.55)*.45;
+            bagAngle=-3+Math.sin(seconds*1.2-.75)*.8;
         }
         else if(state==='WALK'){
             const speedRatio=Math.min(Math.abs(velocityX)/260,1);
             const phase=seconds*(7+speedRatio*4);
             const swing=Math.sin(phase);
-            const delayedSwing=Math.sin(phase-.62);
-            const bounce=Math.abs(Math.sin(phase*2))*1.25;
+            const delayed=Math.sin(phase-.72);
+            const bounce=Math.abs(Math.sin(phase*2))*1.15;
 
             bodyOffsetY=-bounce;
-            torsoY=-7-bounce*.38;
-            torsoAngle=swing*1.25;
-            headY=-33-bounce*.28;
-            headAngle=-swing*.65;
-            hatY=-47-bounce*.22;
-            hatAngle=swing*1.2;
-            porongaAngle=-swing*.7;
+            torsoY=-7-bounce*.35;
+            torsoAngle=swing*.95;
+            headY=-33-bounce*.24;
+            headAngle=-swing*.5;
+            hatY=-47-bounce*.2;
+            hatAngle=swing*.85;
+            porongaAngle=-swing*.38;
 
             leftLegAngle=swing*22;
             rightLegAngle=-swing*22;
-            leftLowerLegAngle=Math.max(0,-swing)*18-Math.max(0,swing)*4;
-            rightLowerLegAngle=Math.max(0,swing)*18-Math.max(0,-swing)*4;
+            leftLowerLegAngle=Math.max(0,-swing)*17-Math.max(0,swing)*4;
+            rightLowerLegAngle=Math.max(0,swing)*17-Math.max(0,-swing)*4;
 
-            leftArmAngle=-swing*18;
-            rightArmAngle=swing*18;
-            leftForearmAngle=5+swing*6;
-            rightForearmAngle=-5-swing*6;
+            leftArmAngle=8-swing*15;
+            rightArmAngle=-8+swing*15;
+            leftForearmAngle=3+swing*4;
+            rightForearmAngle=-4-swing*4;
 
-            bagX=-12-Math.abs(delayedSwing)*.8;
-            bagY=-8+bounce*.22;
-            bagAngle=-4-delayedSwing*3.2;
-            macheteAngle=18+swing*1.5;
+            bagX=-13-Math.abs(delayed)*.6;
+            bagY=-8+bounce*.18;
+            bagAngle=-3-delayed*2.4;
+            macheteAngle=18+swing*1.1;
         }
         else if(state==='JUMP'){
             const doubleJump=this.jumpsUsed>=2;
             bodyOffsetY=-1;
             torsoY=doubleJump?-9:-8;
-            torsoAngle=doubleJump?-5:-3;
+            torsoAngle=doubleJump?-4:-2.5;
             headY=doubleJump?-35:-34;
-            headAngle=-1;
+            headAngle=-.6;
             hatY=doubleJump?-49:-48;
-            hatAngle=doubleJump?-3.5:-2;
-            porongaAngle=1;
+            hatAngle=doubleJump?-2.6:-1.5;
+            porongaAngle=.45;
 
-            leftArmAngle=doubleJump?-30:-24;
-            rightArmAngle=doubleJump?30:24;
-            leftForearmAngle=doubleJump?14:9;
-            rightForearmAngle=doubleJump?-12:-8;
+            // Braços abrem para fora do torso: não se cruzam no ar.
+            leftArmAngle=doubleJump?27:22;
+            rightArmAngle=doubleJump?-28:-23;
+            leftForearmAngle=doubleJump?-7:-4;
+            rightForearmAngle=doubleJump?7:4;
 
             leftLegAngle=doubleJump?17:12;
             rightLegAngle=doubleJump?-17:-12;
-            leftLowerLegAngle=doubleJump?20:13;
-            rightLowerLegAngle=doubleJump?-12:-8;
-            leftLegY=7;
-            rightLegY=7;
+            leftLowerLegAngle=doubleJump?18:12;
+            rightLowerLegAngle=doubleJump?-10:-7;
+            leftLegY=7;rightLegY=7;
 
-            bagY=-5.5;
-            bagAngle=doubleJump?8:5;
-            macheteAngle=doubleJump?16:18;
+            bagX=-13.5;
+            bagY=doubleJump?-5.2:-5.8;
+            bagAngle=doubleJump?5.5:3.5;
+            macheteAngle=doubleJump?15:17;
         }
         else if(state==='FALL'){
             const fast=this.fastFallActive===true;
-            bodyOffsetY=fast?1:1.4;
+            bodyOffsetY=fast?.9:1.3;
             torsoY=fast?-6:-5;
-            torsoAngle=fast?1:6;
+            torsoAngle=fast?1:4.5;
             headY=fast?-33:-32;
-            headAngle=fast?0:-1.5;
+            headAngle=fast?0:-1;
             hatY=fast?-46:-45;
-            hatAngle=fast?1:4;
-            porongaAngle=fast?-.5:-2;
+            hatAngle=fast?.8:2.8;
+            porongaAngle=fast?-.2:-.7;
 
-            leftArmAngle=fast?-18:-42;
-            rightArmAngle=fast?20:38;
-            leftForearmAngle=fast?4:10;
-            rightForearmAngle=fast?-4:-10;
+            leftArmAngle=fast?18:28;
+            rightArmAngle=fast?-19:-27;
+            leftForearmAngle=fast?-3:-8;
+            rightForearmAngle=fast?3:8;
 
-            leftLegAngle=fast?-7:-21;
+            leftLegAngle=fast?-7:-20;
             rightLegAngle=fast?7:18;
-            leftLowerLegAngle=fast?2:10;
-            rightLowerLegAngle=fast?-2:-8;
+            leftLowerLegAngle=fast?2:9;
+            rightLowerLegAngle=fast?-2:-7;
             leftLegY=fast?10:12;
             rightLegY=fast?10:11;
 
-            bagY=fast?-4.5:-5.5;
-            bagAngle=fast?1:-8;
-            bagScaleX=fast?1.03:1;
-            bagScaleY=fast?.96:1;
-            macheteAngle=fast?22:28;
+            bagX=-13.5;
+            bagY=fast?-5:-5.7;
+            bagAngle=fast?.5:-5.5;
+            bagScaleX=fast?1.02:1;
+            bagScaleY=fast?.97:1;
+            macheteAngle=fast?21:26;
         }
         else if(state==='DASH'){
             bodyOffsetY=0;
             torsoY=-7;
-            torsoAngle=-13;
+            torsoAngle=-12;
             headY=-34;
-            headAngle=-2;
+            headAngle=-1.5;
             hatY=-47;
-            hatAngle=-6;
-            porongaAngle=2;
+            hatAngle=-5;
+            porongaAngle=.7;
 
-            leftArmAngle=-34;
-            rightArmAngle=-40;
-            leftForearmAngle=8;
-            rightForearmAngle=-8;
+            leftArmAngle=24;
+            rightArmAngle=-38;
+            leftForearmAngle=-5;
+            rightForearmAngle=-10;
 
             leftLegAngle=22;
             rightLegAngle=-25;
             leftLowerLegAngle=8;
             rightLowerLegAngle=-12;
-            leftLegY=8;
-            rightLegY=7;
+            leftLegY=8;rightLegY=7;
 
             bagX=-14;
-            bagY=-6;
-            bagAngle=9;
-            bagScaleX=1.04;
-            bagScaleY=.97;
+            bagY=-6.2;
+            bagAngle=7;
+            bagScaleX=1.03;
+            bagScaleY=.98;
             macheteAngle=8;
         }
 
-        // Resposta de peso no pouso aproveitando o squash visual existente.
         const landingCompression=grounded&&this.motionFx.scaleY<.975;
         if(landingCompression){
             const strength=Math.min(1,(1-this.motionFx.scaleY)/.14);
-            torsoY+=2.2*strength;
-            torsoAngle+=2.5*strength;
+            torsoY+=2.1*strength;
+            torsoAngle+=2.2*strength;
             leftLegAngle-=8*strength;
             rightLegAngle+=8*strength;
             leftLowerLegAngle+=18*strength;
             rightLowerLegAngle+=18*strength;
-            leftArmAngle-=8*strength;
-            rightArmAngle+=7*strength;
-            bagY+=2.2*strength;
-            bagAngle+=6*strength;
-            hatY+=1.2*strength;
-            porongaAngle-=1.5*strength;
+            leftArmAngle+=7*strength;
+            rightArmAngle-=6*strength;
+            bagY+=2*strength;
+            bagAngle+=4.5*strength;
+            hatY+=1*strength;
+            porongaAngle-=.6*strength;
         }
 
-        // O ataque continua funcionalmente intocado; apenas saco, braço livre e articulação visual reagem.
+        // Reação visual acompanha o ataque funcional sem mudar janela, hitbox ou dano.
         if(this.isAttacking){
             const elapsed=Math.max(0,time-this.attackStartedAt);
             if(elapsed<70){
                 const t=elapsed/70;
-                leftArmAngle+=8*t;
-                leftForearmAngle-=7*t;
-                rightForearmAngle-=12*t;
-                bagAngle-=3*t;
-                hatAngle-=.8*t;
+                leftArmAngle=10+10*t;
+                leftForearmAngle=2-5*t;
+                rightForearmAngle=-6-10*t;
+                bagX=-13.5;
+                bagAngle=-3-2*t;
+                headAngle=-.5*t;
+                hatAngle-=.45*t;
+                porongaAngle+=.15*t;
             }else if(elapsed<=210){
                 const swing=Math.sin(((elapsed-70)/140)*Math.PI);
-                leftArmAngle-=10*swing;
-                leftForearmAngle+=8*swing;
-                rightForearmAngle+=12*swing;
-                bagAngle+=5*swing;
-                bagX-=1.5*swing;
-                headAngle+=1.3*swing;
-                hatAngle+=1.2*swing;
-                porongaAngle-=1.2*swing;
+                leftArmAngle=20+7*swing;
+                leftForearmAngle=-3+3*swing;
+                rightForearmAngle=-16+8*swing;
+                bagX=-13.5-1.2*swing;
+                bagAngle=-5+6*swing;
+                headAngle=1.1*swing;
+                hatAngle+=.8*swing;
+                porongaAngle-=.25*swing;
             }else{
                 const recovery=Math.min(1,(elapsed-210)/90);
-                bagAngle+=2*(1-recovery);
+                leftArmAngle=20-(12*recovery);
+                leftForearmAngle=-3+(6*recovery);
+                rightForearmAngle=-8+(4*recovery);
+                bagAngle=1*(1-recovery)-3*recovery;
             }
         }
 
@@ -888,18 +831,17 @@ export class Level2Scene extends Scene
 
         parts.torso.y=lerp(parts.torso.y,torsoY,.22);
         parts.torso.angle=lerp(parts.torso.angle,torsoAngle,.22);
-
         parts.head.y=lerp(parts.head.y,headY,.22);
         parts.head.angle=lerp(parts.head.angle,headAngle,.2);
         parts.hat.y=lerp(parts.hat.y,hatY,.22);
         parts.hat.angle=lerp(parts.hat.angle,hatAngle,.2);
-        parts.poronga.angle=lerp(parts.poronga.angle,porongaAngle,.18);
+        parts.poronga.angle=lerp(parts.poronga.angle,porongaAngle,.16);
 
-        parts.bag.x=lerp(parts.bag.x,bagX,.17);
-        parts.bag.y=lerp(parts.bag.y,bagY,.17);
-        parts.bag.angle=lerp(parts.bag.angle,bagAngle,.16);
-        parts.bag.scaleX=lerp(parts.bag.scaleX,bagScaleX,.16);
-        parts.bag.scaleY=lerp(parts.bag.scaleY,bagScaleY,.16);
+        parts.bag.x=lerp(parts.bag.x,bagX,.16);
+        parts.bag.y=lerp(parts.bag.y,bagY,.16);
+        parts.bag.angle=lerp(parts.bag.angle,bagAngle,.15);
+        parts.bag.scaleX=lerp(parts.bag.scaleX,bagScaleX,.15);
+        parts.bag.scaleY=lerp(parts.bag.scaleY,bagScaleY,.15);
 
         parts.leftArm.angle=lerp(parts.leftArm.angle,leftArmAngle,.24);
         parts.leftForearm.angle=lerp(parts.leftForearm.angle,leftForearmAngle,.24);
@@ -914,7 +856,6 @@ export class Level2Scene extends Scene
         parts.rightLeg.y=lerp(parts.rightLeg.y,rightLegY,.24);
 
         parts.machete.angle=macheteAngle;
-
         this.playerBaseRightArmAngle=rightArmAngle;
         this.playerBaseTorsoAngle=torsoAngle;
     }
@@ -2937,48 +2878,95 @@ export class Level2Scene extends Scene
         const baseY=y+trunkHeight;
         const crownY=y-12-(index%2)*5;
 
+        // Tronco com casca em camadas e leitura vertical mais orgânica.
         g.fillStyle(index%2?0x493222:0x4d3625,.98);
         g.fillRoundedRect(x,y,trunkWidth,trunkHeight,Math.max(7,trunkWidth*.28));
-        g.fillStyle(0x674831,.34);
-        g.fillRoundedRect(x+trunkWidth*.16,y+8,trunkWidth*.18,trunkHeight-16,5);
-        g.fillStyle(0x35261d,.28);
-        g.fillRoundedRect(x+trunkWidth*.68,y+18,trunkWidth*.12,trunkHeight-25,4);
+        g.fillStyle(0x674831,.3);
+        g.fillRoundedRect(x+trunkWidth*.13,y+8,trunkWidth*.16,trunkHeight-16,5);
+        g.fillStyle(0x35261d,.3);
+        g.fillRoundedRect(x+trunkWidth*.7,y+18,trunkWidth*.11,trunkHeight-25,4);
 
+        g.lineStyle(1.5,0x8a6849,.28);
+        for(let bark=0;bark<5;bark++){
+            const bx=x+6+(bark%3)*Math.max(7,trunkWidth*.22);
+            const by=y+30+bark*38+(index%2)*6;
+            g.beginPath();g.moveTo(bx,by);g.lineTo(bx+(bark%2?4:-3),by+24);g.strokePath();
+        }
+        g.lineStyle(2,0x2d221b,.34);
+        for(let bark=0;bark<4;bark++){
+            const bx=x+trunkWidth-7-(bark%2)*8;
+            const by=y+48+bark*46;
+            g.beginPath();g.moveTo(bx,by);g.lineTo(bx-3,by+29);g.strokePath();
+        }
+
+        // Raízes e base integradas ao solo.
         g.lineStyle(5,0x3b2a1f,.82);
         g.beginPath();g.moveTo(cx-2,baseY-8);g.lineTo(x-22-(index%2)*6,baseY+3);g.strokePath();
         g.beginPath();g.moveTo(cx+5,baseY-7);g.lineTo(x+trunkWidth+25+(index%3)*4,baseY+2);g.strokePath();
+        g.lineStyle(3,0x513725,.62);
+        g.beginPath();g.moveTo(cx,baseY-4);g.lineTo(cx+(index%2?-28:31),baseY+7);g.strokePath();
 
+        // Galhos e copa procedurais preservam o estilo do jogo.
         g.lineStyle(6,0x3d2b20,.84);
         g.beginPath();g.moveTo(cx,y+72);g.lineTo(cx+(index%2?-58:62),y+28);g.strokePath();
         g.lineStyle(4,0x453023,.68);
         g.beginPath();g.moveTo(cx+2,y+105);g.lineTo(cx+(index%2?42:-46),y+68);g.strokePath();
 
-        g.lineStyle(2,0x8b6a4a,.32);
-        [0,1,2].forEach(mark=>{
-            const my=y+55+mark*48+(index%3)*5;
-            g.beginPath();g.moveTo(x+8,my);g.lineTo(x+trunkWidth-6,my-5-(mark%2)*4);g.strokePath();
+        // Área de sangria: painel raspado sutil + corte principal diagonal e cortes antigos.
+        const cutY=y+trunkHeight*.5;
+        const cutLeft=x+6;
+        const cutRight=x+trunkWidth-6;
+        g.fillStyle(0xb88d67,.24);
+        g.beginPath();
+        g.moveTo(cutLeft,cutY-20);
+        g.lineTo(cutRight,cutY-31);
+        g.lineTo(cutRight-2,cutY+18);
+        g.lineTo(cutLeft+2,cutY+26);
+        g.closePath();
+        g.fillPath();
+
+        g.lineStyle(4.5,0xd0aa7d,.94);
+        g.beginPath();g.moveTo(cutLeft,cutY+5);g.lineTo(cutRight,cutY-13);g.strokePath();
+
+        g.lineStyle(1.5,0x8f6548,.58);
+        [-17,-9,13,22].forEach((offset,mark)=>{
+            const startX=cutLeft+3+(mark%2)*2;
+            g.beginPath();g.moveTo(startX,cutY+offset);g.lineTo(cutRight-4,cutY+offset-11-(mark%2)*3);g.strokePath();
         });
 
-        const cutY=y+trunkHeight*.5;
-        g.lineStyle(5,0xc8a678,.96);
-        g.beginPath();g.moveTo(x+6,cutY+8);g.lineTo(x+trunkWidth-6,cutY-11);g.strokePath();
-
-        g.lineStyle(2,0xb98c62,.58);
-        g.beginPath();g.moveTo(x+8,cutY-4);g.lineTo(x+trunkWidth-10,cutY-19);g.strokePath();
-        g.beginPath();g.moveTo(x+10,cutY+20);g.lineTo(x+trunkWidth-12,cutY+8);g.strokePath();
-
+        // Bica/canal: nasce exatamente no fim baixo do corte e conduz o látex ao coletor.
         const channelX=x+trunkWidth*.58;
-        const bowlY=cutY+58;
-        g.lineStyle(2,0xe6dfce,.82);
-        g.beginPath();g.moveTo(x+trunkWidth-7,cutY-9);g.lineTo(channelX,bowlY-14);g.strokePath();
+        const cutOutletX=cutRight-1;
+        const cutOutletY=cutY-12;
+        const bowlY=cutY+61;
+        g.lineStyle(3,0x6d6257,.9);
+        g.beginPath();g.moveTo(cutOutletX,cutOutletY);g.lineTo(channelX+3,cutY+14);g.strokePath();
+        g.lineStyle(1.5,0xece8dc,.88);
+        g.beginPath();g.moveTo(cutOutletX-1,cutOutletY+1);g.lineTo(channelX+3,cutY+15);g.strokePath();
 
-        g.fillStyle(0x72563f,.98);
-        g.fillEllipse(channelX,bowlY,34,15);
-        g.fillStyle(0x33271f,.9);
-        g.fillEllipse(channelX,bowlY+2,27,9);
-        g.fillStyle(0xf0ecdc,.9);
-        g.fillEllipse(channelX,bowlY-2,24,6);
+        // Fio visual curto de látex deixa clara a continuidade corte -> canal -> coletor.
+        const latexStartY=cutY+15;
+        const latexDropY=latexStartY+13;
+        g.lineStyle(1.5,0xf4f1e7,.72);
+        g.beginPath();g.moveTo(channelX+3,latexStartY);g.lineTo(channelX+3,latexDropY);g.strokePath();
+        g.fillStyle(0xf6f2e8,.84);g.fillCircle(channelX+3,latexDropY+1,2);
 
+        // Coletor com suporte, borda, corpo e látex acumulado.
+        g.lineStyle(2,0x4d392a,.88);
+        g.beginPath();g.moveTo(x+3,bowlY-7);g.lineTo(x+trunkWidth-3,bowlY-7);g.strokePath();
+        g.beginPath();g.moveTo(channelX-16,bowlY-11);g.lineTo(channelX-13,bowlY+3);g.strokePath();
+        g.beginPath();g.moveTo(channelX+16,bowlY-11);g.lineTo(channelX+13,bowlY+3);g.strokePath();
+
+        g.fillStyle(0x6b5948,.98);
+        g.fillEllipse(channelX,bowlY,36,16);
+        g.fillStyle(0x3a3129,.94);
+        g.fillEllipse(channelX,bowlY+2,30,10);
+        g.fillStyle(0x8c7964,.86);
+        g.fillEllipse(channelX,bowlY-4,35,8);
+        g.fillStyle(0xf0ecdc,.92);
+        g.fillEllipse(channelX,bowlY-3,27,5);
+
+        // Copa menos geométrica por sobreposição de massas.
         g.fillStyle(index%2?0x123e28:0x17482d,.95);
         g.fillEllipse(cx,crownY,150+(index%3)*8,112+(index%2)*10);
         g.fillEllipse(cx-58,crownY+22,98,76+(index%3)*5);
@@ -2986,10 +2974,13 @@ export class Level2Scene extends Scene
         g.fillStyle(0x215738,.56);
         g.fillEllipse(cx-14,crownY-28,92,58);
         g.fillEllipse(cx+42,crownY+8,76,54);
+        g.fillStyle(0x2a6240,.24);
+        g.fillEllipse(cx-52,crownY-5,65,36);
+        g.fillEllipse(cx+68,crownY+2,61,34);
 
         this.rubberLatexPoints.push({
             x:channelX+3,
-            startY:cutY+2,
+            startY:latexDropY+1,
             bowlY:bowlY-4,
             depth:depth+2,
             scrollFactor
