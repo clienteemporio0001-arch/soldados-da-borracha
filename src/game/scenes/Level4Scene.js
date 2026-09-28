@@ -750,42 +750,116 @@ export class Level4Scene extends Scene
 
     createPlayerVisual ()
     {
-        const container = this.add.container(this.player.x, this.player.y).setDepth(20);
+        const container=this.add.container(this.player.x,this.player.y).setDepth(20);
 
-        const leftLeg = this.add.rectangle(-8, 16, 11, 28, 0x272820)
-            .setOrigin(0.5, 0.08);
-        const rightLeg = this.add.rectangle(8, 16, 11, 28, 0x272820)
-            .setOrigin(0.5, 0.08);
+        // Sombra local discreta ajuda a silhueta nas fases mais escuras sem iluminar o cenário.
+        const silhouette=this.add.ellipse(0,-3,38,66,0x07100c,.13);
 
-        const torso = this.add.rectangle(0, -7, 30, 34, 0xc7aa73)
-            .setOrigin(0.5);
+        // Saco de borracha / embornal: volume simples, terroso e preso por correia.
+        const bag=this.add.container(-12,-8);
+        const bagBody=this.add.ellipse(0,7,20,28,0x72533a,.96);
+        const bagShade=this.add.ellipse(-3,9,11,22,0x493827,.52);
+        const bagFold=this.add.ellipse(3,-4,14,6,0x8a6847,.72);
+        const bagTie=this.add.rectangle(3,-8,9,3,0x4a3525,.9).setAngle(-5);
+        const bagStrap=this.add.graphics();
+        bagStrap.lineStyle(3,0x5b432f,.9);
+        bagStrap.beginPath();bagStrap.moveTo(-4,-13);bagStrap.lineTo(7,10);bagStrap.strokePath();
+        bag.add([bagBody,bagShade,bagFold,bagTie,bagStrap]);
 
-        const leftArm = this.add.rectangle(-17, -14, 9, 30, 0xb89562)
-            .setOrigin(0.5, 0.12);
-        const rightArmRig = this.add.container(17, -14);
-        const rightArm = this.add.rectangle(0, 0, 9, 30, 0xb89562)
-            .setOrigin(0.5, 0.12);
+        // Pernas articuladas: quadril -> coxa -> joelho -> canela -> bota.
+        const leftLeg=this.add.container(-7,9);
+        const leftThigh=this.add.rectangle(0,0,10,17,0x2b2c24).setOrigin(.5,.08);
+        const leftKnee=this.add.circle(0,15,4.5,0x24251f);
+        const leftLowerLeg=this.add.container(0,15);
+        const leftShin=this.add.rectangle(0,2,9,15,0x24251f).setOrigin(.5,.08);
+        const leftBoot=this.add.rectangle(2,16,12,9,0x2b211b).setOrigin(.5,.5);
+        const leftSole=this.add.rectangle(3,20,13,3,0x151311).setOrigin(.5,.5);
+        leftLowerLeg.add([leftShin,leftBoot,leftSole]);
+        leftLeg.add([leftThigh,leftKnee,leftLowerLeg]);
 
-        const machete = this.add.container(7, 21);
-        const macheteHandle = this.add.rectangle(0, 0, 6, 16, 0x3a2a1d)
-            .setOrigin(0.5, 0.9);
-        const macheteBlade = this.add.rectangle(0, -20, 7, 30, 0xb8c0ba)
-            .setOrigin(0.5, 0.9);
-        const macheteTip = this.add.triangle(0, -38, -3.5, 0, 3.5, 0, 0, -8, 0xcbd1cc)
-            .setOrigin(0.5, 1);
-        machete.add([macheteHandle, macheteBlade, macheteTip]);
+        const rightLeg=this.add.container(7,9);
+        const rightThigh=this.add.rectangle(0,0,10,17,0x303127).setOrigin(.5,.08);
+        const rightKnee=this.add.circle(0,15,4.5,0x282921);
+        const rightLowerLeg=this.add.container(0,15);
+        const rightShin=this.add.rectangle(0,2,9,15,0x282921).setOrigin(.5,.08);
+        const rightBoot=this.add.rectangle(2,16,12,9,0x2d231c).setOrigin(.5,.5);
+        const rightSole=this.add.rectangle(3,20,13,3,0x151311).setOrigin(.5,.5);
+        rightLowerLeg.add([rightShin,rightBoot,rightSole]);
+        rightLeg.add([rightThigh,rightKnee,rightLowerLeg]);
+
+        // Camisa de trabalho: ombros, corpo, gola e separação da calça.
+        const torso=this.add.container(0,-7);
+        const shirtBody=this.add.rectangle(0,0,29,31,0xc7aa73).setOrigin(.5);
+        const shirtShade=this.add.rectangle(-8,1,7,27,0xa98d60,.3).setOrigin(.5);
+        const shoulderLeft=this.add.ellipse(-13,-10,10,9,0xc7aa73);
+        const shoulderRight=this.add.ellipse(13,-10,10,9,0xc7aa73);
+        const collarLeft=this.add.triangle(-4,-12,-5,-3,1,-3,4,5,0xe0c99a,.72);
+        const collarRight=this.add.triangle(4,-12,-4,-3,2,-3,5,5,0xb99a67,.64);
+        const shirtFold=this.add.rectangle(5,4,2,20,0x8f754f,.28).setAngle(2);
+        const waist=this.add.rectangle(0,15,28,4,0x514333,.6);
+        torso.add([shirtBody,shirtShade,shoulderLeft,shoulderRight,collarLeft,collarRight,shirtFold,waist]);
+
+        // Braço livre articulado.
+        const leftArm=this.add.container(-15,-15);
+        const leftSleeve=this.add.rectangle(0,1,10,11,0xb99b68).setOrigin(.5,.12);
+        const leftUpperArm=this.add.rectangle(0,9,8,13,0xb98155).setOrigin(.5,.05);
+        const leftElbow=this.add.circle(0,20,4,0xa86f4c);
+        const leftForearm=this.add.container(0,20);
+        const leftForearmShape=this.add.rectangle(0,2,7,13,0xb98155).setOrigin(.5,.08);
+        const leftHand=this.add.circle(0,15,4,0xc08a62);
+        leftForearm.add([leftForearmShape,leftHand]);
+        leftArm.add([leftSleeve,leftUpperArm,leftElbow,leftForearm]);
+
+        // Braço do facão articulado.
+        const rightArmRig=this.add.container(15,-15);
+        const rightSleeve=this.add.rectangle(0,1,10,11,0xb99b68).setOrigin(.5,.12);
+        const rightArm=this.add.rectangle(0,9,8,13,0xb98155).setOrigin(.5,.05);
+        const rightElbow=this.add.circle(0,20,4,0xa86f4c);
+        const rightForearm=this.add.container(0,20);
+        const rightForearmShape=this.add.rectangle(0,2,7,13,0xb98155).setOrigin(.5,.08);
+        const rightHand=this.add.circle(0,15,4,0xc08a62);
+
+        // Facão mantém comprimento visual próximo do atual e não altera alcance/hitbox.
+        const machete=this.add.container(3,17);
+        const macheteHandle=this.add.rectangle(0,0,5,14,0x3a2a1d).setOrigin(.5,.88);
+        const macheteGuard=this.add.rectangle(0,-11,10,3,0x665846,.9);
+        const macheteBlade=this.add.rectangle(1,-23,7,27,0xb8c0ba).setOrigin(.5,.9).setAngle(-3);
+        const macheteHighlight=this.add.rectangle(-1,-24,1.5,19,0xe4e8e3,.55).setOrigin(.5,.9).setAngle(-3);
+        const macheteTip=this.add.triangle(2,-39,-3,0,4,0,1,-9,0xcbd1cc).setOrigin(.5,1);
+        machete.add([macheteHandle,macheteGuard,macheteBlade,macheteHighlight,macheteTip]);
         machete.setAngle(18);
+        rightForearm.add([rightForearmShape,rightHand,machete]);
+        rightArmRig.add([rightSleeve,rightArm,rightElbow,rightForearm]);
 
-        rightArmRig.add([rightArm, machete]);
+        // Cabeça menos circular, mantendo leitura simples.
+        const head=this.add.container(0,-33);
+        const hair=this.add.ellipse(-2,-8,17,7,0x2d241d,.88);
+        const face=this.add.ellipse(0,0,19,23,0xb98155);
+        const faceShade=this.add.ellipse(-5,2,7,17,0x8f6045,.26);
+        const nose=this.add.triangle(9,1,-2,-3,4,0,0,4,0xc48d64,.82);
+        const neck=this.add.rectangle(0,12,8,6,0xa86f4c);
+        head.add([neck,hair,face,faceShade,nose]);
 
-        const head = this.add.circle(0, -34, 11, 0xb98155);
+        // Chapéu tradicional estilizado + poronga visual integrada.
+        const hat=this.add.container(0,-47);
+        const hatShadow=this.add.ellipse(1,3,30,7,0x2d251c,.42);
+        const hatBrim=this.add.ellipse(0,0,36,7,0x5a432b);
+        const hatCrown=this.add.ellipse(-1,-6,22,13,0x6a5033);
+        const hatBand=this.add.rectangle(-1,-3,21,3,0x443322,.72);
+        const hatTop=this.add.ellipse(-2,-11,17,5,0x765a3a,.72);
 
-        const hat = this.add.container(0, -47);
-        const hatBrim = this.add.rectangle(0, 0, 34, 5, 0x5a432b).setOrigin(0.5);
-        const hatCrown = this.add.rectangle(0, -5, 21, 10, 0x6a5033).setOrigin(0.5);
-        hat.add([hatBrim, hatCrown]);
+        const poronga=this.add.container(11,-1);
+        const porongaSupport=this.add.rectangle(-4,-1,8,2,0x3c3025,.92).setAngle(-12);
+        const porongaFrame=this.add.rectangle(1,-1,5,9,0x665440,.9).setAngle(8);
+        const porongaGlow=this.add.circle(5,1,7,0xe7a84d,.1);
+        const porongaLamp=this.add.ellipse(5,1,7,6,0xe0a249,.88);
+        const porongaCore=this.add.circle(6,1,2,0xffd88a,.85);
+        poronga.add([porongaGlow,porongaSupport,porongaFrame,porongaLamp,porongaCore]);
+        hat.add([hatShadow,hatBrim,hatCrown,hatBand,hatTop,poronga]);
 
         container.add([
+            silhouette,
+            bag,
             leftLeg,
             rightLeg,
             torso,
@@ -795,19 +869,31 @@ export class Level4Scene extends Scene
             hat
         ]);
 
-        container.parts = {
+        container.parts={
+            silhouette,
+            bag,
+            bagBody,
+            torso,
+            shirtBody,
             head,
             hat,
-            torso,
+            poronga,
+            porongaGlow,
             leftArm,
+            leftForearm,
             rightArmRig,
             rightArm,
+            rightForearm,
             machete,
             leftLeg,
-            rightLeg
+            leftLowerLeg,
+            rightLeg,
+            rightLowerLeg,
+            leftBoot,
+            rightBoot
         };
-        container.animationState = 'IDLE';
-        container.facing = 1;
+        container.animationState='IDLE';
+        container.facing=1;
 
         return container;
     }
@@ -819,163 +905,272 @@ export class Level4Scene extends Scene
 
     animatePlayerVisual (time)
     {
-        const visual = this.playerVisual;
-        const parts = visual.parts;
-        const body = this.player.body;
-        const velocityX = body.velocity.x;
-        const velocityY = body.velocity.y;
-        const grounded = body.blocked.down || body.touching.down;
-        const moving = Math.abs(velocityX) > 1;
+        const visual=this.playerVisual;
+        const parts=visual.parts;
+        const body=this.player.body;
+        const velocityX=body.velocity.x;
+        const velocityY=body.velocity.y;
+        const grounded=body.blocked.down||body.touching.down;
+        const moving=Math.abs(velocityX)>1;
+        const dashActive=this.isDashing===true&&!this.dashLandingVisual;
 
-        let state = 'IDLE';
+        let state='IDLE';
+        if(dashActive)state='DASH';
+        else if(!grounded)state=velocityY<0?'JUMP':'FALL';
+        else if(moving)state='WALK';
 
-        if (this.isDashing && !this.dashLandingVisual)
-        {
-            state = 'DASH';
-        }
-        else if (!grounded)
-        {
-            state = velocityY < 0 ? 'JUMP' : 'FALL';
-        }
-        else if (moving)
-        {
-            state = 'WALK';
-        }
+        visual.animationState=state;
 
-        visual.animationState = state;
-
-        if (velocityX > 1)
-        {
-            visual.facing = 1;
-        }
-        else if (velocityX < -1)
-        {
-            visual.facing = -1;
-        }
+        if(velocityX>1)visual.facing=1;
+        else if(velocityX<-1)visual.facing=-1;
 
         visual.setScale(
-            visual.facing * this.motionFx.scaleX,
+            visual.facing*this.motionFx.scaleX,
             this.motionFx.scaleY
         );
 
-        const seconds = time * 0.001;
-        const lerp = (current, target, amount = 0.2) =>
-            current + (target - current) * amount;
+        const seconds=time*.001;
+        const lerp=(current,target,amount=.2)=>current+(target-current)*amount;
 
-        let bodyOffsetY = 0;
-        let torsoAngle = 0;
-        let torsoY = -7;
-        let headY = -34;
-        let hatY = -47;
-        let hatAngle = 0;
-        let leftArmAngle = 5;
-        let rightArmAngle = -5;
-        let leftLegAngle = 0;
-        let rightLegAngle = 0;
-        let leftLegY = 16;
-        let rightLegY = 16;
+        let bodyOffsetY=0;
+        let torsoAngle=0;
+        let torsoY=-7;
+        let headY=-33;
+        let headAngle=0;
+        let hatY=-47;
+        let hatAngle=0;
+        let porongaAngle=0;
 
-        parts.machete.angle = 18;
+        let bagX=-12;
+        let bagY=-8;
+        let bagAngle=-4;
+        let bagScaleX=1;
+        let bagScaleY=1;
 
-        if (state === 'IDLE')
-        {
-            const breath = Math.sin(seconds * 2.2);
-            const armSway = Math.sin(seconds * 1.7) * 2;
+        let leftArmAngle=5;
+        let leftForearmAngle=2;
+        let rightArmAngle=-5;
+        let rightForearmAngle=-2;
 
-            bodyOffsetY = breath * 0.7;
-            torsoY = -7 + breath * 0.7;
-            headY = -34 + breath * 0.45;
-            hatY = -47 + breath * 0.45;
-            hatAngle = Math.sin(seconds * 1.4) * 0.7;
-            leftArmAngle = 5 + armSway;
-            rightArmAngle = -5 - armSway;
+        let leftLegAngle=0;
+        let rightLegAngle=0;
+        let leftLowerLegAngle=0;
+        let rightLowerLegAngle=0;
+        let leftLegY=9;
+        let rightLegY=9;
+        let macheteAngle=18;
+
+        if(state==='IDLE'){
+            const breath=Math.sin(seconds*2.05);
+            const slow=Math.sin(seconds*1.35);
+            bodyOffsetY=breath*.45;
+            torsoY=-7+breath*.55;
+            headY=-33+breath*.32;
+            hatY=-47+breath*.32;
+            hatAngle=slow*.55;
+            porongaAngle=-slow*.35;
+            leftArmAngle=5+slow*1.6;
+            rightArmAngle=-5-slow*1.4;
+            leftForearmAngle=2-slow*.8;
+            rightForearmAngle=-2+slow*.8;
+            bagY=-8+Math.sin(seconds*1.55-.55)*.55;
+            bagAngle=-4+Math.sin(seconds*1.25-.8)*1.1;
         }
-        else if (state === 'WALK')
-        {
-            const speedRatio = Math.min(Math.abs(velocityX) / 260, 1);
-            const phase = seconds * (7 + speedRatio * 4);
-            const swing = Math.sin(phase);
-            const bounce = Math.abs(Math.sin(phase * 2)) * 1.5;
+        else if(state==='WALK'){
+            const speedRatio=Math.min(Math.abs(velocityX)/260,1);
+            const phase=seconds*(7+speedRatio*4);
+            const swing=Math.sin(phase);
+            const delayedSwing=Math.sin(phase-.62);
+            const bounce=Math.abs(Math.sin(phase*2))*1.25;
 
-            bodyOffsetY = -bounce;
-            torsoY = -7 - bounce * 0.45;
-            headY = -34 - bounce * 0.35;
-            hatY = -47 - bounce * 0.3;
-            hatAngle = Math.sin(phase) * 1.5;
+            bodyOffsetY=-bounce;
+            torsoY=-7-bounce*.38;
+            torsoAngle=swing*1.25;
+            headY=-33-bounce*.28;
+            headAngle=-swing*.65;
+            hatY=-47-bounce*.22;
+            hatAngle=swing*1.2;
+            porongaAngle=-swing*.7;
 
-            leftLegAngle = swing * 24;
-            rightLegAngle = -swing * 24;
-            leftArmAngle = -swing * 20;
-            rightArmAngle = swing * 20;
+            leftLegAngle=swing*22;
+            rightLegAngle=-swing*22;
+            leftLowerLegAngle=Math.max(0,-swing)*18-Math.max(0,swing)*4;
+            rightLowerLegAngle=Math.max(0,swing)*18-Math.max(0,-swing)*4;
+
+            leftArmAngle=-swing*18;
+            rightArmAngle=swing*18;
+            leftForearmAngle=5+swing*6;
+            rightForearmAngle=-5-swing*6;
+
+            bagX=-12-Math.abs(delayedSwing)*.8;
+            bagY=-8+bounce*.22;
+            bagAngle=-4-delayedSwing*3.2;
+            macheteAngle=18+swing*1.5;
         }
-        else if (state === 'JUMP')
-        {
-            bodyOffsetY = -1;
-            torsoY = -8;
-            torsoAngle = -3;
-            headY = -35;
-            hatY = -48;
-            hatAngle = -2;
-            leftArmAngle = -24;
-            rightArmAngle = 24;
-            leftLegAngle = 12;
-            rightLegAngle = -12;
-            leftLegY = 13;
-            rightLegY = 13;
+        else if(state==='JUMP'){
+            const doubleJump=this.jumpsUsed>=2;
+            bodyOffsetY=-1;
+            torsoY=doubleJump?-9:-8;
+            torsoAngle=doubleJump?-5:-3;
+            headY=doubleJump?-35:-34;
+            headAngle=-1;
+            hatY=doubleJump?-49:-48;
+            hatAngle=doubleJump?-3.5:-2;
+            porongaAngle=1;
+
+            leftArmAngle=doubleJump?-30:-24;
+            rightArmAngle=doubleJump?30:24;
+            leftForearmAngle=doubleJump?14:9;
+            rightForearmAngle=doubleJump?-12:-8;
+
+            leftLegAngle=doubleJump?17:12;
+            rightLegAngle=doubleJump?-17:-12;
+            leftLowerLegAngle=doubleJump?20:13;
+            rightLowerLegAngle=doubleJump?-12:-8;
+            leftLegY=7;
+            rightLegY=7;
+
+            bagY=-5.5;
+            bagAngle=doubleJump?8:5;
+            macheteAngle=doubleJump?16:18;
         }
-        else if (state === 'FALL')
-        {
-            bodyOffsetY = 1.5;
-            torsoY = -5;
-            torsoAngle = 6;
-            headY = -32;
-            hatY = -45;
-            hatAngle = 4;
-            leftArmAngle = -46;
-            rightArmAngle = 42;
-            leftLegAngle = -24;
-            rightLegAngle = 20;
-            leftLegY = 18;
-            rightLegY = 17;
-            parts.machete.angle = 28;
+        else if(state==='FALL'){
+            const fast=this.fastFallActive===true;
+            bodyOffsetY=fast?1:1.4;
+            torsoY=fast?-6:-5;
+            torsoAngle=fast?1:6;
+            headY=fast?-33:-32;
+            headAngle=fast?0:-1.5;
+            hatY=fast?-46:-45;
+            hatAngle=fast?1:4;
+            porongaAngle=fast?-.5:-2;
+
+            leftArmAngle=fast?-18:-42;
+            rightArmAngle=fast?20:38;
+            leftForearmAngle=fast?4:10;
+            rightForearmAngle=fast?-4:-10;
+
+            leftLegAngle=fast?-7:-21;
+            rightLegAngle=fast?7:18;
+            leftLowerLegAngle=fast?2:10;
+            rightLowerLegAngle=fast?-2:-8;
+            leftLegY=fast?10:12;
+            rightLegY=fast?10:11;
+
+            bagY=fast?-4.5:-5.5;
+            bagAngle=fast?1:-8;
+            bagScaleX=fast?1.03:1;
+            bagScaleY=fast?.96:1;
+            macheteAngle=fast?22:28;
         }
-        else if (state === 'DASH')
-        {
-            bodyOffsetY = 0;
-            torsoY = -7;
-            torsoAngle = -12;
-            headY = -34;
-            hatY = -47;
-            hatAngle = -7;
-            leftArmAngle = -34;
-            rightArmAngle = -42;
-            leftLegAngle = 20;
-            rightLegAngle = -24;
-            leftLegY = 15;
-            rightLegY = 14;
-            parts.machete.angle = 8;
+        else if(state==='DASH'){
+            bodyOffsetY=0;
+            torsoY=-7;
+            torsoAngle=-13;
+            headY=-34;
+            headAngle=-2;
+            hatY=-47;
+            hatAngle=-6;
+            porongaAngle=2;
+
+            leftArmAngle=-34;
+            rightArmAngle=-40;
+            leftForearmAngle=8;
+            rightForearmAngle=-8;
+
+            leftLegAngle=22;
+            rightLegAngle=-25;
+            leftLowerLegAngle=8;
+            rightLowerLegAngle=-12;
+            leftLegY=8;
+            rightLegY=7;
+
+            bagX=-14;
+            bagY=-6;
+            bagAngle=9;
+            bagScaleX=1.04;
+            bagScaleY=.97;
+            macheteAngle=8;
         }
 
-        torsoAngle += this.directionFx.lean;
-        visual.y = this.player.y + bodyOffsetY;
+        // Resposta de peso no pouso aproveitando o squash visual existente.
+        const landingCompression=grounded&&this.motionFx.scaleY<.975;
+        if(landingCompression){
+            const strength=Math.min(1,(1-this.motionFx.scaleY)/.14);
+            torsoY+=2.2*strength;
+            torsoAngle+=2.5*strength;
+            leftLegAngle-=8*strength;
+            rightLegAngle+=8*strength;
+            leftLowerLegAngle+=18*strength;
+            rightLowerLegAngle+=18*strength;
+            leftArmAngle-=8*strength;
+            rightArmAngle+=7*strength;
+            bagY+=2.2*strength;
+            bagAngle+=6*strength;
+            hatY+=1.2*strength;
+            porongaAngle-=1.5*strength;
+        }
 
-        parts.torso.y = lerp(parts.torso.y, torsoY);
-        parts.torso.angle = lerp(parts.torso.angle, torsoAngle);
+        // O ataque continua funcionalmente intocado; apenas saco, braço livre e articulação visual reagem.
+        if(this.isAttacking){
+            const elapsed=Math.max(0,time-this.attackStartedAt);
+            if(elapsed<70){
+                const t=elapsed/70;
+                leftArmAngle+=8*t;
+                leftForearmAngle-=7*t;
+                rightForearmAngle-=12*t;
+                bagAngle-=3*t;
+                hatAngle-=.8*t;
+            }else if(elapsed<=210){
+                const swing=Math.sin(((elapsed-70)/140)*Math.PI);
+                leftArmAngle-=10*swing;
+                leftForearmAngle+=8*swing;
+                rightForearmAngle+=12*swing;
+                bagAngle+=5*swing;
+                bagX-=1.5*swing;
+                headAngle+=1.3*swing;
+                hatAngle+=1.2*swing;
+                porongaAngle-=1.2*swing;
+            }else{
+                const recovery=Math.min(1,(elapsed-210)/90);
+                bagAngle+=2*(1-recovery);
+            }
+        }
 
-        parts.head.y = lerp(parts.head.y, headY);
-        parts.hat.y = lerp(parts.hat.y, hatY);
-        parts.hat.angle = lerp(parts.hat.angle, hatAngle);
+        torsoAngle+=this.directionFx.lean;
+        visual.y=this.player.y+bodyOffsetY;
 
-        parts.leftArm.angle = lerp(parts.leftArm.angle, leftArmAngle);
-        parts.rightArmRig.angle = lerp(parts.rightArmRig.angle, rightArmAngle);
+        parts.torso.y=lerp(parts.torso.y,torsoY,.22);
+        parts.torso.angle=lerp(parts.torso.angle,torsoAngle,.22);
 
-        this.playerBaseRightArmAngle = rightArmAngle;
-        this.playerBaseTorsoAngle = torsoAngle;
+        parts.head.y=lerp(parts.head.y,headY,.22);
+        parts.head.angle=lerp(parts.head.angle,headAngle,.2);
+        parts.hat.y=lerp(parts.hat.y,hatY,.22);
+        parts.hat.angle=lerp(parts.hat.angle,hatAngle,.2);
+        parts.poronga.angle=lerp(parts.poronga.angle,porongaAngle,.18);
 
-        parts.leftLeg.angle = lerp(parts.leftLeg.angle, leftLegAngle);
-        parts.rightLeg.angle = lerp(parts.rightLeg.angle, rightLegAngle);
-        parts.leftLeg.y = lerp(parts.leftLeg.y, leftLegY);
-        parts.rightLeg.y = lerp(parts.rightLeg.y, rightLegY);
+        parts.bag.x=lerp(parts.bag.x,bagX,.17);
+        parts.bag.y=lerp(parts.bag.y,bagY,.17);
+        parts.bag.angle=lerp(parts.bag.angle,bagAngle,.16);
+        parts.bag.scaleX=lerp(parts.bag.scaleX,bagScaleX,.16);
+        parts.bag.scaleY=lerp(parts.bag.scaleY,bagScaleY,.16);
+
+        parts.leftArm.angle=lerp(parts.leftArm.angle,leftArmAngle,.24);
+        parts.leftForearm.angle=lerp(parts.leftForearm.angle,leftForearmAngle,.24);
+        parts.rightArmRig.angle=lerp(parts.rightArmRig.angle,rightArmAngle,.24);
+        parts.rightForearm.angle=lerp(parts.rightForearm.angle,rightForearmAngle,.24);
+
+        parts.leftLeg.angle=lerp(parts.leftLeg.angle,leftLegAngle,.26);
+        parts.rightLeg.angle=lerp(parts.rightLeg.angle,rightLegAngle,.26);
+        parts.leftLowerLeg.angle=lerp(parts.leftLowerLeg.angle,leftLowerLegAngle,.24);
+        parts.rightLowerLeg.angle=lerp(parts.rightLowerLeg.angle,rightLowerLegAngle,.24);
+        parts.leftLeg.y=lerp(parts.leftLeg.y,leftLegY,.24);
+        parts.rightLeg.y=lerp(parts.rightLeg.y,rightLegY,.24);
+
+        parts.machete.angle=macheteAngle;
+
+        this.playerBaseRightArmAngle=rightArmAngle;
+        this.playerBaseTorsoAngle=torsoAngle;
     }
 
     createSnake ()
