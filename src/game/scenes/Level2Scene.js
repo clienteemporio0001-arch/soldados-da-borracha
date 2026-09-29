@@ -738,11 +738,11 @@ export class Level2Scene extends Scene
             {
                 this.idleVisualStartedAt=null;
                 if(this.attackSprite.texture.key!=='seringueiroDash')this.attackSprite.setTexture('seringueiroDash',0);
-                // Quatro poses distribuídas proporcionalmente na duração funcional já existente do dash.
+                // Seis poses distribuídas proporcionalmente na duração funcional já existente do dash.
                 const dashDuration=this.dashDuration||190;
                 const dashRemaining=Math.max(0,(this.dashEndsAt??time)-time);
                 const dashElapsed=Math.max(0,dashDuration-dashRemaining);
-                this.attackSprite.setFrame(Math.min(3,Math.floor((dashElapsed/dashDuration)*4)));
+                this.attackSprite.setFrame(Math.min(5,Math.floor((dashElapsed/dashDuration)*6)));
             }
             else if(landing)
             {
