@@ -991,6 +991,22 @@ export class Level4Scene extends Scene
                 // Respiração a 5 FPS, sem timer ou tween adicional.
                 this.attackSprite.setFrame(Math.floor(Math.max(0,time-this.idleVisualStartedAt)/200)%4);
             }
+            else if(!grounded)
+            {
+                this.idleVisualStartedAt=null;
+                if(this.attackSprite.texture.key!=='seringueiroJump')this.attackSprite.setTexture('seringueiroJump',0);
+                // A física continua controlando a altura; a velocidade vertical escolhe apenas a pose visual.
+                const velocityY=body.velocity.y;
+                let jumpFrame=3;
+                if(velocityY<0)
+                {
+                    if(velocityY<=-360)jumpFrame=0;
+                    else if(velocityY<=-220)jumpFrame=1;
+                    else if(velocityY<=-80)jumpFrame=2;
+                }
+                // No ápice e durante a descida, mantém temporariamente o frame 3 até existir FALL.
+                this.attackSprite.setFrame(jumpFrame);
+            }
             else
             {
                 this.idleVisualStartedAt=null;
