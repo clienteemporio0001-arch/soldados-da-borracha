@@ -1573,7 +1573,17 @@ export class Level5Scene extends Scene
             const blockedHorizontally=(body.velocity.x<0&&body.blocked.left)||(body.velocity.x>0&&body.blocked.right);
             const walking=grounded&&Math.abs(body.velocity.x)>1&&!blockedHorizontally&&!this.isPlayerDead&&!this.phaseCompleted&&this.isDashing!==true&&time>=this.knockbackUntil;
             const idle=grounded&&Math.abs(body.velocity.x)<1&&Math.abs(body.velocity.y)<1;
-            if(walking)
+            if(this.isDashing===true)
+            {
+                this.idleVisualStartedAt=null;
+                if(this.attackSprite.texture.key!=='seringueiroDash')this.attackSprite.setTexture('seringueiroDash',0);
+                // Quatro poses distribuídas proporcionalmente na duração funcional já existente do dash.
+                const dashDuration=this.dashDuration||190;
+                const dashRemaining=Math.max(0,(this.dashEndsAt??time)-time);
+                const dashElapsed=Math.max(0,dashDuration-dashRemaining);
+                this.attackSprite.setFrame(Math.min(3,Math.floor((dashElapsed/dashDuration)*4)));
+            }
+            else if(walking)
             {
                 this.idleVisualStartedAt=null;
                 if(this.attackSprite.texture.key!=='seringueiroWalk')this.attackSprite.setTexture('seringueiroWalk',0);
@@ -1609,7 +1619,7 @@ export class Level5Scene extends Scene
                 if(this.attackSprite.texture.key!=='seringueiroAttack')this.attackSprite.setTexture('seringueiroAttack',0);
                 this.attackSprite.setFrame(0);
             }
-            this.attackSprite.setFlipX(this.playerVisual.facing<0);
+            this.attackSprite.setFlipX(this.isDashing===true?(this.dashDirection??this.playerVisual.facing)<0:this.playerVisual.facing<0);
             return;
         }
 
