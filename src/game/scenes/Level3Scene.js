@@ -693,8 +693,17 @@ export class Level3Scene extends Scene
         {
             const body=this.player.body;
             const grounded=body.blocked.down||body.touching.down;
+            const blockedHorizontally=(body.velocity.x<0&&body.blocked.left)||(body.velocity.x>0&&body.blocked.right);
+            const walking=grounded&&Math.abs(body.velocity.x)>1&&!blockedHorizontally&&!this.isPlayerDead&&!this.phaseCompleted&&this.isDashing!==true&&time>=this.knockbackUntil;
             const idle=grounded&&Math.abs(body.velocity.x)<1&&Math.abs(body.velocity.y)<1;
-            if(idle)
+            if(walking)
+            {
+                this.idleVisualStartedAt=null;
+                if(this.attackSprite.texture.key!=='seringueiroWalk')this.attackSprite.setTexture('seringueiroWalk',0);
+                // Caminhada oficial a 8 FPS: 0 → 1 → 2 → 3 → 4 → 5 → 0.
+                this.attackSprite.setFrame(Math.floor(time/125)%6);
+            }
+            else if(idle)
             {
                 if(this.idleVisualStartedAt===null)this.idleVisualStartedAt=time;
                 if(this.attackSprite.texture.key!=='seringueiroIdle')this.attackSprite.setTexture('seringueiroIdle',0);
