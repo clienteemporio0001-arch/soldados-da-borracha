@@ -28,6 +28,8 @@ export class Level5Scene extends Scene
             .setOrigin(.5,480/512).setScale(.23).setDepth(20).setVisible(true)
             .setFlipX(this.playerVisual.facing<0);
         this.idleVisualStartedAt=null;
+        this.wasAirborneVisual=false;
+        this.landingVisualStartedAt=null;
         this.syncPlayerVisual();
 
         this.maxHealth = 100;
@@ -1566,10 +1568,22 @@ export class Level5Scene extends Scene
         this.attackSprite.setVisible(true);
         // A mesma âncora acompanha o corpo em todos os estados, sem compensação por frame.
         this.attackSprite.setPosition(this.playerVisual.x,this.playerVisual.y+45);
+        const body=this.player.body;
+        const grounded=body.blocked.down||body.touching.down;
+        if(!grounded)
+        {
+            this.wasAirborneVisual=true;
+            this.landingVisualStartedAt=null;
+        }
+        else if(this.wasAirborneVisual===true)
+        {
+            this.wasAirborneVisual=false;
+            this.landingVisualStartedAt=time;
+        }
+        const landingElapsed=this.landingVisualStartedAt===null?Infinity:Math.max(0,time-this.landingVisualStartedAt);
+        const landing=grounded&&landingElapsed<180;
         if(!active)
         {
-            const body=this.player.body;
-            const grounded=body.blocked.down||body.touching.down;
             const blockedHorizontally=(body.velocity.x<0&&body.blocked.left)||(body.velocity.x>0&&body.blocked.right);
             const walking=grounded&&Math.abs(body.velocity.x)>1&&!blockedHorizontally&&!this.isPlayerDead&&!this.phaseCompleted&&this.isDashing!==true&&time>=this.knockbackUntil;
             const idle=grounded&&Math.abs(body.velocity.x)<1&&Math.abs(body.velocity.y)<1;
@@ -1582,6 +1596,13 @@ export class Level5Scene extends Scene
                 const dashRemaining=Math.max(0,(this.dashEndsAt??time)-time);
                 const dashElapsed=Math.max(0,dashDuration-dashRemaining);
                 this.attackSprite.setFrame(Math.min(3,Math.floor((dashElapsed/dashDuration)*4)));
+            }
+            else if(landing)
+            {
+                this.idleVisualStartedAt=null;
+                if(this.attackSprite.texture.key!=='seringueiroLanding')this.attackSprite.setTexture('seringueiroLanding',0);
+                // Impacto e recuperação: uma única passagem visual, sem loop e sem alterar a física.
+                this.attackSprite.setFrame(landingElapsed<90?0:1);
             }
             else if(walking)
             {
