@@ -731,8 +731,8 @@ export class Level3Scene extends Scene
             {
                 this.idleVisualStartedAt=null;
                 if(this.attackSprite.texture.key!=='seringueiroWalk')this.attackSprite.setTexture('seringueiroWalk',0);
-                // Caminhada oficial a 8 FPS: 0 → 1 → 2 → 3 → 4 → 0.
-                this.attackSprite.setFrame(Math.floor(time/125)%5);
+                // Caminhada oficial a 8 FPS: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 0.
+                this.attackSprite.setFrame(Math.floor(time/125)%8);
             }
             else if(idle)
             {
