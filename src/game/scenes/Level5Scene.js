@@ -1628,7 +1628,7 @@ export class Level5Scene extends Scene
                 if(this.attackSprite.texture.key!=='seringueiroJump')this.attackSprite.setTexture('seringueiroJump',0);
                 // A física continua controlando a altura; a velocidade vertical escolhe apenas a pose visual.
                 const velocityY=body.velocity.y;
-                let jumpFrame=4;
+                let jumpFrame=3;
                 if(velocityY<0)
                 {
                     if(velocityY<=-400)jumpFrame=0;
@@ -1636,7 +1636,7 @@ export class Level5Scene extends Scene
                     else if(velocityY<=-200)jumpFrame=2;
                     else if(velocityY<=-100)jumpFrame=3;
                 }
-                // Próximo do ápice e durante a descida, mantém temporariamente o frame 4.
+                // Próximo do ápice e durante a descida, mantém temporariamente o frame 3.
                 this.attackSprite.setFrame(jumpFrame);
             }
             else
