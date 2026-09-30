@@ -79,7 +79,7 @@ export class Level4Scene extends Scene
         this.nextDashDeniedFeedbackAt = 0;
         this.dashDirection = 1;
         this.dashSpeed = 520;
-        this.dashDuration = 190;
+        this.dashDuration = 380;
         this.dashCooldown = 380;
 
         this.isAttacking = false;
@@ -998,7 +998,7 @@ export class Level4Scene extends Scene
                 this.idleVisualStartedAt=null;
                 if(this.attackSprite.texture.key!=='seringueiroDash')this.attackSprite.setTexture('seringueiroDash',0);
                 // Cinco poses distribuídas proporcionalmente na duração funcional já existente do dash.
-                const dashDuration=this.dashDuration||190;
+                const dashDuration=this.dashDuration||380;
                 const dashRemaining=Math.max(0,(this.dashEndsAt??time)-time);
                 const dashElapsed=Math.max(0,dashDuration-dashRemaining);
                 this.attackSprite.setFrame(Math.min(4,Math.floor((dashElapsed/dashDuration)*5)));

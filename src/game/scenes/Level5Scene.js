@@ -78,7 +78,7 @@ export class Level5Scene extends Scene
         this.nextDashDeniedFeedbackAt = 0;
         this.dashDirection = 1;
         this.dashSpeed = 520;
-        this.dashDuration = 190;
+        this.dashDuration = 380;
         this.dashCooldown = 380;
 
         this.isAttacking = false;
@@ -426,10 +426,12 @@ export class Level5Scene extends Scene
     {
         this.fruits=[];
         const data=[
-            {x:620,y:610,color:0xc94432},
-            {x:1510,y:610,color:0xe0b843},
-            {x:2290,y:515,color:0xd77a2f},
-            {x:3060,y:610,color:0xc94432}
+            // Solo principal: superfície em y=592; frutas ficam inteiras acima dela.
+            {x:620,y:570,color:0xc94432},
+            {x:1510,y:570,color:0xe0b843},
+            // Plataforma de x=2310..2490, topo em y=541: deslocada levemente para dentro da plataforma.
+            {x:2340,y:515,color:0xd77a2f},
+            {x:3060,y:570,color:0xc94432}
         ];
         data.forEach((d,index)=>{
             const visual=this.add.container(d.x,d.y).setDepth(18);
@@ -1594,7 +1596,7 @@ export class Level5Scene extends Scene
                 this.idleVisualStartedAt=null;
                 if(this.attackSprite.texture.key!=='seringueiroDash')this.attackSprite.setTexture('seringueiroDash',0);
                 // Cinco poses distribuídas proporcionalmente na duração funcional já existente do dash.
-                const dashDuration=this.dashDuration||190;
+                const dashDuration=this.dashDuration||380;
                 const dashRemaining=Math.max(0,(this.dashEndsAt??time)-time);
                 const dashElapsed=Math.max(0,dashDuration-dashRemaining);
                 this.attackSprite.setFrame(Math.min(4,Math.floor((dashElapsed/dashDuration)*5)));

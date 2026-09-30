@@ -27,7 +27,7 @@ export class Level3Scene extends Scene
         this.doubleJumpUnlocked=this.registry.get('doubleJumpUnlocked')===true;
         this.jumpsUsed=0; this.jumpWasDown=false; this.wasGrounded=false; this.jumpBufferUntil=0; this.jumpBufferMs=130; this.coyoteTimeMs=100; this.coyoteUntil=0; this.lastAirVelocityY=0; this.fastFallActive=false; this.motionFx={scaleX:1,scaleY:1}; this.directionFx={lean:0}; this.lastMoveDirection=0;
         this.maxStamina=100; this.stamina=100; this.doubleJumpStaminaCost=30; this.dashStaminaCost=25; this.staminaRegenDelay=350; this.staminaGroundRegen=40; this.staminaAirRegen=12; this.staminaRegenBlockedUntil=0; this.lastStaminaUpdateAt=this.time.now; this.nextStaminaFeedbackAt=0;
-        this.dashUnlocked=this.registry.get('dashUnlocked')===true; this.isDashing=false; this.dashLandingVisual=false; this.dashEndsAt=0; this.nextDashAt=0; this.airDashUsed=false; this.nextDashDeniedFeedbackAt=0; this.dashDirection=1; this.dashSpeed=520; this.dashDuration=190; this.dashCooldown=380;
+        this.dashUnlocked=this.registry.get('dashUnlocked')===true; this.isDashing=false; this.dashLandingVisual=false; this.dashEndsAt=0; this.nextDashAt=0; this.airDashUsed=false; this.nextDashDeniedFeedbackAt=0; this.dashDirection=1; this.dashSpeed=520; this.dashDuration = 380; this.dashCooldown=380;
         this.isAttacking=false; this.attackStartedAt=0; this.nextAttackAt=0; this.attackDirection=1; this.attackBufferUntil=0; this.attackBufferMs=100; this.attackVisualVariant=-1; this.attackArcShown=false; this.attackHitSnakeRegistered=false; this.attackHitCarapanaRegistered=false;
         this.createSnake(); this.createCarapana(); this.createAttackHitbox(); this.createFruits(); this.createCaboclinhoTrial(); this.createFinalZone();
         this.cursors=this.input.keyboard.createCursorKeys(); this.keyA=this.input.keyboard.addKey('A'); this.keyD=this.input.keyboard.addKey('D'); this.keyW=this.input.keyboard.addKey('W'); this.keyS=this.input.keyboard.addKey('S'); this.spaceKey=this.input.keyboard.addKey('SPACE'); this.keyJ=this.input.keyboard.addKey('J'); this.keyX=this.input.keyboard.addKey('X'); this.keyShift=this.input.keyboard.addKey('SHIFT');
@@ -717,7 +717,7 @@ export class Level3Scene extends Scene
                 this.idleVisualStartedAt=null;
                 if(this.attackSprite.texture.key!=='seringueiroDash')this.attackSprite.setTexture('seringueiroDash',0);
                 // Cinco poses distribuídas proporcionalmente na duração funcional já existente do dash.
-                const dashDuration=this.dashDuration||190;
+                const dashDuration=this.dashDuration||380;
                 const dashRemaining=Math.max(0,(this.dashEndsAt??time)-time);
                 const dashElapsed=Math.max(0,dashDuration-dashRemaining);
                 this.attackSprite.setFrame(Math.min(4,Math.floor((dashElapsed/dashDuration)*5)));
