@@ -2122,7 +2122,7 @@ export class Level3Scene extends Scene
 
     applyFastFall (grounded)
     {
-        const wantsFastFall=this.keyS.isDown||this.cursors.down.isDown||this.mobileInput?.down===true;
+        const wantsFastFall=this.keyS.isDown||this.cursors.down.isDown;
         const body=this.player.body;
         if(!grounded&&wantsFastFall&&body.velocity.y>35){
             body.setVelocityY(Math.min(780,body.velocity.y+70));
@@ -3132,19 +3132,21 @@ export class Level3Scene extends Scene
             .setScrollFactor(0)
             .setDepth(100);
         panel.setStrokeStyle(1, 0x78917c, 0.3);
+        const showDesktopControls = this.isTouchDevice !== true;
+        panel.setVisible(showDesktopControls);
 
-        this.add.text(26, 24, 'CONTROLES', {
+        this.controlsTitle = this.add.text(26, 24, 'CONTROLES', {
             fontFamily: 'Arial Black',
             fontSize: '12px',
             color: '#f1e1ae'
-        }).setScrollFactor(0).setDepth(101);
+        }).setScrollFactor(0).setDepth(101).setVisible(showDesktopControls);
 
         this.controlsText = this.add.text(26, 45, '', {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: '#c7d6ca',
             lineSpacing: 1
-        }).setScrollFactor(0).setDepth(101);
+        }).setScrollFactor(0).setDepth(101).setVisible(showDesktopControls);
         this.updateControlsText();
 
         this.createQuickMenuButton();

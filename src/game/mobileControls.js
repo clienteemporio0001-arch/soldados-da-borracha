@@ -1,30 +1,29 @@
 export function createBasicMobileControls (scene)
 {
-    scene.mobileInput = {
-        left: false,
-        right: false,
-        down: false,
-        jump: false,
-        attack: false,
-        dash: false
-    };
-
     const touchSupported =
         scene.sys.game.device.input.touch ||
         (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
         (typeof window !== 'undefined' && 'ontouchstart' in window);
 
+    scene.isTouchDevice = touchSupported;
+    scene.mobileInput = {
+        left: false,
+        right: false,
+        jump: false,
+        attack: false,
+        dash: false
+    };
+
     if (!touchSupported) return;
 
-    if (scene.input.manager.pointersTotal < 6) {
-        scene.input.addPointer(6 - scene.input.manager.pointersTotal);
+    if (scene.input.manager.pointersTotal < 5) {
+        scene.input.addPointer(5 - scene.input.manager.pointersTotal);
     }
 
     const depth = 10000;
     const heldPointers = {
         left: new Set(),
         right: new Set(),
-        down: new Set(),
         jump: new Set(),
         attack: new Set(),
         dash: new Set()
@@ -61,8 +60,8 @@ export function createBasicMobileControls (scene)
     };
 
     const makeRoundButton = (x, y, radius, label, key, onPress) => {
-        const circle = scene.add.circle(x, y, radius, 0x07100f, 0.46)
-            .setStrokeStyle(3, 0xffffff, 0.38)
+        const circle = scene.add.circle(x, y, radius, 0x07100f, 0.52)
+            .setStrokeStyle(3, 0xe7efe9, 0.48)
             .setScrollFactor(0)
             .setDepth(depth);
 
@@ -74,29 +73,39 @@ export function createBasicMobileControls (scene)
             align: 'center'
         })
             .setOrigin(0.5)
-            .setAlpha(0.78)
+            .setAlpha(0.88)
             .setScrollFactor(0)
             .setDepth(depth + 1);
+
+        const setPressed = (pressed) => {
+            circle.setFillStyle(pressed ? 0x254136 : 0x07100f, pressed ? 0.72 : 0.52);
+            circle.setStrokeStyle(3, pressed ? 0xf1e1ae : 0xe7efe9, pressed ? 0.72 : 0.48);
+        };
+
+        circle.on('pointerdown', () => setPressed(true));
+        circle.on('pointerup', () => setPressed(false));
+        circle.on('pointerout', () => setPressed(false));
+        circle.on('pointerupoutside', () => setPressed(false));
 
         bindButton(circle, key, onPress);
         return { hit: circle, label: text };
     };
 
     const makeRectButton = (x, y, width, height, label, onPress) => {
-        const rect = scene.add.rectangle(x, y, width, height, 0x07100f, 0.46)
-            .setStrokeStyle(2, 0xffffff, 0.38)
+        const rect = scene.add.rectangle(x, y, width, height, 0x07100f, 0.56)
+            .setStrokeStyle(2, 0xe7efe9, 0.44)
             .setScrollFactor(0)
             .setDepth(depth);
 
         const text = scene.add.text(x, y, label, {
             fontFamily: 'Arial',
-            fontSize: '14px',
+            fontSize: '13px',
             color: '#ffffff',
             fontStyle: 'bold',
             align: 'center'
         })
             .setOrigin(0.5)
-            .setAlpha(0.8)
+            .setAlpha(0.9)
             .setScrollFactor(0)
             .setDepth(depth + 1);
 
@@ -105,26 +114,32 @@ export function createBasicMobileControls (scene)
         return { hit: rect, label: text };
     };
 
-    makeRoundButton(82, 690, 48, '◀', 'left');
-    makeRoundButton(190, 690, 48, '▶', 'right');
-    makeRoundButton(136, 590, 44, '▼', 'down');
+    // Esquerda: somente direção, sem botão extra acima.
+    makeRoundButton(82, 688, 50, '◀', 'left');
+    makeRoundButton(196, 688, 50, '▶', 'right');
 
-    makeRoundButton(924, 690, 52, 'PULO', 'jump');
-    makeRoundButton(835, 590, 48, 'ATAQUE', 'attack', () => {
+    // Direita: ataque em cima, pulo e dash embaixo para uso confortável com o polegar.
+    makeRoundButton(846, 592, 48, 'ATAQUE', 'attack', () => {
         if (typeof scene.queueAttackInput === 'function') scene.queueAttackInput();
     });
 
-    const dashButton = makeRoundButton(814, 690, 48, 'DASH', 'dash', () => {
+    makeRoundButton(862, 688, 52, 'PULO', 'jump');
+
+    const dashButton = makeRoundButton(966, 688, 46, 'DASH', 'dash', () => {
         if (typeof scene.tryDash === 'function') scene.tryDash();
     });
 
+    let dashAvailable = null;
     const setDashAvailable = () => {
         const available = scene.dashUnlocked === true && typeof scene.tryDash === 'function';
+        if (dashAvailable === available) return;
+        dashAvailable = available;
+
         dashButton.hit.setVisible(available);
         dashButton.label.setVisible(available);
 
         if (available) {
-            if (!dashButton.hit.input?.enabled) dashButton.hit.setInteractive({ useHandCursor: false });
+            dashButton.hit.setInteractive({ useHandCursor: false });
         } else {
             dashButton.hit.disableInteractive();
             heldPointers.dash.clear();
@@ -135,54 +150,83 @@ export function createBasicMobileControls (scene)
     setDashAvailable();
     scene.events.on('update', setDashAvailable);
 
-    const requestGameFullscreen = async () => {
+    const getFullscreenElement = () => {
+        if (typeof document === 'undefined') return null;
+        return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
+    };
+
+    let fullscreenButton;
+
+    const updateFullscreenLabel = () => {
+        if (!fullscreenButton) return;
+        fullscreenButton.label.setText(getFullscreenElement() ? 'SAIR TELA CHEIA' : 'TELA CHEIA');
+    };
+
+    const toggleGameFullscreen = async () => {
         if (typeof document === 'undefined') return;
 
-        const element = document.getElementById('game-container') || document.documentElement;
-        const requestFullscreen =
-            element.requestFullscreen ||
-            element.webkitRequestFullscreen ||
-            element.msRequestFullscreen;
-
-        if (!requestFullscreen) return;
-
         try {
-            const result = requestFullscreen.call(element);
-            if (result && typeof result.then === 'function') await result;
+            if (getFullscreenElement()) {
+                const exitFullscreen =
+                    document.exitFullscreen ||
+                    document.webkitExitFullscreen ||
+                    document.msExitFullscreen;
 
-            try {
-                if (screen.orientation && typeof screen.orientation.lock === 'function') {
-                    await screen.orientation.lock('landscape');
+                if (exitFullscreen) {
+                    const result = exitFullscreen.call(document);
+                    if (result && typeof result.then === 'function') await result;
                 }
-            } catch (_) {
-                // Orientation lock is progressive enhancement only.
-            }
+            } else {
+                const element = document.getElementById('game-container') || document.documentElement;
+                const requestFullscreen =
+                    element.requestFullscreen ||
+                    element.webkitRequestFullscreen ||
+                    element.msRequestFullscreen;
 
-            scene.scale.refresh();
+                if (!requestFullscreen) return;
+
+                const result = requestFullscreen.call(element);
+                if (result && typeof result.then === 'function') await result;
+
+                try {
+                    if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                        await screen.orientation.lock('landscape');
+                    }
+                } catch (_) {
+                    // Orientation lock is progressive enhancement only.
+                }
+            }
         } catch (_) {
             // Fullscreen is optional; keep the game usable inside the viewport.
+        } finally {
+            updateFullscreenLabel();
+            scene.scale.refresh();
         }
     };
 
-    const fullscreenButton = makeRectButton(928, 52, 142, 38, 'TELA CHEIA', requestGameFullscreen);
-    fullscreenButton.hit.setDepth(depth + 5);
-    fullscreenButton.label.setDepth(depth + 6);
+    // Mantém distância do MENU (y=27) e evita qualquer sobreposição.
+    fullscreenButton = makeRectButton(925, 78, 150, 36, 'TELA CHEIA', toggleGameFullscreen);
+    fullscreenButton.hit.setDepth(depth + 3);
+    fullscreenButton.label.setDepth(depth + 4);
 
-    const portraitShade = scene.add.rectangle(512, 384, 1024, 768, 0x000000, 0.58)
-        .setScrollFactor(0)
-        .setDepth(depth + 3);
-
-    const rotateText = scene.add.text(512, 384, 'Gire o celular para jogar', {
+    const rotateText = scene.add.text(512, 32, 'Dica: gire o celular para jogar em tela ampla', {
         fontFamily: 'Arial',
-        fontSize: '30px',
-        color: '#ffffff',
-        backgroundColor: '#000000bb',
-        padding: { x: 22, y: 14 },
+        fontSize: '15px',
+        color: '#eef4ef',
+        backgroundColor: 'rgba(0,0,0,0.42)',
+        padding: { x: 12, y: 6 },
         align: 'center'
     })
         .setOrigin(0.5)
+        .setAlpha(0.82)
         .setScrollFactor(0)
-        .setDepth(depth + 4);
+        .setDepth(depth + 2);
+
+    const applyMobileHudLayout = () => {
+        if (scene.healthHud) scene.healthHud.setPosition(18, 18).setScale(0.94);
+        if (scene.hungerHud) scene.hungerHud.setPosition(18, 52).setScale(0.94);
+        if (scene.staminaHud) scene.staminaHud.setPosition(18, 86).setScale(0.94);
+    };
 
     const refreshMobileLayout = () => {
         if (typeof window === 'undefined') return;
@@ -192,9 +236,14 @@ export function createBasicMobileControls (scene)
         const height = viewport?.height || window.innerHeight;
         const portrait = height > width;
 
-        portraitShade.setVisible(portrait);
         rotateText.setVisible(portrait);
+        applyMobileHudLayout();
         scene.scale.refresh();
+    };
+
+    const onFullscreenChange = () => {
+        updateFullscreenLabel();
+        refreshMobileLayout();
     };
 
     const canvas = scene.sys.game.canvas;
@@ -206,7 +255,15 @@ export function createBasicMobileControls (scene)
     window.addEventListener('resize', refreshMobileLayout, { passive: true });
     window.addEventListener('orientationchange', refreshMobileLayout, { passive: true });
     window.visualViewport?.addEventListener('resize', refreshMobileLayout, { passive: true });
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
+    scene.time.delayedCall(0, () => {
+        applyMobileHudLayout();
+        refreshMobileLayout();
+    });
+
+    updateFullscreenLabel();
     refreshMobileLayout();
 
     scene.events.once('shutdown', () => {
@@ -218,5 +275,7 @@ export function createBasicMobileControls (scene)
         window.removeEventListener('resize', refreshMobileLayout);
         window.removeEventListener('orientationchange', refreshMobileLayout);
         window.visualViewport?.removeEventListener('resize', refreshMobileLayout);
+        document.removeEventListener('fullscreenchange', onFullscreenChange);
+        document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
     });
 }
