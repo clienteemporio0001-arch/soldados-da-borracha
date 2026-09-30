@@ -757,15 +757,15 @@ export class Level2Scene extends Scene
             {
                 this.idleVisualStartedAt=null;
                 if(this.attackSprite.texture.key!=='seringueiroWalk')this.attackSprite.setTexture('seringueiroWalk',0);
-                // Caminhada oficial a 8 FPS: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 0.
-                this.attackSprite.setFrame(Math.floor(time/125)%8);
+                // Caminhada definitiva a 10 FPS: 0 → 1 → 2 → 3 → 4 → 5 → 0.
+                this.attackSprite.setFrame(Math.floor(time/100)%6);
             }
             else if(idle)
             {
                 if(this.idleVisualStartedAt===null)this.idleVisualStartedAt=time;
                 if(this.attackSprite.texture.key!=='seringueiroIdle')this.attackSprite.setTexture('seringueiroIdle',0);
-                // Respiração a 5 FPS, sem timer ou tween adicional.
-                this.attackSprite.setFrame(Math.floor(Math.max(0,time-this.idleVisualStartedAt)/200)%12);
+                // Idle definitiva a ~6,7 FPS, sem reiniciar enquanto permanece parado.
+                this.attackSprite.setFrame(Math.floor(Math.max(0,time-this.idleVisualStartedAt)/150)%8);
             }
             else if(!grounded)
             {
