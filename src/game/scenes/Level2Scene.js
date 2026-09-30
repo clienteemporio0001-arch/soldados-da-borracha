@@ -2008,12 +2008,81 @@ export class Level2Scene extends Scene
         this.curupiraLandingMarker = null;
 
         this.curupiraVisual = this.add.container(this.curupira.x, this.curupira.y).setDepth(21).setVisible(false);
-        const leftFoot = this.add.rectangle(-9, 26, 12, 22, 0x5c3b28).setAngle(18);
-        const rightFoot = this.add.rectangle(9, 26, 12, 22, 0x5c3b28).setAngle(-18);
-        const body = this.add.rectangle(0, 0, 30, 42, 0x355a35);
-        const head = this.add.circle(0, -31, 13, 0x996247);
-        const hair = this.add.ellipse(0, -43, 35, 20, 0xb74427);
-        this.curupiraVisual.add([leftFoot, rightFoot, body, head, hair]);
+
+        // Visual procedural refinado: mantém a hitbox/lógica intactas e dá identidade folclórica clara.
+        const shadow = this.add.ellipse(0, 35, 48, 12, 0x07100d, 0.24);
+
+        // Pernas compactas e pés invertidos: calcanhares apontam para frente e dedos para trás.
+        const leftLeg = this.add.rectangle(-9, 18, 9, 24, 0x8f5a3c).setAngle(5);
+        const rightLeg = this.add.rectangle(9, 18, 9, 24, 0x8f5a3c).setAngle(-5);
+        const leftFoot = this.add.container(-10, 31);
+        const leftHeel = this.add.ellipse(3, 0, 13, 8, 0x6f402d);
+        const leftToes = this.add.ellipse(-8, 2, 17, 7, 0x7b4932).setAngle(8);
+        leftFoot.add([leftHeel, leftToes]);
+        const rightFoot = this.add.container(10, 31);
+        const rightHeel = this.add.ellipse(-3, 0, 13, 8, 0x6f402d);
+        const rightToes = this.add.ellipse(8, 2, 17, 7, 0x7b4932).setAngle(-8);
+        rightFoot.add([rightHeel, rightToes]);
+
+        // Corpo de guardião da mata, com faixa de cipó e folhas.
+        const body = this.add.rectangle(0, -3, 32, 40, 0x355a35).setStrokeStyle(2, 0x203e28, 0.9);
+        const chestShade = this.add.ellipse(-7, -4, 12, 30, 0x26462c, 0.72);
+        const vine = this.add.rectangle(0, -4, 5, 39, 0x6c7c42, 0.95).setAngle(-18);
+        const belt = this.add.rectangle(0, 12, 31, 5, 0x5d4227, 0.95);
+        const beltLeafL = this.add.ellipse(-10, 11, 10, 5, 0x4d783d, 0.95).setAngle(-28);
+        const beltLeafR = this.add.ellipse(10, 12, 10, 5, 0x5f8a47, 0.95).setAngle(24);
+
+        // Braços finos e ágeis, com braceletes naturais.
+        const leftArm = this.add.rectangle(-20, -5, 8, 30, 0x8f5a3c).setAngle(16);
+        const rightArm = this.add.rectangle(20, -5, 8, 30, 0x8f5a3c).setAngle(-16);
+        const leftWrist = this.add.rectangle(-23, 7, 10, 5, 0x4a6e38).setAngle(16);
+        const rightWrist = this.add.rectangle(23, 7, 10, 5, 0x4a6e38).setAngle(-16);
+        const leftHand = this.add.circle(-25, 11, 5, 0x9a6244);
+        const rightHand = this.add.circle(25, 11, 5, 0x9a6244);
+
+        // Cabeça e rosto mais legíveis em escala pequena.
+        const neck = this.add.rectangle(0, -25, 10, 8, 0x8a563b);
+        const head = this.add.ellipse(0, -36, 29, 31, 0xa96b4b).setStrokeStyle(1, 0x633827, 0.75);
+        const earL = this.add.ellipse(-15, -35, 5, 8, 0x995c40);
+        const earR = this.add.ellipse(15, -35, 5, 8, 0x995c40);
+        const browL = this.add.rectangle(-6, -40, 7, 2, 0x4a2a20).setAngle(-8);
+        const browR = this.add.rectangle(6, -40, 7, 2, 0x4a2a20).setAngle(8);
+        const eyeL = this.add.circle(-6, -36, 2.2, 0xf1d47a);
+        const eyeR = this.add.circle(6, -36, 2.2, 0xf1d47a);
+        const pupilL = this.add.circle(-6, -36, 1, 0x1a120e);
+        const pupilR = this.add.circle(6, -36, 1, 0x1a120e);
+        const nose = this.add.triangle(0, -31, -3, 3, 3, 3, 0, -3, 0x7f4935).setAngle(8);
+        const grin = this.add.graphics();
+        grin.lineStyle(2, 0x4a261d, 0.95);
+        grin.beginPath();
+        grin.arc(0, -28, 7, 0.1, Math.PI - 0.1, false);
+        grin.strokePath();
+
+        // Cabelo vermelho/alaranjado em pontas, lembrando fogo e copa da floresta.
+        const hair = this.add.container(0, -48);
+        const hairBack = this.add.ellipse(0, 4, 38, 21, 0xc34524);
+        const hairGlow = this.add.ellipse(-3, 1, 27, 13, 0xe6652f, 0.95);
+        const locks = [
+            [-15, -4, -22, -13, -8, -10],
+            [-9, -8, -12, -20, -2, -13],
+            [-2, -9, 1, -23, 6, -12],
+            [6, -8, 12, -20, 14, -10],
+            [13, -4, 22, -13, 19, -3]
+        ].map(([x1,y1,x2,y2,x3,y3],i) => this.add.triangle(0,0,x1,y1,x2,y2,x3,y3,i%2?0xe45b2b:0xb93e21));
+        hair.add([hairBack, hairGlow, ...locks]);
+
+        // Folhas presas ao cabelo reforçam o vínculo com a mata.
+        const hairLeafL = this.add.ellipse(-14, -49, 11, 5, 0x5d873f, 0.95).setAngle(-32);
+        const hairLeafR = this.add.ellipse(14, -47, 10, 5, 0x4e7738, 0.95).setAngle(28);
+
+        this.curupiraVisual.add([
+            shadow,
+            leftLeg, rightLeg, leftFoot, rightFoot,
+            body, chestShade, vine, belt, beltLeafL, beltLeafR,
+            leftArm, rightArm, leftWrist, rightWrist, leftHand, rightHand,
+            neck, earL, earR, head, browL, browR, eyeL, eyeR, pupilL, pupilR, nose, grin,
+            hair, hairLeafL, hairLeafR
+        ]);
         this.curupiraVisual.parts = { leftFoot, rightFoot, body, head, hair };
 
         this.curupiraBossHud = this.add.container(512, 155).setScrollFactor(0).setDepth(160).setVisible(false);
