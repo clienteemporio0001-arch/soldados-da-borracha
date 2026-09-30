@@ -2009,82 +2009,111 @@ export class Level2Scene extends Scene
 
         this.curupiraVisual = this.add.container(this.curupira.x, this.curupira.y).setDepth(21).setVisible(false);
 
-        // Visual procedural refinado: mantém a hitbox/lógica intactas e dá identidade folclórica clara.
-        const shadow = this.add.ellipse(0, 35, 48, 12, 0x07100d, 0.24);
+        // Rig visual procedural independente da hitbox física.
+        const rig = this.add.container(0, 0);
+        const shadow = this.add.ellipse(0, 35, 50, 12, 0x07100d, 0.28);
 
-        // Pernas compactas e pés invertidos: calcanhares apontam para frente e dedos para trás.
-        const leftLeg = this.add.rectangle(-9, 18, 9, 24, 0x8f5a3c).setAngle(5);
-        const rightLeg = this.add.rectangle(9, 18, 9, 24, 0x8f5a3c).setAngle(-5);
-        const leftFoot = this.add.container(-10, 31);
-        const leftHeel = this.add.ellipse(3, 0, 13, 8, 0x6f402d);
-        const leftToes = this.add.ellipse(-8, 2, 17, 7, 0x7b4932).setAngle(8);
-        leftFoot.add([leftHeel, leftToes]);
-        const rightFoot = this.add.container(10, 31);
-        const rightHeel = this.add.ellipse(-3, 0, 13, 8, 0x6f402d);
-        const rightToes = this.add.ellipse(8, 2, 17, 7, 0x7b4932).setAngle(-8);
-        rightFoot.add([rightHeel, rightToes]);
+        // Tronco / roupa de mata.
+        const torsoRig = this.add.container(0, -2);
+        const torso = this.add.polygon(0, 0, [
+            -16,-19, 16,-19, 14,16, 8,22, -8,22, -14,16
+        ], 0x365b37, 1).setStrokeStyle(2, 0x1f3b27, 0.95);
+        const chestLight = this.add.ellipse(-5, -4, 13, 28, 0x4b7447, 0.5);
+        const vine = this.add.rectangle(0, -1, 5, 40, 0x7d7540, 0.95).setAngle(-20);
+        const waist = this.add.rectangle(0, 16, 31, 5, 0x5a3d25, 0.98);
+        const leafSkirtL = this.add.triangle(-9, 18, -7,-2, 7,-2, 0,13, 0x4f7b3d, 0.95).setAngle(-8);
+        const leafSkirtR = this.add.triangle(9, 18, -7,-2, 7,-2, 0,13, 0x638b49, 0.95).setAngle(8);
+        torsoRig.add([torso, chestLight, vine, waist, leafSkirtL, leafSkirtR]);
 
-        // Corpo de guardião da mata, com faixa de cipó e folhas.
-        const body = this.add.rectangle(0, -3, 32, 40, 0x355a35).setStrokeStyle(2, 0x203e28, 0.9);
-        const chestShade = this.add.ellipse(-7, -4, 12, 30, 0x26462c, 0.72);
-        const vine = this.add.rectangle(0, -4, 5, 39, 0x6c7c42, 0.95).setAngle(-18);
-        const belt = this.add.rectangle(0, 12, 31, 5, 0x5d4227, 0.95);
-        const beltLeafL = this.add.ellipse(-10, 11, 10, 5, 0x4d783d, 0.95).setAngle(-28);
-        const beltLeafR = this.add.ellipse(10, 12, 10, 5, 0x5f8a47, 0.95).setAngle(24);
+        // Braços com pivô real no ombro para balançar.
+        const leftArmRig = this.add.container(-17, -14);
+        const leftUpperArm = this.add.rectangle(0, 11, 8, 23, 0x9b6043).setOrigin(0.5, 0.05);
+        const leftForearmRig = this.add.container(0, 22);
+        const leftForearm = this.add.rectangle(0, 8, 7, 18, 0x9f6547).setOrigin(0.5, 0.05);
+        const leftWrist = this.add.rectangle(0, 15, 10, 4, 0x4f7139);
+        const leftHand = this.add.circle(0, 19, 4.5, 0xa86c4c);
+        leftForearmRig.add([leftForearm, leftWrist, leftHand]);
+        leftArmRig.add([leftUpperArm, leftForearmRig]);
 
-        // Braços finos e ágeis, com braceletes naturais.
-        const leftArm = this.add.rectangle(-20, -5, 8, 30, 0x8f5a3c).setAngle(16);
-        const rightArm = this.add.rectangle(20, -5, 8, 30, 0x8f5a3c).setAngle(-16);
-        const leftWrist = this.add.rectangle(-23, 7, 10, 5, 0x4a6e38).setAngle(16);
-        const rightWrist = this.add.rectangle(23, 7, 10, 5, 0x4a6e38).setAngle(-16);
-        const leftHand = this.add.circle(-25, 11, 5, 0x9a6244);
-        const rightHand = this.add.circle(25, 11, 5, 0x9a6244);
+        const rightArmRig = this.add.container(17, -14);
+        const rightUpperArm = this.add.rectangle(0, 11, 8, 23, 0x9b6043).setOrigin(0.5, 0.05);
+        const rightForearmRig = this.add.container(0, 22);
+        const rightForearm = this.add.rectangle(0, 8, 7, 18, 0x9f6547).setOrigin(0.5, 0.05);
+        const rightWrist = this.add.rectangle(0, 15, 10, 4, 0x4f7139);
+        const rightHand = this.add.circle(0, 19, 4.5, 0xa86c4c);
+        rightForearmRig.add([rightForearm, rightWrist, rightHand]);
+        rightArmRig.add([rightUpperArm, rightForearmRig]);
 
-        // Cabeça e rosto mais legíveis em escala pequena.
-        const neck = this.add.rectangle(0, -25, 10, 8, 0x8a563b);
-        const head = this.add.ellipse(0, -36, 29, 31, 0xa96b4b).setStrokeStyle(1, 0x633827, 0.75);
-        const earL = this.add.ellipse(-15, -35, 5, 8, 0x995c40);
-        const earR = this.add.ellipse(15, -35, 5, 8, 0x995c40);
-        const browL = this.add.rectangle(-6, -40, 7, 2, 0x4a2a20).setAngle(-8);
-        const browR = this.add.rectangle(6, -40, 7, 2, 0x4a2a20).setAngle(8);
-        const eyeL = this.add.circle(-6, -36, 2.2, 0xf1d47a);
-        const eyeR = this.add.circle(6, -36, 2.2, 0xf1d47a);
-        const pupilL = this.add.circle(-6, -36, 1, 0x1a120e);
-        const pupilR = this.add.circle(6, -36, 1, 0x1a120e);
-        const nose = this.add.triangle(0, -31, -3, 3, 3, 3, 0, -3, 0x7f4935).setAngle(8);
-        const grin = this.add.graphics();
-        grin.lineStyle(2, 0x4a261d, 0.95);
-        grin.beginPath();
-        grin.arc(0, -28, 7, 0.1, Math.PI - 0.1, false);
-        grin.strokePath();
+        // Pernas com pivô no quadril e pés visualmente invertidos.
+        const leftLegRig = this.add.container(-8, 15);
+        const leftThigh = this.add.rectangle(0, 10, 9, 22, 0x7d4d37).setOrigin(0.5, 0.05);
+        const leftShinRig = this.add.container(0, 21);
+        const leftShin = this.add.rectangle(0, 8, 8, 18, 0x87543b).setOrigin(0.5, 0.05);
+        const leftFoot = this.add.container(0, 18);
+        const leftHeel = this.add.ellipse(3, 1, 11, 7, 0x68402d);
+        const leftBackFoot = this.add.ellipse(-8, 2, 19, 7, 0x754630).setAngle(-6);
+        leftFoot.add([leftHeel, leftBackFoot]);
+        leftShinRig.add([leftShin, leftFoot]);
+        leftLegRig.add([leftThigh, leftShinRig]);
 
-        // Cabelo vermelho/alaranjado em pontas, lembrando fogo e copa da floresta.
-        const hair = this.add.container(0, -48);
-        const hairBack = this.add.ellipse(0, 4, 38, 21, 0xc34524);
-        const hairGlow = this.add.ellipse(-3, 1, 27, 13, 0xe6652f, 0.95);
-        const locks = [
-            [-15, -4, -22, -13, -8, -10],
-            [-9, -8, -12, -20, -2, -13],
-            [-2, -9, 1, -23, 6, -12],
-            [6, -8, 12, -20, 14, -10],
-            [13, -4, 22, -13, 19, -3]
-        ].map(([x1,y1,x2,y2,x3,y3],i) => this.add.triangle(0,0,x1,y1,x2,y2,x3,y3,i%2?0xe45b2b:0xb93e21));
-        hair.add([hairBack, hairGlow, ...locks]);
+        const rightLegRig = this.add.container(8, 15);
+        const rightThigh = this.add.rectangle(0, 10, 9, 22, 0x7d4d37).setOrigin(0.5, 0.05);
+        const rightShinRig = this.add.container(0, 21);
+        const rightShin = this.add.rectangle(0, 8, 8, 18, 0x87543b).setOrigin(0.5, 0.05);
+        const rightFoot = this.add.container(0, 18);
+        const rightHeel = this.add.ellipse(3, 1, 11, 7, 0x68402d);
+        const rightBackFoot = this.add.ellipse(-8, 2, 19, 7, 0x754630).setAngle(6);
+        rightFoot.add([rightHeel, rightBackFoot]);
+        rightShinRig.add([rightShin, rightFoot]);
+        rightLegRig.add([rightThigh, rightShinRig]);
 
-        // Folhas presas ao cabelo reforçam o vínculo com a mata.
-        const hairLeafL = this.add.ellipse(-14, -49, 11, 5, 0x5d873f, 0.95).setAngle(-32);
-        const hairLeafR = this.add.ellipse(14, -47, 10, 5, 0x4e7738, 0.95).setAngle(28);
+        // Cabeça / rosto / cabelo flamejante.
+        const headRig = this.add.container(0, -34);
+        const neck = this.add.rectangle(0, 12, 10, 10, 0x8d553c);
+        const earL = this.add.ellipse(-15, 0, 5, 9, 0x985b40);
+        const earR = this.add.ellipse(15, 0, 5, 9, 0x985b40);
+        const head = this.add.ellipse(0, 0, 29, 31, 0xaa6b4b).setStrokeStyle(1, 0x653928, 0.78);
+        const browL = this.add.rectangle(-6, -5, 7, 2, 0x49271e).setAngle(-10);
+        const browR = this.add.rectangle(6, -5, 7, 2, 0x49271e).setAngle(10);
+        const eyeL = this.add.circle(-6, 0, 2.3, 0xf4d978);
+        const eyeR = this.add.circle(6, 0, 2.3, 0xf4d978);
+        const pupilL = this.add.circle(-6, 0, 1, 0x19100c);
+        const pupilR = this.add.circle(6, 0, 1, 0x19100c);
+        const nose = this.add.triangle(0, 5, -3,3, 3,3, 0,-3, 0x824936);
+        const mouth = this.add.graphics();
+        mouth.lineStyle(2, 0x48251c, 0.95);
+        mouth.beginPath(); mouth.arc(1, 8, 7, 0.15, Math.PI - 0.15, false); mouth.strokePath();
 
-        this.curupiraVisual.add([
+        const hairRig = this.add.container(0, -13);
+        const hairMass = this.add.ellipse(0, -2, 39, 22, 0xc84525);
+        const hairCore = this.add.ellipse(-3, -4, 27, 14, 0xee6a30, 0.95);
+        const hairLocks = [
+            this.add.triangle(-13,-8,-7,1,-20,-1,-11,-17,0xb93f22),
+            this.add.triangle(-7,-12,-6,1,-12,-3,-5,-22,0xe15b2b),
+            this.add.triangle(0,-13,-5,0,6,-1,2,-24,0xf07835),
+            this.add.triangle(7,-12,3,0,14,-2,10,-21,0xd94f27),
+            this.add.triangle(13,-8,8,1,21,-1,17,-16,0xb93f22)
+        ];
+        hairRig.add([hairMass, hairCore, ...hairLocks]);
+        const hairLeafL = this.add.ellipse(-15, -15, 11, 5, 0x5b873e, 0.95).setAngle(-30);
+        const hairLeafR = this.add.ellipse(14, -13, 10, 5, 0x4e7638, 0.95).setAngle(28);
+        headRig.add([neck, earL, earR, head, browL, browR, eyeL, eyeR, pupilL, pupilR, nose, mouth, hairRig, hairLeafL, hairLeafR]);
+
+        rig.add([
             shadow,
-            leftLeg, rightLeg, leftFoot, rightFoot,
-            body, chestShade, vine, belt, beltLeafL, beltLeafR,
-            leftArm, rightArm, leftWrist, rightWrist, leftHand, rightHand,
-            neck, earL, earR, head, browL, browR, eyeL, eyeR, pupilL, pupilR, nose, grin,
-            hair, hairLeafL, hairLeafR
+            leftLegRig, rightLegRig,
+            torsoRig,
+            leftArmRig, rightArmRig,
+            headRig
         ]);
-        this.curupiraVisual.parts = { leftFoot, rightFoot, body, head, hair };
-
+        this.curupiraVisual.add(rig);
+        this.curupiraVisual.parts = {
+            rig, shadow, torsoRig, torso, headRig, head, hairRig,
+            leftArmRig, rightArmRig, leftForearmRig, rightForearmRig,
+            leftLegRig, rightLegRig, leftShinRig, rightShinRig,
+            leftFoot, rightFoot
+        };
+        this.curupiraVisualFacing = 1;
         this.curupiraBossHud = this.add.container(512, 155).setScrollFactor(0).setDepth(160).setVisible(false);
         const bg = this.add.rectangle(0, 0, 430, 58, 0x06100d, 0.9).setOrigin(0.5, 0);
         bg.setStrokeStyle(1, 0x8c7558, 0.55);
@@ -2151,9 +2180,131 @@ export class Level2Scene extends Scene
         }
     }
 
+    animateCurupiraVisual (time)
+    {
+        if (!this.curupiraVisual || !this.curupiraVisual.parts) return;
+
+        const p = this.curupiraVisual.parts;
+        const vx = this.curupira.body?.velocity?.x || 0;
+        const vy = this.curupira.body?.velocity?.y || 0;
+        const moving = Math.abs(vx) > 24;
+        const airborne = Math.abs(vy) > 35 && !this.curupira.body.blocked.down;
+        const state = this.curupiraState;
+        const attack = state === 'ATTACK';
+
+        // Direção visual sem interferir nos scales/angles funcionais do container externo.
+        let facing = this.curupiraVisualFacing || 1;
+        if (Math.abs(vx) > 8) facing = vx > 0 ? 1 : -1;
+        else if (this.player && state !== 'DEFEATED') facing = this.player.x >= this.curupira.x ? 1 : -1;
+        this.curupiraVisualFacing = facing;
+        p.rig.setScale(facing, 1);
+
+        const phase = time * (moving ? 0.018 : 0.006);
+        const gait = Math.sin(phase);
+        const gaitOpp = Math.sin(phase + Math.PI);
+        const breathe = Math.sin(time * 0.005);
+        const hairWave = Math.sin(time * 0.009);
+
+        // Base viva mesmo parado.
+        p.torsoRig.y = -2 + breathe * 1.2;
+        p.headRig.y = -34 + breathe * 0.7;
+        p.headRig.angle = breathe * 1.4;
+        p.hairRig.y = -13 + hairWave * 1.1;
+        p.hairRig.angle = -hairWave * 2.2;
+        p.shadow.scaleX = moving ? 1.06 : 1;
+        p.shadow.alpha = airborne ? 0.12 : 0.28;
+
+        if (airborne) {
+            const lift = vy < 0 ? -1 : 1;
+            p.leftLegRig.angle = -18 * lift;
+            p.rightLegRig.angle = 20 * lift;
+            p.leftShinRig.angle = 26;
+            p.rightShinRig.angle = 20;
+            p.leftArmRig.angle = 26;
+            p.rightArmRig.angle = -30;
+            p.leftForearmRig.angle = -24;
+            p.rightForearmRig.angle = -18;
+            p.torsoRig.angle = facing * (vy < 0 ? -4 : 5);
+            return;
+        }
+
+        if (attack) {
+            if (this.curupiraAttackPattern === 0) {
+                // Dash: corrida agressiva com braços/pernas bem marcados.
+                p.leftLegRig.angle = gait * 28;
+                p.rightLegRig.angle = gaitOpp * 28;
+                p.leftShinRig.angle = Math.max(0, -gait) * 28;
+                p.rightShinRig.angle = Math.max(0, gait) * 28;
+                p.leftArmRig.angle = gaitOpp * 32 - 12;
+                p.rightArmRig.angle = gait * 32 + 18;
+                p.leftForearmRig.angle = -18;
+                p.rightForearmRig.angle = -32;
+                p.torsoRig.angle = facing * -9;
+                p.headRig.angle += facing * 4;
+            } else if (this.curupiraAttackPattern === 1) {
+                // Salto/queda: braços abertos e joelhos flexionados.
+                p.leftLegRig.angle = -22;
+                p.rightLegRig.angle = 22;
+                p.leftShinRig.angle = 34;
+                p.rightShinRig.angle = 34;
+                p.leftArmRig.angle = 48;
+                p.rightArmRig.angle = -48;
+                p.leftForearmRig.angle = -28;
+                p.rightForearmRig.angle = 28;
+                p.torsoRig.angle = 0;
+            } else {
+                // Finta: pose assimétrica e ameaçadora.
+                const feint = Math.sin(time * 0.022);
+                p.leftLegRig.angle = feint * 18;
+                p.rightLegRig.angle = -feint * 18;
+                p.leftArmRig.angle = 34 + feint * 10;
+                p.rightArmRig.angle = -56 - feint * 8;
+                p.leftForearmRig.angle = -42;
+                p.rightForearmRig.angle = 36;
+                p.torsoRig.angle = facing * 8;
+            }
+            return;
+        }
+
+        if (moving) {
+            // Caminhada/corrida legível: alternância clara de membros.
+            p.leftLegRig.angle = gait * 24;
+            p.rightLegRig.angle = gaitOpp * 24;
+            p.leftShinRig.angle = Math.max(0, -gait) * 24;
+            p.rightShinRig.angle = Math.max(0, gait) * 24;
+            p.leftArmRig.angle = gaitOpp * 25;
+            p.rightArmRig.angle = gait * 25;
+            p.leftForearmRig.angle = -10 + Math.max(0, gaitOpp) * 16;
+            p.rightForearmRig.angle = 10 - Math.max(0, gait) * 16;
+            p.torsoRig.y += Math.abs(gait) * 1.8;
+            p.headRig.y += Math.abs(gait) * 0.8;
+            p.torsoRig.angle = facing * gait * 2.2;
+        } else {
+            // Idle com respiração, braços soltos e leve transferência de peso.
+            p.leftLegRig.angle = -3 + breathe * 2;
+            p.rightLegRig.angle = 3 - breathe * 2;
+            p.leftShinRig.angle = 2;
+            p.rightShinRig.angle = -2;
+            p.leftArmRig.angle = 8 + breathe * 4;
+            p.rightArmRig.angle = -8 - breathe * 4;
+            p.leftForearmRig.angle = -8 + breathe * 3;
+            p.rightForearmRig.angle = 8 - breathe * 3;
+            p.torsoRig.angle = breathe * 1.2;
+        }
+
+        if (state === 'VULNERABLE' || state === 'RECOVERY' || state === 'HIT') {
+            p.leftArmRig.angle += 16;
+            p.rightArmRig.angle -= 16;
+            p.leftLegRig.angle *= 0.45;
+            p.rightLegRig.angle *= 0.45;
+            p.headRig.angle += facing * 5;
+        }
+    }
+
     updateCurupira (time)
     {
         this.curupiraVisual.setPosition(this.curupira.x, this.curupira.y);
+        this.animateCurupiraVisual(time);
         if (!this.arenaStarted || this.arenaCleared || this.curupiraState === 'INTRO' || this.curupiraState === 'DEFEATED') return;
 
         if (this.curupiraState === 'PREPARE') {
