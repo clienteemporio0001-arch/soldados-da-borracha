@@ -796,9 +796,9 @@ export class Level2Scene extends Scene
 
         this.idleVisualStartedAt=null;
         if(this.attackSprite.texture.key!=='seringueiroAttack')this.attackSprite.setTexture('seringueiroAttack',0);
-        // Os oito quadros seguem o relógio do ataque funcional (300 ms).
+        // Os doze quadros seguem o mesmo relógio funcional do ataque (300 ms).
         const elapsed=Math.max(0,time-this.attackStartedAt);
-        const starts=[0,30,60,90,125,175,210,245];
+        const starts=[0,25,50,75,100,125,150,175,200,225,250,275];
         let frame=starts.length-1;
         while(frame>0&&elapsed<starts[frame])frame--;
         this.attackSprite.setFrame(frame);
