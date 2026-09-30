@@ -38,7 +38,7 @@ export class Preloader extends Scene
         this.load.spritesheet('seringueiroWalk', 'walk.png?v=walk-080-y480-20260930', { frameWidth: 512, frameHeight: 512, endFrame: 5 });
         this.load.spritesheet('seringueiroJump', 'jump.png', { frameWidth: 512, frameHeight: 512, endFrame: 3 });
         this.load.spritesheet('seringueiroDash', 'dash.png', { frameWidth: 512, frameHeight: 512, endFrame: 4 });
-        this.load.spritesheet('seringueiroLanding', 'landing.png', { frameWidth: 512, frameHeight: 512, endFrame: 1 });
+        this.load.spritesheet('seringueiroLanding', 'landing.png?v=landing2-20260930', { frameWidth: 512, frameHeight: 512, endFrame: 1 });
     }
 
     create ()
