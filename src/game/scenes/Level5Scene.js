@@ -1915,7 +1915,7 @@ export class Level5Scene extends Scene
         const grounded=this.player.body.blocked.down||this.player.body.touching.down;
         if(!grounded&&this.airDashUsed){this.showDashUnavailableFeedback();return;}
         if(this.stamina<this.dashStaminaCost){this.showStaminaBlockedFeedback();return;}
-        const left=this.cursors.left.isDown||this.keyA.isDown,right=this.cursors.right.isDown||this.keyD.isDown;
+        const left=this.cursors.left.isDown||this.keyA.isDown||this.mobileInput?.left===true,right=this.cursors.right.isDown||this.keyD.isDown||this.mobileInput?.right===true;
         const direction=left&&!right?-1:right&&!left?1:(this.playerVisual.facing||1);
         this.spendStamina(this.dashStaminaCost);this.isDashing=true;this.dashLandingVisual=false;this.dashDirection=direction;this.dashEndsAt=this.time.now+this.dashDuration;this.nextDashAt=this.time.now+this.dashCooldown;if(!grounded)this.airDashUsed=true;
         this.player.body.setVelocityX(direction*this.dashSpeed);this.player.body.setVelocityY(this.player.body.velocity.y*.45);this.setMotionSquash(1.09,.92,125);this.showDashFeedback(direction);
@@ -1980,7 +1980,7 @@ export class Level5Scene extends Scene
 
     applyFastFall (grounded)
     {
-        const wantsFastFall=this.keyS.isDown||this.cursors.down.isDown;
+        const wantsFastFall=this.keyS.isDown||this.cursors.down.isDown||this.mobileInput?.down===true;
         const body=this.player.body;
         if(!grounded&&wantsFastFall&&body.velocity.y>35){
             body.setVelocityY(Math.min(780,body.velocity.y+70));

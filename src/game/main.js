@@ -18,7 +18,7 @@ const config = {
     parent: 'game-container',
     backgroundColor: '#028af8',
     input: {
-        activePointers: 3
+        activePointers: 6
     },
     physics: {
         default: 'arcade',
@@ -47,7 +47,29 @@ const config = {
 };
 
 const StartGame = (parent) => {
-    return new Game({ ...config, parent });
+    const game = new Game({ ...config, parent });
+
+    if (typeof window !== 'undefined') {
+        let resizeFrame = 0;
+
+        const refreshScale = () => {
+            cancelAnimationFrame(resizeFrame);
+            resizeFrame = requestAnimationFrame(() => game.scale.refresh());
+        };
+
+        window.addEventListener('resize', refreshScale, { passive: true });
+        window.addEventListener('orientationchange', refreshScale, { passive: true });
+        window.visualViewport?.addEventListener('resize', refreshScale, { passive: true });
+
+        game.events.once('destroy', () => {
+            cancelAnimationFrame(resizeFrame);
+            window.removeEventListener('resize', refreshScale);
+            window.removeEventListener('orientationchange', refreshScale);
+            window.visualViewport?.removeEventListener('resize', refreshScale);
+        });
+    }
+
+    return game;
 }
 
 export default StartGame;

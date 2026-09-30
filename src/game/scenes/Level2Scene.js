@@ -2629,7 +2629,7 @@ export class Level2Scene extends Scene
 
     applyFastFall (grounded)
     {
-        const wantsFastFall = this.keyS.isDown || this.cursors.down.isDown;
+        const wantsFastFall = this.keyS.isDown || this.cursors.down.isDown || this.mobileInput?.down === true;
         const body = this.player.body;
 
         if (!grounded && wantsFastFall && body.velocity.y > 35)
