@@ -22,27 +22,20 @@ export function createBasicMobileControls (scene)
 
     const depth = 10000;
     const heldPointers = {
-        left: new Set(),
-        right: new Set(),
         jump: new Set(),
         attack: new Set(),
         dash: new Set()
     };
 
-    const syncState = () => {
-        Object.keys(heldPointers).forEach((key) => {
-            scene.mobileInput[key] = heldPointers[key].size > 0;
-        });
+    const syncButtonState = () => {
+        scene.mobileInput.jump = heldPointers.jump.size > 0;
+        scene.mobileInput.attack = heldPointers.attack.size > 0;
+        scene.mobileInput.dash = heldPointers.dash.size > 0;
     };
 
-    const releasePointer = (pointer) => {
+    const releaseButtonPointer = (pointer) => {
         Object.values(heldPointers).forEach((set) => set.delete(pointer.id));
-        syncState();
-    };
-
-    const releaseAll = () => {
-        Object.values(heldPointers).forEach((set) => set.clear());
-        syncState();
+        syncButtonState();
     };
 
     const bindButton = (button, key, onPress) => {
@@ -50,13 +43,13 @@ export function createBasicMobileControls (scene)
 
         button.on('pointerdown', (pointer) => {
             heldPointers[key].add(pointer.id);
-            syncState();
+            syncButtonState();
             if (onPress) onPress();
         });
 
-        button.on('pointerup', releasePointer);
-        button.on('pointerout', releasePointer);
-        button.on('pointerupoutside', releasePointer);
+        button.on('pointerup', releaseButtonPointer);
+        button.on('pointerout', releaseButtonPointer);
+        button.on('pointerupoutside', releaseButtonPointer);
     };
 
     const makeRoundButton = (x, y, radius, label, key, onPress) => {
@@ -114,11 +107,97 @@ export function createBasicMobileControls (scene)
         return { hit: rect, label: text };
     };
 
-    // Esquerda: somente direção, sem botão extra acima.
-    makeRoundButton(82, 688, 50, '◀', 'left');
-    makeRoundButton(196, 688, 50, '▶', 'right');
+    // Analógico virtual: substitui apenas os direcionais digitais de esquerda/direita.
+    const joystickX = 136;
+    const joystickY = 688;
+    const joystickBaseRadius = 66;
+    const joystickKnobRadius = 30;
+    const joystickMaxTravel = joystickBaseRadius - joystickKnobRadius + 2;
+    const joystickDeadZone = joystickBaseRadius * 0.20;
+    let joystickPointerId = null;
 
-    // Direita: ataque em cima, pulo e dash embaixo para uso confortável com o polegar.
+    const joystickBase = scene.add.circle(joystickX, joystickY, joystickBaseRadius, 0x07100f, 0.34)
+        .setStrokeStyle(3, 0xe7efe9, 0.34)
+        .setScrollFactor(0)
+        .setDepth(depth);
+
+    scene.add.circle(joystickX, joystickY, joystickBaseRadius * 0.56, 0x254136, 0.12)
+        .setStrokeStyle(1, 0xe7efe9, 0.16)
+        .setScrollFactor(0)
+        .setDepth(depth + 0.1);
+
+    const joystickKnob = scene.add.circle(joystickX, joystickY, joystickKnobRadius, 0x254136, 0.72)
+        .setStrokeStyle(3, 0xf1e1ae, 0.52)
+        .setScrollFactor(0)
+        .setDepth(depth + 1);
+
+    // Área de toque ligeiramente maior que a representação visual.
+    const joystickHit = scene.add.circle(joystickX, joystickY, joystickBaseRadius + 18, 0x000000, 0)
+        .setScrollFactor(0)
+        .setDepth(depth + 2)
+        .setInteractive({ useHandCursor: false });
+
+    const resetJoystick = () => {
+        joystickPointerId = null;
+        scene.mobileInput.left = false;
+        scene.mobileInput.right = false;
+        joystickKnob.setPosition(joystickX, joystickY);
+        joystickBase.setFillStyle(0x07100f, 0.34);
+        joystickBase.setStrokeStyle(3, 0xe7efe9, 0.34);
+    };
+
+    const updateJoystickFromPointer = (pointer) => {
+        if (joystickPointerId !== pointer.id) return;
+
+        const dx = pointer.x - joystickX;
+        const dy = pointer.y - joystickY;
+        const distance = Math.hypot(dx, dy);
+        const scale = distance > joystickMaxTravel && distance > 0 ? joystickMaxTravel / distance : 1;
+
+        joystickKnob.setPosition(
+            joystickX + dx * scale,
+            joystickY + dy * scale
+        );
+
+        if (dx > joystickDeadZone) {
+            scene.mobileInput.left = false;
+            scene.mobileInput.right = true;
+        } else if (dx < -joystickDeadZone) {
+            scene.mobileInput.left = true;
+            scene.mobileInput.right = false;
+        } else {
+            scene.mobileInput.left = false;
+            scene.mobileInput.right = false;
+        }
+    };
+
+    joystickHit.on('pointerdown', (pointer) => {
+        if (joystickPointerId !== null) return;
+        joystickPointerId = pointer.id;
+        joystickBase.setFillStyle(0x10241c, 0.48);
+        joystickBase.setStrokeStyle(3, 0xf1e1ae, 0.46);
+        updateJoystickFromPointer(pointer);
+    });
+
+    joystickHit.on('pointerup', (pointer) => {
+        if (joystickPointerId === pointer.id) resetJoystick();
+    });
+
+    joystickHit.on('pointerout', (pointer) => {
+        if (joystickPointerId === pointer.id) resetJoystick();
+    });
+
+    joystickHit.on('pointerupoutside', (pointer) => {
+        if (joystickPointerId === pointer.id) resetJoystick();
+    });
+
+    const handleJoystickMove = (pointer) => {
+        updateJoystickFromPointer(pointer);
+    };
+
+    scene.input.on('pointermove', handleJoystickMove);
+
+    // Direita: ataque em cima, pulo e dash embaixo. Mantidos sem alteração funcional.
     makeRoundButton(846, 592, 48, 'ATAQUE', 'attack', () => {
         if (typeof scene.queueAttackInput === 'function') scene.queueAttackInput();
     });
@@ -246,11 +325,21 @@ export function createBasicMobileControls (scene)
         refreshMobileLayout();
     };
 
-    const canvas = scene.sys.game.canvas;
+    const releaseAll = () => {
+        Object.values(heldPointers).forEach((set) => set.clear());
+        syncButtonState();
+        resetJoystick();
+    };
 
-    scene.input.on('pointerup', releasePointer);
+    const canvas = scene.sys.game.canvas;
+    const handlePointerCancel = (event) => {
+        if (joystickPointerId === event.pointerId) resetJoystick();
+        releaseAll();
+    };
+
+    scene.input.on('pointerup', releaseButtonPointer);
     scene.input.on('gameout', releaseAll);
-    canvas?.addEventListener('pointercancel', releaseAll, { passive: true });
+    canvas?.addEventListener('pointercancel', handlePointerCancel, { passive: true });
 
     window.addEventListener('resize', refreshMobileLayout, { passive: true });
     window.addEventListener('orientationchange', refreshMobileLayout, { passive: true });
@@ -269,9 +358,10 @@ export function createBasicMobileControls (scene)
     scene.events.once('shutdown', () => {
         releaseAll();
         scene.events.off('update', setDashAvailable);
-        scene.input.off('pointerup', releasePointer);
+        scene.input.off('pointermove', handleJoystickMove);
+        scene.input.off('pointerup', releaseButtonPointer);
         scene.input.off('gameout', releaseAll);
-        canvas?.removeEventListener('pointercancel', releaseAll);
+        canvas?.removeEventListener('pointercancel', handlePointerCancel);
         window.removeEventListener('resize', refreshMobileLayout);
         window.removeEventListener('orientationchange', refreshMobileLayout);
         window.visualViewport?.removeEventListener('resize', refreshMobileLayout);
