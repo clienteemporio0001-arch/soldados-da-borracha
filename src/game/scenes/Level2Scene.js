@@ -2019,7 +2019,7 @@ export class Level2Scene extends Scene
             [-18,-8,-28,-1,0x294f31],[-13,2,-25,10,0x365f39],[-7,8,-16,18,0x3f6f40],
             [18,-8,28,-1,0x294f31],[13,2,25,10,0x365f39],[7,8,16,18,0x3f6f40]
         ].forEach(([x,y,tx,ty,color])=>{
-            backLeaves.add(this.add.ellipse(x,y,17,7,color,0.94).setAngle(Phaser.Math.RadToDeg(Math.atan2(ty-y,tx-x))));
+            backLeaves.add(this.add.ellipse(x,y,17,7,color,0.94).setAngle(Math.atan2(ty-y,tx-x) * 180 / Math.PI));
         });
 
         // Tronco mais largo e legível, com fibras e adorno de cipó.

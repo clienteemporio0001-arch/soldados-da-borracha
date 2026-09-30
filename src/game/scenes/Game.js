@@ -79,6 +79,7 @@ export class Game extends Scene
         this.isPlayerDead = false;
         this.phaseCompleted = false;
         this.phaseCompleteScreenShown = false;
+        this.phaseTransitionStarted = false;
 
         this.jumpWasDown = false;
         this.jumpBufferUntil = 0;
@@ -766,8 +767,23 @@ export class Game extends Scene
         });
 
         button.on('pointerdown', () => {
-            this.scene.start('Level2Scene');
+            this.continueToLevel2();
         });
+    }
+
+    continueToLevel2 ()
+    {
+        if (this.phaseTransitionStarted)
+        {
+            return;
+        }
+
+        this.phaseTransitionStarted = true;
+
+        // Mesma configuração/chave usada pelo Mapa da Jornada para abrir a Fase 2.
+        this.registry.set('doubleJumpUnlocked', false);
+        this.registry.set('dashUnlocked', false);
+        this.scene.start('Level2Scene');
     }
 
     createPlayerPlaceholder ()
