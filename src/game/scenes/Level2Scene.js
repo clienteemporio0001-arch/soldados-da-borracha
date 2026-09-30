@@ -2009,109 +2009,140 @@ export class Level2Scene extends Scene
 
         this.curupiraVisual = this.add.container(this.curupira.x, this.curupira.y).setDepth(21).setVisible(false);
 
-        // Rig visual procedural independente da hitbox física.
+        // Rig visual remodelado do Curupira. A física continua no retângulo 44x74 acima.
         const rig = this.add.container(0, 0);
-        const shadow = this.add.ellipse(0, 35, 50, 12, 0x07100d, 0.28);
+        const shadow = this.add.ellipse(0, 36, 54, 12, 0x07100d, 0.3);
 
-        // Tronco / roupa de mata.
+        // Silhueta de guardião: pequena capa de folhas atrás do corpo.
+        const backLeaves = this.add.container(0, -7);
+        [
+            [-18,-8,-28,-1,0x294f31],[-13,2,-25,10,0x365f39],[-7,8,-16,18,0x3f6f40],
+            [18,-8,28,-1,0x294f31],[13,2,25,10,0x365f39],[7,8,16,18,0x3f6f40]
+        ].forEach(([x,y,tx,ty,color])=>{
+            backLeaves.add(this.add.ellipse(x,y,17,7,color,0.94).setAngle(Phaser.Math.RadToDeg(Math.atan2(ty-y,tx-x))));
+        });
+
+        // Tronco mais largo e legível, com fibras e adorno de cipó.
         const torsoRig = this.add.container(0, -2);
         const torso = this.add.polygon(0, 0, [
-            -16,-19, 16,-19, 14,16, 8,22, -8,22, -14,16
-        ], 0x365b37, 1).setStrokeStyle(2, 0x1f3b27, 0.95);
-        const chestLight = this.add.ellipse(-5, -4, 13, 28, 0x4b7447, 0.5);
-        const vine = this.add.rectangle(0, -1, 5, 40, 0x7d7540, 0.95).setAngle(-20);
-        const waist = this.add.rectangle(0, 16, 31, 5, 0x5a3d25, 0.98);
-        const leafSkirtL = this.add.triangle(-9, 18, -7,-2, 7,-2, 0,13, 0x4f7b3d, 0.95).setAngle(-8);
-        const leafSkirtR = this.add.triangle(9, 18, -7,-2, 7,-2, 0,13, 0x638b49, 0.95).setAngle(8);
-        torsoRig.add([torso, chestLight, vine, waist, leafSkirtL, leafSkirtR]);
+            -19,-20, 19,-20, 17,8, 12,20, 0,24, -12,20, -17,8
+        ], 0x355d38, 1).setStrokeStyle(2, 0x172d1d, 0.95);
+        const chest = this.add.ellipse(-4,-4,20,31,0x4c794a,0.48);
+        const chestFiber = this.add.graphics();
+        chestFiber.lineStyle(2,0x87a25a,0.5);
+        chestFiber.beginPath(); chestFiber.moveTo(-9,-15); chestFiber.lineTo(5,17); chestFiber.strokePath();
+        chestFiber.beginPath(); chestFiber.moveTo(7,-15); chestFiber.lineTo(-4,16); chestFiber.strokePath();
+        const belt = this.add.rectangle(0,15,34,6,0x5a3b22,0.98).setStrokeStyle(1,0x2f2118,0.8);
+        const frontLeafL = this.add.triangle(-10,18,-8,-3,8,-3,0,16,0x4e7b3e,1).setAngle(-10);
+        const frontLeafR = this.add.triangle(10,18,-8,-3,8,-3,0,16,0x668f48,1).setAngle(10);
+        torsoRig.add([torso,chest,chestFiber,belt,frontLeafL,frontLeafR]);
 
-        // Braços com pivô real no ombro para balançar.
-        const leftArmRig = this.add.container(-17, -14);
-        const leftUpperArm = this.add.rectangle(0, 11, 8, 23, 0x9b6043).setOrigin(0.5, 0.05);
-        const leftForearmRig = this.add.container(0, 22);
-        const leftForearm = this.add.rectangle(0, 8, 7, 18, 0x9f6547).setOrigin(0.5, 0.05);
-        const leftWrist = this.add.rectangle(0, 15, 10, 4, 0x4f7139);
-        const leftHand = this.add.circle(0, 19, 4.5, 0xa86c4c);
-        leftForearmRig.add([leftForearm, leftWrist, leftHand]);
-        leftArmRig.add([leftUpperArm, leftForearmRig]);
+        // Ombros com folhas deixam a silhueta mais forte.
+        const shoulderL = this.add.ellipse(-20,-16,18,8,0x527d3e,0.98).setAngle(-24);
+        const shoulderR = this.add.ellipse(20,-16,18,8,0x527d3e,0.98).setAngle(24);
 
-        const rightArmRig = this.add.container(17, -14);
-        const rightUpperArm = this.add.rectangle(0, 11, 8, 23, 0x9b6043).setOrigin(0.5, 0.05);
-        const rightForearmRig = this.add.container(0, 22);
-        const rightForearm = this.add.rectangle(0, 8, 7, 18, 0x9f6547).setOrigin(0.5, 0.05);
-        const rightWrist = this.add.rectangle(0, 15, 10, 4, 0x4f7139);
-        const rightHand = this.add.circle(0, 19, 4.5, 0xa86c4c);
-        rightForearmRig.add([rightForearm, rightWrist, rightHand]);
-        rightArmRig.add([rightUpperArm, rightForearmRig]);
+        // Braços segmentados com pivôs corretos.
+        const leftArmRig = this.add.container(-18,-14);
+        const leftUpperArm = this.add.rectangle(0,12,9,25,0x9c5f40).setOrigin(0.5,0.06).setStrokeStyle(1,0x613a29,0.8);
+        const leftForearmRig = this.add.container(0,23);
+        const leftForearm = this.add.rectangle(0,9,8,20,0xa46645).setOrigin(0.5,0.06);
+        const leftBracer = this.add.rectangle(0,15,10,6,0x3d6236).setStrokeStyle(1,0x203c27,0.8);
+        const leftHand = this.add.circle(0,20,5,0xad704f).setStrokeStyle(1,0x673c2a,0.8);
+        leftForearmRig.add([leftForearm,leftBracer,leftHand]);
+        leftArmRig.add([leftUpperArm,leftForearmRig]);
 
-        // Pernas com pivô no quadril e pés visualmente invertidos.
-        const leftLegRig = this.add.container(-8, 15);
-        const leftThigh = this.add.rectangle(0, 10, 9, 22, 0x7d4d37).setOrigin(0.5, 0.05);
-        const leftShinRig = this.add.container(0, 21);
-        const leftShin = this.add.rectangle(0, 8, 8, 18, 0x87543b).setOrigin(0.5, 0.05);
-        const leftFoot = this.add.container(0, 18);
-        const leftHeel = this.add.ellipse(3, 1, 11, 7, 0x68402d);
-        const leftBackFoot = this.add.ellipse(-8, 2, 19, 7, 0x754630).setAngle(-6);
-        leftFoot.add([leftHeel, leftBackFoot]);
-        leftShinRig.add([leftShin, leftFoot]);
-        leftLegRig.add([leftThigh, leftShinRig]);
+        const rightArmRig = this.add.container(18,-14);
+        const rightUpperArm = this.add.rectangle(0,12,9,25,0x9c5f40).setOrigin(0.5,0.06).setStrokeStyle(1,0x613a29,0.8);
+        const rightForearmRig = this.add.container(0,23);
+        const rightForearm = this.add.rectangle(0,9,8,20,0xa46645).setOrigin(0.5,0.06);
+        const rightBracer = this.add.rectangle(0,15,10,6,0x3d6236).setStrokeStyle(1,0x203c27,0.8);
+        const rightHand = this.add.circle(0,20,5,0xad704f).setStrokeStyle(1,0x673c2a,0.8);
+        rightForearmRig.add([rightForearm,rightBracer,rightHand]);
+        rightArmRig.add([rightUpperArm,rightForearmRig]);
 
-        const rightLegRig = this.add.container(8, 15);
-        const rightThigh = this.add.rectangle(0, 10, 9, 22, 0x7d4d37).setOrigin(0.5, 0.05);
-        const rightShinRig = this.add.container(0, 21);
-        const rightShin = this.add.rectangle(0, 8, 8, 18, 0x87543b).setOrigin(0.5, 0.05);
-        const rightFoot = this.add.container(0, 18);
-        const rightHeel = this.add.ellipse(3, 1, 11, 7, 0x68402d);
-        const rightBackFoot = this.add.ellipse(-8, 2, 19, 7, 0x754630).setAngle(6);
-        rightFoot.add([rightHeel, rightBackFoot]);
-        rightShinRig.add([rightShin, rightFoot]);
-        rightLegRig.add([rightThigh, rightShinRig]);
+        // Pernas fortes e compactas.
+        const leftLegRig = this.add.container(-9,16);
+        const leftThigh = this.add.rectangle(0,11,10,24,0x754832).setOrigin(0.5,0.05).setStrokeStyle(1,0x4b3023,0.8);
+        const leftShinRig = this.add.container(0,22);
+        const leftShin = this.add.rectangle(0,8,9,18,0x845239).setOrigin(0.5,0.05);
+        const leftFoot = this.add.container(0,18);
+        const leftHeel = this.add.ellipse(5,1,12,8,0x66402d);
+        const leftBackToe = this.add.ellipse(-10,2,23,8,0x74452f).setAngle(-8);
+        const leftToeMark = this.add.rectangle(-14,2,6,2,0x9a6a45,0.75);
+        leftFoot.add([leftHeel,leftBackToe,leftToeMark]);
+        leftShinRig.add([leftShin,leftFoot]);
+        leftLegRig.add([leftThigh,leftShinRig]);
 
-        // Cabeça / rosto / cabelo flamejante.
-        const headRig = this.add.container(0, -34);
-        const neck = this.add.rectangle(0, 12, 10, 10, 0x8d553c);
-        const earL = this.add.ellipse(-15, 0, 5, 9, 0x985b40);
-        const earR = this.add.ellipse(15, 0, 5, 9, 0x985b40);
-        const head = this.add.ellipse(0, 0, 29, 31, 0xaa6b4b).setStrokeStyle(1, 0x653928, 0.78);
-        const browL = this.add.rectangle(-6, -5, 7, 2, 0x49271e).setAngle(-10);
-        const browR = this.add.rectangle(6, -5, 7, 2, 0x49271e).setAngle(10);
-        const eyeL = this.add.circle(-6, 0, 2.3, 0xf4d978);
-        const eyeR = this.add.circle(6, 0, 2.3, 0xf4d978);
-        const pupilL = this.add.circle(-6, 0, 1, 0x19100c);
-        const pupilR = this.add.circle(6, 0, 1, 0x19100c);
-        const nose = this.add.triangle(0, 5, -3,3, 3,3, 0,-3, 0x824936);
+        const rightLegRig = this.add.container(9,16);
+        const rightThigh = this.add.rectangle(0,11,10,24,0x754832).setOrigin(0.5,0.05).setStrokeStyle(1,0x4b3023,0.8);
+        const rightShinRig = this.add.container(0,22);
+        const rightShin = this.add.rectangle(0,8,9,18,0x845239).setOrigin(0.5,0.05);
+        const rightFoot = this.add.container(0,18);
+        const rightHeel = this.add.ellipse(5,1,12,8,0x66402d);
+        const rightBackToe = this.add.ellipse(-10,2,23,8,0x74452f).setAngle(8);
+        const rightToeMark = this.add.rectangle(-14,2,6,2,0x9a6a45,0.75);
+        rightFoot.add([rightHeel,rightBackToe,rightToeMark]);
+        rightShinRig.add([rightShin,rightFoot]);
+        rightLegRig.add([rightThigh,rightShinRig]);
+
+        // Cabeça maior e mais agressiva.
+        const headRig = this.add.container(0,-37);
+        const neck = this.add.rectangle(0,14,11,10,0x8d5438);
+        const earL = this.add.polygon(-16,0,[-4,-5,3,0,-4,5],0x985b3e,1);
+        const earR = this.add.polygon(16,0,[4,-5,-3,0,4,5],0x985b3e,1);
+        const head = this.add.ellipse(0,0,33,35,0xaa6847).setStrokeStyle(2,0x593024,0.9);
+        const faceShade = this.add.ellipse(5,4,14,22,0x7f4937,0.24);
+
+        // Sobrancelhas inclinadas e olhos quentes para "cara de mau".
+        const browL = this.add.rectangle(-7,-6,9,3,0x3d211a).setAngle(18);
+        const browR = this.add.rectangle(7,-6,9,3,0x3d211a).setAngle(-18);
+        const eyeGlowL = this.add.circle(-7,-1,3.3,0xf3b238,0.4);
+        const eyeGlowR = this.add.circle(7,-1,3.3,0xf3b238,0.4);
+        const eyeL = this.add.circle(-7,-1,2.2,0xffdc63);
+        const eyeR = this.add.circle(7,-1,2.2,0xffdc63);
+        const pupilL = this.add.circle(-7,-1,1.1,0x170e0b);
+        const pupilR = this.add.circle(7,-1,1.1,0x170e0b);
+        const nose = this.add.triangle(0,5,-3,3,3,3,0,-4,0x7b4431);
         const mouth = this.add.graphics();
-        mouth.lineStyle(2, 0x48251c, 0.95);
-        mouth.beginPath(); mouth.arc(1, 8, 7, 0.15, Math.PI - 0.15, false); mouth.strokePath();
+        mouth.lineStyle(2,0x3e2119,1);
+        mouth.beginPath(); mouth.moveTo(-7,9); mouth.lineTo(0,7); mouth.lineTo(7,9); mouth.strokePath();
+        const fangL = this.add.triangle(-4,10,-2,0,2,0,0,4,0xf0e1bf);
+        const fangR = this.add.triangle(4,10,-2,0,2,0,0,4,0xf0e1bf);
 
-        const hairRig = this.add.container(0, -13);
-        const hairMass = this.add.ellipse(0, -2, 39, 22, 0xc84525);
-        const hairCore = this.add.ellipse(-3, -4, 27, 14, 0xee6a30, 0.95);
-        const hairLocks = [
-            this.add.triangle(-13,-8,-7,1,-20,-1,-11,-17,0xb93f22),
-            this.add.triangle(-7,-12,-6,1,-12,-3,-5,-22,0xe15b2b),
-            this.add.triangle(0,-13,-5,0,6,-1,2,-24,0xf07835),
-            this.add.triangle(7,-12,3,0,14,-2,10,-21,0xd94f27),
-            this.add.triangle(13,-8,8,1,21,-1,17,-16,0xb93f22)
+        // Cabelo em chama com massa e pontas grandes, principal assinatura visual.
+        const hairRig = this.add.container(0,-16);
+        const hairMass = this.add.ellipse(0,-1,48,25,0xbf3e20).setStrokeStyle(1,0x7b2818,0.7);
+        const hairInner = this.add.ellipse(-2,-3,34,17,0xec612c,0.98);
+        const flameBack = [
+            this.add.triangle(-18,-8,-8,1,-28,-2,-16,-24,0xa9321d),
+            this.add.triangle(-10,-12,-6,1,-16,-3,-8,-28,0xd74722),
+            this.add.triangle(0,-14,-7,0,7,0,1,-31,0xf06a2c),
+            this.add.triangle(10,-12,5,1,17,-2,10,-28,0xdf4d23),
+            this.add.triangle(18,-8,9,1,28,-1,18,-23,0xb5361e)
         ];
-        hairRig.add([hairMass, hairCore, ...hairLocks]);
-        const hairLeafL = this.add.ellipse(-15, -15, 11, 5, 0x5b873e, 0.95).setAngle(-30);
-        const hairLeafR = this.add.ellipse(14, -13, 10, 5, 0x4e7638, 0.95).setAngle(28);
-        headRig.add([neck, earL, earR, head, browL, browR, eyeL, eyeR, pupilL, pupilR, nose, mouth, hairRig, hairLeafL, hairLeafR]);
+        hairRig.add([hairMass,hairInner,...flameBack]);
+        const hairLeafL = this.add.ellipse(-18,-17,12,5,0x557b3b,0.96).setAngle(-28);
+        const hairLeafR = this.add.ellipse(17,-15,11,5,0x608842,0.96).setAngle(30);
+
+        headRig.add([
+            neck,earL,earR,head,faceShade,browL,browR,
+            eyeGlowL,eyeGlowR,eyeL,eyeR,pupilL,pupilR,nose,mouth,fangL,fangR,
+            hairRig,hairLeafL,hairLeafR
+        ]);
 
         rig.add([
-            shadow,
-            leftLegRig, rightLegRig,
-            torsoRig,
-            leftArmRig, rightArmRig,
+            shadow,backLeaves,
+            leftLegRig,rightLegRig,
+            torsoRig,shoulderL,shoulderR,
+            leftArmRig,rightArmRig,
             headRig
         ]);
         this.curupiraVisual.add(rig);
         this.curupiraVisual.parts = {
-            rig, shadow, torsoRig, torso, headRig, head, hairRig,
-            leftArmRig, rightArmRig, leftForearmRig, rightForearmRig,
-            leftLegRig, rightLegRig, leftShinRig, rightShinRig,
-            leftFoot, rightFoot
+            rig,shadow,backLeaves,torsoRig,torso,headRig,head,hairRig,
+            leftArmRig,rightArmRig,leftForearmRig,rightForearmRig,
+            leftLegRig,rightLegRig,leftShinRig,rightShinRig,leftFoot,rightFoot,
+            shoulderL,shoulderR,eyeGlowL,eyeGlowR
         };
         this.curupiraVisualFacing = 1;
         this.curupiraBossHud = this.add.container(512, 155).setScrollFactor(0).setDepth(160).setVisible(false);
@@ -2187,117 +2218,143 @@ export class Level2Scene extends Scene
         const p = this.curupiraVisual.parts;
         const vx = this.curupira.body?.velocity?.x || 0;
         const vy = this.curupira.body?.velocity?.y || 0;
-        const moving = Math.abs(vx) > 24;
+        const speedX = Math.abs(vx);
+        const moving = speedX > 24;
         const airborne = Math.abs(vy) > 35 && !this.curupira.body.blocked.down;
         const state = this.curupiraState;
         const attack = state === 'ATTACK';
 
-        // Direção visual sem interferir nos scales/angles funcionais do container externo.
         let facing = this.curupiraVisualFacing || 1;
-        if (Math.abs(vx) > 8) facing = vx > 0 ? 1 : -1;
+        if (speedX > 8) facing = vx > 0 ? 1 : -1;
         else if (this.player && state !== 'DEFEATED') facing = this.player.x >= this.curupira.x ? 1 : -1;
         this.curupiraVisualFacing = facing;
         p.rig.setScale(facing, 1);
 
-        const phase = time * (moving ? 0.018 : 0.006);
-        const gait = Math.sin(phase);
-        const gaitOpp = Math.sin(phase + Math.PI);
-        const breathe = Math.sin(time * 0.005);
-        const hairWave = Math.sin(time * 0.009);
+        const walkPhase = time * (moving ? 0.020 : 0.006);
+        const step = Math.sin(walkPhase);
+        const opposite = -step;
+        const breath = Math.sin(time * 0.0045);
+        const hairPulse = Math.sin(time * 0.011);
+        const menace = Math.sin(time * 0.008);
 
-        // Base viva mesmo parado.
-        p.torsoRig.y = -2 + breathe * 1.2;
-        p.headRig.y = -34 + breathe * 0.7;
-        p.headRig.angle = breathe * 1.4;
-        p.hairRig.y = -13 + hairWave * 1.1;
-        p.hairRig.angle = -hairWave * 2.2;
-        p.shadow.scaleX = moving ? 1.06 : 1;
-        p.shadow.alpha = airborne ? 0.12 : 0.28;
+        // Vida contínua: respiração, cabeça e cabelo nunca ficam totalmente congelados.
+        p.torsoRig.y = -2 + breath * 1.4;
+        p.headRig.y = -37 + breath * 0.8;
+        p.headRig.angle = breath * 1.2;
+        p.hairRig.y = -16 + hairPulse * 1.3;
+        p.hairRig.angle = -hairPulse * 2.8;
+        p.backLeaves.angle = -breath * 1.8;
+        p.eyeGlowL.alpha = 0.28 + (menace + 1) * 0.09;
+        p.eyeGlowR.alpha = p.eyeGlowL.alpha;
+        p.shadow.scaleX = moving ? 1.10 : 1;
+        p.shadow.alpha = airborne ? 0.12 : 0.3;
 
         if (airborne) {
-            const lift = vy < 0 ? -1 : 1;
-            p.leftLegRig.angle = -18 * lift;
-            p.rightLegRig.angle = 20 * lift;
-            p.leftShinRig.angle = 26;
-            p.rightShinRig.angle = 20;
-            p.leftArmRig.angle = 26;
-            p.rightArmRig.angle = -30;
-            p.leftForearmRig.angle = -24;
-            p.rightForearmRig.angle = -18;
-            p.torsoRig.angle = facing * (vy < 0 ? -4 : 5);
+            // Salto: joelhos recolhem, braços abrem e cabeça acompanha arco.
+            const rising = vy < 0;
+            p.leftLegRig.angle = rising ? -26 : 18;
+            p.rightLegRig.angle = rising ? 24 : -18;
+            p.leftShinRig.angle = rising ? 42 : 22;
+            p.rightShinRig.angle = rising ? 34 : 28;
+            p.leftArmRig.angle = rising ? 48 : 30;
+            p.rightArmRig.angle = rising ? -48 : -30;
+            p.leftForearmRig.angle = -30;
+            p.rightForearmRig.angle = 30;
+            p.torsoRig.angle = facing * (rising ? -6 : 7);
+            p.headRig.angle += facing * (rising ? -3 : 5);
             return;
         }
 
         if (attack) {
             if (this.curupiraAttackPattern === 0) {
-                // Dash: corrida agressiva com braços/pernas bem marcados.
-                p.leftLegRig.angle = gait * 28;
-                p.rightLegRig.angle = gaitOpp * 28;
-                p.leftShinRig.angle = Math.max(0, -gait) * 28;
-                p.rightShinRig.angle = Math.max(0, gait) * 28;
-                p.leftArmRig.angle = gaitOpp * 32 - 12;
-                p.rightArmRig.angle = gait * 32 + 18;
-                p.leftForearmRig.angle = -18;
-                p.rightForearmRig.angle = -32;
-                p.torsoRig.angle = facing * -9;
-                p.headRig.angle += facing * 4;
-            } else if (this.curupiraAttackPattern === 1) {
-                // Salto/queda: braços abertos e joelhos flexionados.
-                p.leftLegRig.angle = -22;
-                p.rightLegRig.angle = 22;
-                p.leftShinRig.angle = 34;
-                p.rightShinRig.angle = 34;
-                p.leftArmRig.angle = 48;
-                p.rightArmRig.angle = -48;
+                // Dash: passada curta e rápida, tronco lançado para frente.
+                p.leftLegRig.angle = step * 34;
+                p.rightLegRig.angle = opposite * 34;
+                p.leftShinRig.angle = Math.max(0,-step) * 32;
+                p.rightShinRig.angle = Math.max(0,step) * 32;
+                p.leftArmRig.angle = opposite * 38 - 18;
+                p.rightArmRig.angle = step * 38 + 22;
                 p.leftForearmRig.angle = -28;
-                p.rightForearmRig.angle = 28;
-                p.torsoRig.angle = 0;
-            } else {
-                // Finta: pose assimétrica e ameaçadora.
-                const feint = Math.sin(time * 0.022);
-                p.leftLegRig.angle = feint * 18;
-                p.rightLegRig.angle = -feint * 18;
-                p.leftArmRig.angle = 34 + feint * 10;
-                p.rightArmRig.angle = -56 - feint * 8;
-                p.leftForearmRig.angle = -42;
+                p.rightForearmRig.angle = -38;
+                p.torsoRig.angle = facing * -11;
+                p.headRig.angle += facing * 6;
+                p.backLeaves.angle = -facing * 8;
+            } else if (this.curupiraAttackPattern === 1) {
+                // Ataque aéreo: pose ampla antes da aterrissagem.
+                p.leftLegRig.angle = -28;
+                p.rightLegRig.angle = 28;
+                p.leftShinRig.angle = 44;
+                p.rightShinRig.angle = 44;
+                p.leftArmRig.angle = 62;
+                p.rightArmRig.angle = -62;
+                p.leftForearmRig.angle = -36;
                 p.rightForearmRig.angle = 36;
-                p.torsoRig.angle = facing * 8;
+                p.torsoRig.angle = 0;
+                p.headRig.angle += facing * 3;
+            } else {
+                // Finta: guarda alta, braço dianteiro ameaçador e troca rápida de peso.
+                const feint = Math.sin(time * 0.024);
+                p.leftLegRig.angle = feint * 22;
+                p.rightLegRig.angle = -feint * 22;
+                p.leftShinRig.angle = Math.max(0,-feint) * 18;
+                p.rightShinRig.angle = Math.max(0,feint) * 18;
+                p.leftArmRig.angle = 52 + feint * 10;
+                p.rightArmRig.angle = -68 - feint * 8;
+                p.leftForearmRig.angle = -55;
+                p.rightForearmRig.angle = 48;
+                p.torsoRig.angle = facing * 10;
+                p.headRig.angle += facing * -5;
             }
             return;
         }
 
         if (moving) {
-            // Caminhada/corrida legível: alternância clara de membros.
-            p.leftLegRig.angle = gait * 24;
-            p.rightLegRig.angle = gaitOpp * 24;
-            p.leftShinRig.angle = Math.max(0, -gait) * 24;
-            p.rightShinRig.angle = Math.max(0, gait) * 24;
-            p.leftArmRig.angle = gaitOpp * 25;
-            p.rightArmRig.angle = gait * 25;
-            p.leftForearmRig.angle = -10 + Math.max(0, gaitOpp) * 16;
-            p.rightForearmRig.angle = 10 - Math.max(0, gait) * 16;
-            p.torsoRig.y += Math.abs(gait) * 1.8;
-            p.headRig.y += Math.abs(gait) * 0.8;
-            p.torsoRig.angle = facing * gait * 2.2;
+            // Corrida/patrulha visual: braços e pernas alternam com amplitude forte.
+            p.leftLegRig.angle = step * 30;
+            p.rightLegRig.angle = opposite * 30;
+            p.leftShinRig.angle = Math.max(0,-step) * 30;
+            p.rightShinRig.angle = Math.max(0,step) * 30;
+            p.leftArmRig.angle = opposite * 31;
+            p.rightArmRig.angle = step * 31;
+            p.leftForearmRig.angle = -12 + Math.max(0,opposite) * 20;
+            p.rightForearmRig.angle = 12 - Math.max(0,step) * 20;
+            p.torsoRig.y += Math.abs(step) * 2.2;
+            p.headRig.y += Math.abs(step) * 1.1;
+            p.torsoRig.angle = facing * step * 3.2;
+            p.headRig.angle += -facing * step * 1.8;
+            p.backLeaves.angle = -facing * (3 + Math.abs(step) * 4);
         } else {
-            // Idle com respiração, braços soltos e leve transferência de peso.
-            p.leftLegRig.angle = -3 + breathe * 2;
-            p.rightLegRig.angle = 3 - breathe * 2;
-            p.leftShinRig.angle = 2;
-            p.rightShinRig.angle = -2;
-            p.leftArmRig.angle = 8 + breathe * 4;
-            p.rightArmRig.angle = -8 - breathe * 4;
-            p.leftForearmRig.angle = -8 + breathe * 3;
-            p.rightForearmRig.angle = 8 - breathe * 3;
-            p.torsoRig.angle = breathe * 1.2;
+            // Idle ameaçador: respiração, leve flexão de joelhos e guarda viva.
+            p.leftLegRig.angle = -5 + breath * 2.5;
+            p.rightLegRig.angle = 5 - breath * 2.5;
+            p.leftShinRig.angle = 5 + Math.max(0,breath) * 3;
+            p.rightShinRig.angle = -2 + Math.max(0,-breath) * 3;
+            p.leftArmRig.angle = 18 + breath * 5;
+            p.rightArmRig.angle = -18 - breath * 5;
+            p.leftForearmRig.angle = -24 + breath * 4;
+            p.rightForearmRig.angle = 24 - breath * 4;
+            p.torsoRig.angle = breath * 1.6;
+        }
+
+        if (state === 'PREPARE') {
+            // Leve antecipação visual sem alterar qualquer timing funcional.
+            p.leftArmRig.angle += 14;
+            p.rightArmRig.angle -= 18;
+            p.leftForearmRig.angle -= 12;
+            p.rightForearmRig.angle += 12;
+            p.torsoRig.angle += facing * 4;
+            p.headRig.angle -= facing * 3;
         }
 
         if (state === 'VULNERABLE' || state === 'RECOVERY' || state === 'HIT') {
-            p.leftArmRig.angle += 16;
-            p.rightArmRig.angle -= 16;
+            p.leftArmRig.angle += 22;
+            p.rightArmRig.angle -= 22;
+            p.leftForearmRig.angle += 10;
+            p.rightForearmRig.angle -= 10;
             p.leftLegRig.angle *= 0.45;
             p.rightLegRig.angle *= 0.45;
-            p.headRig.angle += facing * 5;
+            p.headRig.angle += facing * 7;
+            p.torsoRig.y += 2;
         }
     }
 
