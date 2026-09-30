@@ -739,7 +739,7 @@ export class Level3Scene extends Scene
                 if(this.idleVisualStartedAt===null)this.idleVisualStartedAt=time;
                 if(this.attackSprite.texture.key!=='seringueiroIdle')this.attackSprite.setTexture('seringueiroIdle',0);
                 // Respiração a 5 FPS, sem timer ou tween adicional.
-                this.attackSprite.setFrame(Math.floor(Math.max(0,time-this.idleVisualStartedAt)/200)%8);
+                this.attackSprite.setFrame(Math.floor(Math.max(0,time-this.idleVisualStartedAt)/200)%12);
             }
             else if(!grounded)
             {
