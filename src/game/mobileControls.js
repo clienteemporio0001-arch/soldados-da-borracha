@@ -113,7 +113,7 @@ export function createBasicMobileControls (scene)
     const joystickBaseRadius = 66;
     const joystickKnobRadius = 30;
     const joystickMaxTravel = joystickBaseRadius - joystickKnobRadius + 2;
-    const joystickDeadZone = joystickBaseRadius * 0.20;
+    const joystickDeadZone = joystickBaseRadius * 0.18;
     let joystickPointerId = null;
 
     const joystickBase = scene.add.circle(joystickX, joystickY, joystickBaseRadius, 0x07100f, 0.34)
@@ -132,7 +132,7 @@ export function createBasicMobileControls (scene)
         .setDepth(depth + 1);
 
     // Área de toque ligeiramente maior que a representação visual.
-    const joystickHit = scene.add.circle(joystickX, joystickY, joystickBaseRadius + 18, 0x000000, 0)
+    const joystickHit = scene.add.circle(joystickX, joystickY, joystickBaseRadius * 1.4, 0x000000, 0)
         .setScrollFactor(0)
         .setDepth(depth + 2)
         .setInteractive({ useHandCursor: false });
@@ -183,19 +183,23 @@ export function createBasicMobileControls (scene)
         if (joystickPointerId === pointer.id) resetJoystick();
     });
 
-    joystickHit.on('pointerout', (pointer) => {
-        if (joystickPointerId === pointer.id) resetJoystick();
-    });
-
     joystickHit.on('pointerupoutside', (pointer) => {
         if (joystickPointerId === pointer.id) resetJoystick();
     });
 
     const handleJoystickMove = (pointer) => {
-        updateJoystickFromPointer(pointer);
+        if (joystickPointerId !== null && pointer.id === joystickPointerId) {
+            updateJoystickFromPointer(pointer);
+        }
+    };
+
+    const handleJoystickPointerUp = (pointer) => {
+        if (joystickPointerId === pointer.id) resetJoystick();
     };
 
     scene.input.on('pointermove', handleJoystickMove);
+    scene.input.on('pointerup', handleJoystickPointerUp);
+    scene.input.on('pointerupoutside', handleJoystickPointerUp);
 
     // Direita: ataque em cima, pulo e dash embaixo. Mantidos sem alteração funcional.
     makeRoundButton(846, 592, 48, 'ATAQUE', 'attack', () => {
@@ -307,6 +311,18 @@ export function createBasicMobileControls (scene)
         if (scene.staminaHud) scene.staminaHud.setPosition(18, 86).setScale(0.94);
     };
 
+    const refreshJoystickGeometry = () => {
+        // Phaser pointer.x/y já chegam no mesmo espaço lógico 1024×768 usado pelos GameObjects,
+        // inclusive com Scale.FIT, rotação e fullscreen. Reaplicamos a geometria para evitar
+        // qualquer área interativa stale após refresh do canvas.
+        joystickBase.setPosition(joystickX, joystickY);
+        joystickHit.setPosition(joystickX, joystickY);
+        if (joystickPointerId === null) joystickKnob.setPosition(joystickX, joystickY);
+        if (joystickHit.input?.hitArea && 'radius' in joystickHit.input.hitArea) {
+            joystickHit.input.hitArea.radius = joystickBaseRadius * 1.4;
+        }
+    };
+
     const refreshMobileLayout = () => {
         if (typeof window === 'undefined') return;
 
@@ -318,6 +334,7 @@ export function createBasicMobileControls (scene)
         rotateText.setVisible(portrait);
         applyMobileHudLayout();
         scene.scale.refresh();
+        refreshJoystickGeometry();
     };
 
     const onFullscreenChange = () => {
@@ -338,7 +355,7 @@ export function createBasicMobileControls (scene)
     };
 
     scene.input.on('pointerup', releaseButtonPointer);
-    scene.input.on('gameout', releaseAll);
+    scene.input.on('pointerupoutside', releaseButtonPointer);
     canvas?.addEventListener('pointercancel', handlePointerCancel, { passive: true });
 
     window.addEventListener('resize', refreshMobileLayout, { passive: true });
@@ -359,8 +376,10 @@ export function createBasicMobileControls (scene)
         releaseAll();
         scene.events.off('update', setDashAvailable);
         scene.input.off('pointermove', handleJoystickMove);
+        scene.input.off('pointerup', handleJoystickPointerUp);
+        scene.input.off('pointerupoutside', handleJoystickPointerUp);
         scene.input.off('pointerup', releaseButtonPointer);
-        scene.input.off('gameout', releaseAll);
+        scene.input.off('pointerupoutside', releaseButtonPointer);
         canvas?.removeEventListener('pointercancel', handlePointerCancel);
         window.removeEventListener('resize', refreshMobileLayout);
         window.removeEventListener('orientationchange', refreshMobileLayout);
