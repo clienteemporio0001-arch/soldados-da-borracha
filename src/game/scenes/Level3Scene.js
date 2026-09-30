@@ -1960,8 +1960,8 @@ export class Level3Scene extends Scene
             return;
         }
 
-        const left = this.cursors.left.isDown || this.keyA.isDown || this.mobileInput?.left === true;
-        const right = this.cursors.right.isDown || this.keyD.isDown || this.mobileInput?.right === true;
+        const left = this.cursors.left.isDown || this.keyA.isDown;
+        const right = this.cursors.right.isDown || this.keyD.isDown;
         const direction = left && !right ? -1 : right && !left ? 1 : (this.playerVisual.facing || 1);
 
         this.spendStamina(this.dashStaminaCost);
