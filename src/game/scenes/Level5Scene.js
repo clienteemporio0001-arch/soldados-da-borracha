@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { createBasicMobileControls } from '../mobileControls';
 
 export class Level5Scene extends Scene
 {
@@ -124,6 +125,7 @@ export class Level5Scene extends Scene
         this.keyJ.on('down', () => this.queueAttackInput());
         this.keyX.on('down', () => this.queueAttackInput());
         this.keyShift.on('down', () => this.tryDash());
+        createBasicMobileControls(this);
 
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.cameras.main.setDeadzone(220, 160);
@@ -1913,7 +1915,7 @@ export class Level5Scene extends Scene
         const grounded=this.player.body.blocked.down||this.player.body.touching.down;
         if(!grounded&&this.airDashUsed){this.showDashUnavailableFeedback();return;}
         if(this.stamina<this.dashStaminaCost){this.showStaminaBlockedFeedback();return;}
-        const left=this.cursors.left.isDown||this.keyA.isDown,right=this.cursors.right.isDown||this.keyD.isDown;
+        const left=this.cursors.left.isDown||this.keyA.isDown||this.mobileInput?.left===true,right=this.cursors.right.isDown||this.keyD.isDown||this.mobileInput?.right===true;
         const direction=left&&!right?-1:right&&!left?1:(this.playerVisual.facing||1);
         this.spendStamina(this.dashStaminaCost);this.isDashing=true;this.dashLandingVisual=false;this.dashDirection=direction;this.dashEndsAt=this.time.now+this.dashDuration;this.nextDashAt=this.time.now+this.dashCooldown;if(!grounded)this.airDashUsed=true;
         this.player.body.setVelocityX(direction*this.dashSpeed);this.player.body.setVelocityY(this.player.body.velocity.y*.45);this.setMotionSquash(1.09,.92,125);this.showDashFeedback(direction);
@@ -2904,7 +2906,7 @@ export class Level5Scene extends Scene
     {
         const time=this.time.now;const moveSpeed=260;const grounded=this.player.body.blocked.down||this.player.body.touching.down;
         this.updateDash(time,grounded);this.updateStamina(time,grounded);
-        const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown;
+        const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown||this.mobileInput?.jump===true;
         if(jumpDown&&!this.jumpWasDown)this.queueJumpInput(time);else if(!jumpDown&&this.jumpWasDown)this.applyJumpCut();this.jumpWasDown=jumpDown;
 
         if(!this.isPlayerDead&&!this.phaseCompleted){

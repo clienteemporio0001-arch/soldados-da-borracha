@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { createBasicMobileControls } from '../mobileControls';
 
 export class Game extends Scene
 {
@@ -121,6 +122,7 @@ export class Game extends Scene
 
         this.keyJ.on('down', () => this.queueAttackInput());
         this.keyX.on('down', () => this.queueAttackInput());
+        createBasicMobileControls(this);
 
         // Câmera lateral preservada.
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -3523,7 +3525,7 @@ export class Game extends Scene
         const time = this.time.now;
         const moveSpeed = 260;
         const grounded = this.player.body.blocked.down || this.player.body.touching.down;
-        const jumpDown = this.keyW.isDown || this.cursors.up.isDown || this.spaceKey.isDown;
+        const jumpDown = this.keyW.isDown || this.cursors.up.isDown || this.spaceKey.isDown || this.mobileInput?.jump === true;
 
         if (jumpDown && !this.jumpWasDown) this.queueJumpInput(time);
         else if (!jumpDown && this.jumpWasDown) this.applyJumpCut();
@@ -3533,8 +3535,8 @@ export class Game extends Scene
         {
             if (time >= this.knockbackUntil)
             {
-                const moveLeft = this.cursors.left.isDown || this.keyA.isDown;
-                const moveRight = this.cursors.right.isDown || this.keyD.isDown;
+                const moveLeft = this.cursors.left.isDown || this.keyA.isDown || this.mobileInput?.left === true;
+                const moveRight = this.cursors.right.isDown || this.keyD.isDown || this.mobileInput?.right === true;
                 const direction = moveLeft && !moveRight ? -1 : moveRight && !moveLeft ? 1 : 0;
                 if (direction !== 0 && this.lastMoveDirection !== 0 && direction !== this.lastMoveDirection) this.showDirectionChangeFeedback(direction);
                 if (direction !== 0) this.lastMoveDirection = direction;

@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { createBasicMobileControls } from '../mobileControls';
 
 export class Level4Scene extends Scene
 {
@@ -119,6 +120,7 @@ export class Level4Scene extends Scene
         this.keyJ.on('down', () => this.queueAttackInput());
         this.keyX.on('down', () => this.queueAttackInput());
         this.keyShift.on('down', () => this.tryDash());
+        createBasicMobileControls(this);
 
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.cameras.main.setDeadzone(220, 160);
@@ -2276,8 +2278,8 @@ export class Level4Scene extends Scene
         const grounded=this.player.body.blocked.down||this.player.body.touching.down;
         if(!grounded&&this.airDashUsed){this.showDashUnavailableFeedback();return;}
         if(this.stamina<this.dashStaminaCost){this.showStaminaBlockedFeedback();return;}
-        const left=this.cursors.left.isDown||this.keyA.isDown;
-        const right=this.cursors.right.isDown||this.keyD.isDown;
+        const left=this.cursors.left.isDown||this.keyA.isDown||this.mobileInput?.left===true;
+        const right=this.cursors.right.isDown||this.keyD.isDown||this.mobileInput?.right===true;
         const direction=left&&!right?-1:right&&!left?1:(this.playerVisual.facing||1);
 
         this.spendStamina(this.dashStaminaCost);
@@ -3328,7 +3330,7 @@ export class Level4Scene extends Scene
         this.updateDash(time,grounded);
         this.updateStamina(time,grounded);
 
-        const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown;
+        const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown||this.mobileInput?.jump===true;
         if(jumpDown&&!this.jumpWasDown)this.queueJumpInput(time);
         else if(!jumpDown&&this.jumpWasDown)this.applyJumpCut();
         this.jumpWasDown=jumpDown;

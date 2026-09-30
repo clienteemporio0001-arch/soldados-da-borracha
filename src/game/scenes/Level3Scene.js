@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { createBasicMobileControls } from '../mobileControls';
 
 export class Level3Scene extends Scene
 {
@@ -30,7 +31,8 @@ export class Level3Scene extends Scene
         this.isAttacking=false; this.attackStartedAt=0; this.nextAttackAt=0; this.attackDirection=1; this.attackBufferUntil=0; this.attackBufferMs=100; this.attackVisualVariant=-1; this.attackArcShown=false; this.attackHitSnakeRegistered=false; this.attackHitCarapanaRegistered=false;
         this.createSnake(); this.createCarapana(); this.createAttackHitbox(); this.createFruits(); this.createCaboclinhoTrial(); this.createFinalZone();
         this.cursors=this.input.keyboard.createCursorKeys(); this.keyA=this.input.keyboard.addKey('A'); this.keyD=this.input.keyboard.addKey('D'); this.keyW=this.input.keyboard.addKey('W'); this.keyS=this.input.keyboard.addKey('S'); this.spaceKey=this.input.keyboard.addKey('SPACE'); this.keyJ=this.input.keyboard.addKey('J'); this.keyX=this.input.keyboard.addKey('X'); this.keyShift=this.input.keyboard.addKey('SHIFT');
-        this.keyJ.on('down', () => this.queueAttackInput()); this.keyX.on('down', () => this.queueAttackInput()); this.keyShift.on('down',()=>this.tryDash());
+        this.keyJ.on('down', () => this.queueAttackInput()); this.keyX.on('down', () => this.queueAttackInput());
+        createBasicMobileControls(this); this.keyShift.on('down',()=>this.tryDash());
         this.cameras.main.startFollow(this.player,true,0.08,0.08); this.cameras.main.setDeadzone(220,160);
         this.createHud(); this.createHealthHud(); this.createHungerHud(); this.createStaminaHud(); this.showLevelTitle(); this.createLivingAtmosphere(); this.createPorongaLightSystem(); this.spawnPoint={x:150,y:560};
     }
@@ -1958,8 +1960,8 @@ export class Level3Scene extends Scene
             return;
         }
 
-        const left = this.cursors.left.isDown || this.keyA.isDown;
-        const right = this.cursors.right.isDown || this.keyD.isDown;
+        const left = this.cursors.left.isDown || this.keyA.isDown || this.mobileInput?.left === true;
+        const right = this.cursors.right.isDown || this.keyD.isDown || this.mobileInput?.right === true;
         const direction = left && !right ? -1 : right && !left ? 1 : (this.playerVisual.facing || 1);
 
         this.spendStamina(this.dashStaminaCost);
@@ -3223,15 +3225,15 @@ export class Level3Scene extends Scene
         this.updateDash(time,grounded);
         this.updateStamina(time,grounded);
 
-        const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown;
+        const jumpDown=this.keyW.isDown||this.cursors.up.isDown||this.spaceKey.isDown||this.mobileInput?.jump===true;
         if(jumpDown&&!this.jumpWasDown)this.queueJumpInput(time);
         else if(!jumpDown&&this.jumpWasDown)this.applyJumpCut();
         this.jumpWasDown=jumpDown;
 
         if(!this.isPlayerDead&&!this.phaseCompleted){
             if(!this.isDashing&&time>=this.knockbackUntil){
-                const left=this.cursors.left.isDown||this.keyA.isDown;
-                const right=this.cursors.right.isDown||this.keyD.isDown;
+                const left=this.cursors.left.isDown||this.keyA.isDown||this.mobileInput?.left===true;
+                const right=this.cursors.right.isDown||this.keyD.isDown||this.mobileInput?.right===true;
                 const direction=left&&!right?-1:right&&!left?1:0;
                 if(direction!==0&&this.lastMoveDirection!==0&&direction!==this.lastMoveDirection)this.showDirectionChangeFeedback(direction);
                 if(direction!==0)this.lastMoveDirection=direction;
