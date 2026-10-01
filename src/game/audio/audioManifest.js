@@ -4,13 +4,13 @@ export const AUDIO_ASSETS = {
     music_final: { category: 'music', path: null, license: null },
 
     forest_ambient: { category: 'ambient', path: 'audio/ambient/forest_ambient.mp3', license: 'CC0-1.0', gain: 1 },
-    rain_loop: { category: 'ambient', path: 'audio/weather/rain_loop.ogg', license: 'CC0-1.0', gain: 0.9 },
+    rain_loop: { category: 'ambient', path: 'audio/weather/rain_loop.ogg', license: 'CC0-1.0', gain: 2.0 },
     thunder_01: { category: 'sfx', path: 'audio/weather/thunder_01.ogg', license: 'CC0-1.0', gain: 0.9 },
     thunder_02: { category: 'sfx', path: 'audio/weather/thunder_02.ogg', license: 'CC0-1.0', gain: 0.82, detune: -160 },
 
     player_step_01: { category: 'sfx', path: 'audio/player/player_step_01.ogg', license: 'CC0-1.0', gain: 0.68 },
     player_step_02: { category: 'sfx', path: 'audio/player/player_step_02.ogg', license: 'CC0-1.0', gain: 0.68 },
-    player_jump: { category: 'sfx', path: 'audio/player/air_01.ogg', license: 'CC0-1.0', gain: 0.52, rate: 1.1 },
+    player_jump: { category: 'sfx', path: 'audio/player/air_02.ogg', license: 'CC0-1.0', gain: 0.56, rate: 1.18 },
     player_double_jump: { category: 'sfx', path: 'audio/player/air_02.ogg', license: 'CC0-1.0', gain: 0.56, rate: 1.18 },
     player_land: { category: 'sfx', path: 'audio/player/player_step_02.ogg', license: 'CC0-1.0', gain: 0.82, rate: 0.88 },
     player_dash: { category: 'sfx', path: 'audio/player/air_02.ogg', license: 'CC0-1.0', gain: 0.82, rate: 0.92 },
@@ -19,9 +19,9 @@ export const AUDIO_ASSETS = {
     player_hurt: { category: 'sfx', path: 'audio/player/player_hurt.ogg', license: 'CC0-1.0', gain: 0.82 },
     player_death: { category: 'sfx', path: 'audio/player/player_death.ogg', license: 'CC0-1.0', gain: 0.9 },
 
-    snake_hiss: { category: 'sfx', path: 'audio/enemies/snake_hiss.ogg', license: 'CC0-1.0', gain: 0.65, rate: 1.22 },
-    carapana_buzz: { category: 'sfx', path: 'audio/enemies/carapana_buzz.ogg', license: 'CC0-1.0', gain: 0.48, rate: 1.22 },
-    monkey_call: { category: 'sfx', path: 'audio/enemies/monkey_call.ogg', license: 'CC0-1.0', gain: 0.7, rate: 1.08 },
+    snake_hiss: { category: 'sfx', path: 'audio/enemies/snake_hiss.ogg', license: 'CC0-1.0', gain: 0.82, rate: 1.22 },
+    carapana_buzz: { category: 'sfx', path: 'audio/enemies/carapana_buzz.ogg', license: 'CC0-1.0', gain: 0.70, rate: 1.22 },
+    monkey_call: { category: 'sfx', path: 'audio/enemies/monkey_call.ogg', license: 'CC0-1.0', gain: 0.90, rate: 1.08 },
     monkey_throw: { category: 'sfx', path: 'audio/enemies/monkey_call.ogg', license: 'CC0-1.0', gain: 0.42, rate: 1.26 },
     rock_throw: { category: 'sfx', path: 'audio/player/air_01.ogg', license: 'CC0-1.0', gain: 0.5, rate: 1.28 },
     rock_impact: { category: 'sfx', path: 'audio/enemies/stone_01.ogg', license: 'CC0-1.0', gain: 0.72 },
