@@ -24,6 +24,7 @@ Todos os arquivos abaixo foram selecionados somente de fontes identificadas como
 | `player/air_02.ogg` | `sfx100v2_air_02.ogg` | rubberduck | https://opengameart.org/content/100-cc0-sfx-2 | CC0 1.0 | marcel-st/war30k-adventure |
 | `player/jump.wav` | `jump.wav` | MoxieCat | https://opengameart.org/content/8-bit-platformer-sfx-0 | CC0 1.0 | OpenGameArt (espelho verificado: schulerj89/sphere-3d-game) |
 | `player/player_jump_v2.ogg` | `Game-ish jump sound.wav` | SomeOrdinaryDude | https://freesound.org/people/SomeOrdinaryDude/sounds/584350/ | CC0 / Public Domain | Freesound (preview HQ OGG do CDN oficial) |
+| `player/player_jump_v3.ogg` | `air_move.wav` | Almitory | https://opengameart.org/content/air-woosh-move | CC0 1.0 | Corte curto derivado do Air Woosh Move: 0,32 s, mono, low-pass e fade-out |
 | `player/player_hurt.ogg` | `human_01.ogg` | rubberduck | https://opengameart.org/content/80-cc0-creture-sfx-2 | CC0 1.0 | 1993velezpadilla-source/config-old-3 |
 | `player/player_death.ogg` | `human_02.ogg` | rubberduck | https://opengameart.org/content/80-cc0-creture-sfx-2 | CC0 1.0 | 1993velezpadilla-source/config-old-3 |
 | `items/fruit_bite.ogg` | `apple_bite.ogg` | AntumDeluge | https://opengameart.org/content/apple-bite | CC0 1.0 | OpenGameArt (espelho verificado: abcdmku/Corealm, bytes originais sem transcodificação) |
