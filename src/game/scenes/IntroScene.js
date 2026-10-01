@@ -135,7 +135,7 @@ export class IntroScene extends Scene
             this.shadow.setAlpha(0);
             this.camp.setAlpha(0.8);
             this.titleText.setText('AO AMANHECER, RESTARAM APENAS RASTROS.');
-            this.bodyText.setText('Mesmo ferido, ele pegou seu facão e entrou na floresta.\n\nSOLDADOS DA BORRACHA\nA jornada começa.');
+            this.bodyText.setText('Mesmo ferido, ele pegou seu facão e entrou na floresta.\n\nSOLDADO DA BORRACHA\nA jornada começa.');
         }
     }
 
