@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
+import { OncaEncounter } from '../oncaEncounter.js';
 
 export class Level3Scene extends Scene
 {
@@ -35,6 +36,17 @@ export class Level3Scene extends Scene
         createBasicMobileControls(this); this.keyShift.on('down',()=>this.tryDash());
         this.cameras.main.startFollow(this.player,true,0.08,0.08); this.cameras.main.setDeadzone(220,160);
         this.createHud(); this.createHealthHud(); this.createHungerHud(); this.createStaminaHud(); this.showLevelTitle(); this.createLivingAtmosphere(); this.createPorongaLightSystem(); this.spawnPoint={x:150,y:560};
+        this.oncaEncounter = new OncaEncounter(this, {
+            phase: 3,
+            canSpawn: () => {
+                const bossActive = this.caboclinhoTestActive && !this.caboclinhoTestComplete;
+                const introBlocked = bossActive && this.caboclinhoStage === 0 && !this.caboclinhoReachZone?.body?.enable;
+                return {
+                    allowed: !this.phaseCompleted && !this.isPlayerDead && !introBlocked,
+                    bossActive
+                };
+            }
+        });
     }
 
     createHighForest ()
@@ -3253,7 +3265,7 @@ export class Level3Scene extends Scene
             if(this.caboclinhoTestActive&&!this.caboclinhoTestComplete)this.resetCaboclinhoTest();
             this.handlePlayerDeath();
         }
-        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();
+        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.oncaEncounter?.update(time);
     }
 
     createStaminaHud ()

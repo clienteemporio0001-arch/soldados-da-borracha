@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
+import { OncaEncounter } from '../oncaEncounter.js';
 
 export class Level4Scene extends Scene
 {
@@ -134,6 +135,13 @@ export class Level4Scene extends Scene
         this.createPorongaLightSystem();
 
         this.spawnPoint = { x: 150, y: 515 };
+        this.oncaEncounter = new OncaEncounter(this, {
+            phase: 4,
+            canSpawn: () => ({
+                allowed: !this.phaseCompleted && !this.isPlayerDead && !this.escapeStarted,
+                bossActive: false
+            })
+        });
     }
 
     createWoundedForest ()
@@ -3367,6 +3375,7 @@ export class Level4Scene extends Scene
         this.updateFruits(time);
         this.updateHunger(time);
         this.updateLivingAtmosphere();
+        this.oncaEncounter?.update(time);
     }
 
     createStaminaHud ()

@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
+import { OncaEncounter } from '../oncaEncounter.js';
 
 export class Level2Scene extends Scene
 {
@@ -122,6 +123,18 @@ export class Level2Scene extends Scene
         this.createPorongaLightSystem();
 
         this.spawnPoint = { x: 150, y: 560 };
+        this.oncaEncounter = new OncaEncounter(this, {
+            phase: 2,
+            canSpawn: () => {
+                const bossActive = this.arenaStarted && !this.arenaCleared;
+                const bossBlocked = bossActive && (this.curupiraState === 'INTRO' || this.curupiraState === 'DEFEATED');
+                const unlockBlocked = this.arenaCleared && !this.doubleJumpUnlocked;
+                return {
+                    allowed: !this.phaseCompleted && !this.isPlayerDead && !bossBlocked && !unlockBlocked,
+                    bossActive
+                };
+            }
+        });
     }
 
     createDeepForest ()
@@ -4916,6 +4929,7 @@ export class Level2Scene extends Scene
         this.updateCarapana(time);
         this.updateFruits(time);
         this.updateCurupira(time);
+        this.oncaEncounter?.update(time);
         this.updateHunger(time);
         this.updateLivingAtmosphere();
     }

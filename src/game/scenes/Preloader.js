@@ -39,6 +39,8 @@ export class Preloader extends Scene
         this.load.spritesheet('seringueiroJump', 'jump.png', { frameWidth: 512, frameHeight: 512, endFrame: 3 });
         this.load.spritesheet('seringueiroDash', 'dash.png', { frameWidth: 512, frameHeight: 512, endFrame: 4 });
         this.load.spritesheet('seringueiroLanding', 'landing.png?v=landing2-20260930', { frameWidth: 512, frameHeight: 512, endFrame: 1 });
+        // Asset de onca fornecido pelo usuario; origem/licenca externa ainda nao documentadas.
+        this.load.spritesheet('onca', 'onca.png', { frameWidth: 512, frameHeight: 512, endFrame: 7 });
     }
 
     create ()

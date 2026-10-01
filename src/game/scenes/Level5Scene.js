@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
+import { OncaEncounter } from '../oncaEncounter.js';
 
 export class Level5Scene extends Scene
 {
@@ -140,6 +141,17 @@ export class Level5Scene extends Scene
         this.createPorongaLightSystem();
 
         this.spawnPoint = { x: 150, y: 530 };
+        this.oncaEncounter = new OncaEncounter(this, {
+            phase: 5,
+            canSpawn: () => {
+                const bossActive = this.bossStarted && !this.bossDefeated && this.bossState !== 'DORMANT';
+                const bossIntro = this.bossStarted && !this.bossDefeated && this.bossState === 'DORMANT';
+                return {
+                    allowed: !this.phaseCompleted && !this.isPlayerDead && !bossIntro && !this.bossDefeated,
+                    bossActive
+                };
+            }
+        });
     }
 
     createTerritory ()
@@ -2928,6 +2940,6 @@ export class Level5Scene extends Scene
             this.handlePlayerDeath();
         }
 
-        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();
+        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.oncaEncounter?.update(time);
     }
 }
