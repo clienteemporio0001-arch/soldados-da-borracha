@@ -17,10 +17,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify ffmpeg
+      - name: Install audio tooling
         run: |
-          ffmpeg -version | head -1
-          ffprobe -version | head -1
+          python -m pip install --disable-pip-version-check numpy soundfile
 
       - name: Download official Air Woosh Move
         run: |
@@ -30,105 +29,95 @@ jobs:
           test -s /tmp/air_move.wav
           ls -lh /tmp/air_move.wav
 
-      - name: Build normalized V4 from strongest attack
+      - name: Build and verify normalized V4
         run: |
-          ffmpeg -y -hide_banner -loglevel error \
-            -i /tmp/air_move.wav -ac 1 -ar 44100 -c:a pcm_s16le /tmp/air_move_mono.wav
-
           python - <<'PY'
-          import math, struct, wave
-          from pathlib import Path
+          import math
+          import numpy as np
+          import soundfile as sf
 
-          source = "/tmp/air_move_mono.wav"
-          output = "/tmp/player_jump_v4_norm.wav"
+          source = "/tmp/air_move.wav"
+          output = "public/assets/audio/player/player_jump_v4.ogg"
+          target_rate = 44100
           duration_s = 0.32
           pre_peak_s = 0.055
           fade_out_s = 0.055
           target_peak_db = -3.0
 
-          with wave.open(source, "rb") as w:
-              rate = w.getframerate()
-              channels = w.getnchannels()
-              width = w.getsampwidth()
-              frames = w.readframes(w.getnframes())
+          audio, rate = sf.read(source, always_2d=True, dtype="float64")
+          if audio.size == 0:
+              raise SystemExit("Source WAV is empty")
 
-          if rate != 44100 or channels != 1 or width != 2:
-              raise SystemExit(f"Unexpected normalized source format: {rate} Hz, {channels} ch, {width * 8} bit")
+          mono = audio.mean(axis=1)
 
-          samples = list(struct.unpack("<" + "h" * (len(frames) // 2), frames))
-          if not samples:
-              raise SystemExit("Source has no samples")
+          if rate != target_rate:
+              old_x = np.linspace(0.0, 1.0, num=len(mono), endpoint=False)
+              new_len = int(round(len(mono) * target_rate / rate))
+              new_x = np.linspace(0.0, 1.0, num=new_len, endpoint=False)
+              mono = np.interp(new_x, old_x, mono)
+              rate = target_rate
 
-          peak_index = max(range(len(samples)), key=lambda i: abs(samples[i]))
-          segment_len = int(duration_s * rate)
-          start = max(0, peak_index - int(pre_peak_s * rate))
-          if start + segment_len > len(samples):
-              start = max(0, len(samples) - segment_len)
-          segment = samples[start:start + segment_len]
+          peak_index = int(np.argmax(np.abs(mono)))
+          segment_len = int(round(duration_s * rate))
+          start = max(0, peak_index - int(round(pre_peak_s * rate)))
+          if start + segment_len > len(mono):
+              start = max(0, len(mono) - segment_len)
+
+          segment = mono[start:start + segment_len].copy()
           if len(segment) < segment_len:
-              segment += [0] * (segment_len - len(segment))
+              segment = np.pad(segment, (0, segment_len - len(segment)))
 
-          fade_len = int(fade_out_s * rate)
-          if fade_len > 0:
-              for i in range(fade_len):
-                  idx = len(segment) - fade_len + i
-                  if idx >= 0:
-                      segment[idx] = int(segment[idx] * (1.0 - i / fade_len))
+          fade_len = int(round(fade_out_s * rate))
+          if fade_len > 1:
+              segment[-fade_len:] *= np.linspace(1.0, 0.0, fade_len)
 
-          current_peak = max(abs(x) for x in segment)
-          if current_peak <= 0:
+          current_peak = float(np.max(np.abs(segment)))
+          if current_peak <= 1e-9:
               raise SystemExit("Selected segment is silent")
 
-          target_peak = int(32767 * (10 ** (target_peak_db / 20.0)))
-          gain = target_peak / current_peak
-          normalized = [
-              max(-32768, min(32767, int(round(x * gain))))
-              for x in segment
-          ]
+          target_peak = 10 ** (target_peak_db / 20.0)
+          segment *= target_peak / current_peak
+          segment = np.clip(segment, -1.0, 1.0)
 
-          rms = math.sqrt(sum(x * x for x in normalized) / len(normalized))
-          rms_db = 20 * math.log10(rms / 32767) if rms > 0 else -120.0
-          peak = max(abs(x) for x in normalized)
-          peak_db = 20 * math.log10(peak / 32767) if peak > 0 else -120.0
+          peak = float(np.max(np.abs(segment)))
+          rms = float(np.sqrt(np.mean(segment ** 2)))
+          peak_db = 20 * math.log10(peak) if peak > 0 else -120.0
+          rms_db = 20 * math.log10(rms) if rms > 0 else -120.0
 
-          with wave.open(output, "wb") as w:
-              w.setnchannels(1)
-              w.setsampwidth(2)
-              w.setframerate(rate)
-              w.writeframes(struct.pack("<" + "h" * len(normalized), *normalized))
+          sf.write(output, segment, rate, format="OGG", subtype="VORBIS")
 
+          info = sf.info(output)
+          decoded, decoded_rate = sf.read(output, always_2d=True, dtype="float64")
+          decoded_peak = float(np.max(np.abs(decoded))) if decoded.size else 0.0
+          decoded_rms = float(np.sqrt(np.mean(decoded ** 2))) if decoded.size else 0.0
+          decoded_peak_db = 20 * math.log10(decoded_peak) if decoded_peak > 0 else -120.0
+          decoded_rms_db = 20 * math.log10(decoded_rms) if decoded_rms > 0 else -120.0
+          decoded_duration = len(decoded) / decoded_rate if decoded_rate else 0.0
+
+          print(f"source_rate={rate}")
           print(f"source_peak_time={peak_index / rate:.4f}s")
           print(f"segment_start={start / rate:.4f}s")
-          print(f"duration={len(normalized) / rate:.4f}s")
-          print(f"peak_db={peak_db:.2f}")
-          print(f"rms_db={rms_db:.2f}")
-          if not (-3.15 <= peak_db <= -2.85):
-              raise SystemExit(f"Peak normalization outside target: {peak_db:.2f} dB")
-          if rms_db < -28:
-              raise SystemExit(f"Jump remains too quiet by RMS check: {rms_db:.2f} dB")
+          print(f"preencode_peak_db={peak_db:.2f}")
+          print(f"preencode_rms_db={rms_db:.2f}")
+          print(f"format={info.format}")
+          print(f"subtype={info.subtype}")
+          print(f"sample_rate={info.samplerate}")
+          print(f"channels={info.channels}")
+          print(f"duration={decoded_duration:.4f}s")
+          print(f"decoded_peak_db={decoded_peak_db:.2f}")
+          print(f"decoded_rms_db={decoded_rms_db:.2f}")
+
+          if info.format != "OGG" or info.subtype != "VORBIS":
+              raise SystemExit(f"Wrong codec/container: {info.format}/{info.subtype}")
+          if info.samplerate != 44100 or info.channels != 1:
+              raise SystemExit(f"Wrong audio format: {info.samplerate} Hz, {info.channels} ch")
+          if not (0.25 <= decoded_duration <= 0.40):
+              raise SystemExit(f"Wrong duration: {decoded_duration:.4f}s")
+          if not (-3.8 <= decoded_peak_db <= -2.2):
+              raise SystemExit(f"Decoded peak outside expected normalized range: {decoded_peak_db:.2f} dB")
+          if decoded_rms_db < -28:
+              raise SystemExit(f"Jump still too quiet: RMS {decoded_rms_db:.2f} dB")
           PY
-
-          ffmpeg -y -hide_banner -loglevel error \
-            -i /tmp/player_jump_v4_norm.wav \
-            -ac 1 -ar 44100 -c:a libvorbis -q:a 6 \
-            public/assets/audio/player/player_jump_v4.ogg
-
-      - name: Verify V4 codec format duration and audibility
-        run: |
-          ffprobe -v error \
-            -show_entries stream=codec_name,sample_rate,channels \
-            -show_entries format=duration \
-            -of default=noprint_wrappers=1 \
-            public/assets/audio/player/player_jump_v4.ogg | tee /tmp/jump_v4_probe.txt
-
-          grep -q "codec_name=vorbis" /tmp/jump_v4_probe.txt
-          grep -q "sample_rate=44100" /tmp/jump_v4_probe.txt
-          grep -q "channels=1" /tmp/jump_v4_probe.txt
-
-          ffmpeg -hide_banner -i public/assets/audio/player/player_jump_v4.ogg \
-            -af volumedetect -f null - 2>&1 | tee /tmp/jump_v4_volume.txt
-          grep "max_volume" /tmp/jump_v4_volume.txt
-          grep "mean_volume" /tmp/jump_v4_volume.txt
 
       - name: Update manifest preloader and license
         run: |
