@@ -1379,7 +1379,7 @@ export class Level5Scene extends Scene
     {
         objects.forEach(o=>{if(o&&o.destroy)o.destroy();});
         this.add.rectangle(512,384,1024,768,0x020705,.97).setScrollFactor(0).setDepth(500);
-        this.add.text(512,165,'SOLDADOS DA BORRACHA',{fontFamily:'Arial Black',fontSize:'42px',color:'#f1e1ae'}).setOrigin(.5).setScrollFactor(0).setDepth(501);
+        this.add.text(512,165,'SOLDADO DA BORRACHA',{fontFamily:'Arial Black',fontSize:'42px',color:'#f1e1ae'}).setOrigin(.5).setScrollFactor(0).setDepth(501);
         this.add.text(512,265,'A FLORESTA GUARDA\nQUEM APRENDE A ESCUTÁ-LA.',{fontFamily:'Arial Black',fontSize:'26px',color:'#c8d8cc',align:'center'}).setOrigin(.5).setScrollFactor(0).setDepth(501);
         const playerName=String(this.registry.get('playerName')||'SERINGUEIRO').slice(0,16);
         this.add.text(512,340,`SERINGUEIRO ${playerName}`,{fontFamily:'Arial',fontSize:'17px',color:'#9fba9f'}).setOrigin(.5).setScrollFactor(0).setDepth(501);
