@@ -2016,6 +2016,8 @@ export class Level2Scene extends Scene
         this.curupiraWhistleIntroduced = false;
         this.curupiraFalseTrailIntroduced = false;
         this.curupiraWhistleDamageDone = false;
+        this.curupiraForcedNextPattern = null;
+        this.curupiraPhaseBDuoShown = false;
         this.curupiraBaseScale = 1.78;
 
         // Bottom-most point of the procedural feet at scale 1:
@@ -2280,7 +2282,15 @@ export class Level2Scene extends Scene
         if (this.curupiraHealth <= 50) allowed.push(4);
 
         let selected = null;
-        if (this.curupiraHealth <= 50 && !this.curupiraFalseTrailIntroduced) {
+        if (this.curupiraForcedNextPattern !== null) {
+            selected = this.curupiraForcedNextPattern;
+            this.curupiraForcedNextPattern = null;
+            if (selected === 3) this.curupiraWhistleIntroduced = true;
+        } else if (this.curupiraHealth === 75 && !this.curupiraPhaseBDuoShown) {
+            selected = 1;
+            this.curupiraPhaseBDuoShown = true;
+            this.curupiraForcedNextPattern = 3;
+        } else if (this.curupiraHealth <= 50 && !this.curupiraFalseTrailIntroduced) {
             selected = 4;
             this.curupiraFalseTrailIntroduced = true;
         } else if (this.curupiraHealth <= 75 && !this.curupiraWhistleIntroduced) {
@@ -2735,9 +2745,9 @@ export class Level2Scene extends Scene
     {
         if (!this.curupiraVisual?.parts) return;
         const p = this.curupiraVisual.parts;
-        if (p.hairRig?.active !== false) p.hairRig.setScale(1.08, 1.28);
-        if (p.eyeGlowL?.active !== false) p.eyeGlowL.setAlpha(0.95);
-        if (p.eyeGlowR?.active !== false) p.eyeGlowR.setAlpha(0.95);
+        if (p.hairRig && p.hairRig.active !== false) p.hairRig.setScale(1.08, 1.28);
+        if (p.eyeGlowL && p.eyeGlowL.active !== false) p.eyeGlowL.setAlpha(0.95);
+        if (p.eyeGlowR && p.eyeGlowR.active !== false) p.eyeGlowR.setAlpha(0.95);
         this.curupiraVisual.setScale(this.curupiraBaseScale * 1.04, this.curupiraBaseScale * 0.92);
 
         for (let i = 0; i < 6; i += 1) {
@@ -2789,11 +2799,11 @@ export class Level2Scene extends Scene
 
         if (this.curupiraVisual?.parts) {
             const p = this.curupiraVisual.parts;
-            if (p.headRig?.active !== false) p.headRig.setAngle(-10);
-            if (p.torsoRig?.active !== false) p.torsoRig.setScale(1.07, 1.02);
-            if (p.hairRig?.active !== false) p.hairRig.setScale(1.18, 1.08);
-            if (p.eyeGlowL?.active !== false) p.eyeGlowL.setAlpha(0.94);
-            if (p.eyeGlowR?.active !== false) p.eyeGlowR.setAlpha(0.94);
+            if (p.headRig && p.headRig.active !== false) p.headRig.setAngle(-10);
+            if (p.torsoRig && p.torsoRig.active !== false) p.torsoRig.setScale(1.07, 1.02);
+            if (p.hairRig && p.hairRig.active !== false) p.hairRig.setScale(1.18, 1.08);
+            if (p.eyeGlowL && p.eyeGlowL.active !== false) p.eyeGlowL.setAlpha(0.94);
+            if (p.eyeGlowR && p.eyeGlowR.active !== false) p.eyeGlowR.setAlpha(0.94);
         }
 
         for (let i = 0; i < 3; i += 1) {
@@ -2925,7 +2935,8 @@ export class Level2Scene extends Scene
                     this.curupira.y + this.curupiraVisualOffsetY
                 );
             }
-            if (this.curupiraVisual?.parts?.hairRig?.active !== false) {
+            if (this.curupiraVisual?.parts?.hairRig &&
+                this.curupiraVisual.parts.hairRig.active !== false) {
                 this.curupiraVisual.parts.hairRig.setScale(1.10, 1.18);
             }
 
@@ -2985,7 +2996,10 @@ export class Level2Scene extends Scene
         this.curupiraState = 'RECOVERY';
         const recoveryDuration = this.curupiraHealth <= 25 ? Math.min(duration, 180) : duration;
         this.curupiraNextActionAt = time + recoveryDuration;
-        this.curupiraWillChain = this.curupiraComboCount === 0 && this.curupiraAttackSerial > 0 && this.curupiraAttackSerial % 3 === 0;
+        this.curupiraWillChain = this.curupiraComboCount === 0 && (
+            this.curupiraForcedNextPattern !== null ||
+            (this.curupiraAttackSerial > 0 && this.curupiraAttackSerial % 3 === 0)
+        );
 
         if (this.curupiraVisual) {
             this.curupiraVisual.setAlpha(0.92);
@@ -3328,6 +3342,7 @@ export class Level2Scene extends Scene
         this.curupiraState = 'DEFEATED';
         this.curupiraLandingDangerUntil = 0;
         this.curupiraWillChain = false;
+        this.curupiraForcedNextPattern = null;
 
         this.curupiraAttackTimers.forEach(timer => timer?.remove(false));
         this.curupiraAttackTimers.length = 0;
