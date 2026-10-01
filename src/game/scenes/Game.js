@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
 import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
+import { addMuddySwampWaterFromGroundSegments } from '../muddySwampWater.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 import { getAudioManager } from '../audio/AudioManager.js';
 import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
@@ -408,6 +409,11 @@ export class Game extends Scene
             [1420, 652, 760, 116],
             [2300, 652, 700, 116]
         ];
+        this.muddySwampWater = addMuddySwampWaterFromGroundSegments(this, groundSegments, {
+            phase: 1,
+            surfaceY: 700,
+            endX: 3000
+        });
 
         groundSegments.forEach(([x, y, width, height], index) => {
             terrain.fillStyle(index % 2 === 0 ? 0x4b3423 : 0x513824, 1);

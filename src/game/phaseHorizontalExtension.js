@@ -1,3 +1,5 @@
+import { addMuddySwampGap } from './muddySwampWater.js';
+
 export function createHorizontalExpansion (scene, config = {})
 {
     const system = {
@@ -8,6 +10,7 @@ export function createHorizontalExpansion (scene, config = {})
         traversalEndX: config.traversalEndX ?? config.endX ?? 8500,
         resourceEndX: config.resourceEndX ?? config.traversalEndX ?? config.endX ?? 8500,
         groundY: config.groundY ?? 710,
+        swampSurfaceY: config.swampSurfaceY ?? 700,
         checkpointXs: config.checkpointXs ?? [],
         monkeyPerches: config.monkeyPerches ?? [],
         enemies: [],
@@ -52,6 +55,14 @@ export function createHorizontalExpansion (scene, config = {})
                 graphics.fillStyle(i%2?p.leaf:p.rock,.42);
                 graphics.fillEllipse(x,system.groundY-67,12+(i%3)*4,5+(i%2)*2);
             }
+        }
+        const gapStart = cursor + usableW;
+        const gapWidth = Math.max(0, Math.min(gap, system.endX - gapStart));
+        if (gapWidth > 1) {
+            addMuddySwampGap(scene, gapStart, gapWidth, {
+                phase: system.phase,
+                surfaceY: system.swampSurfaceY
+            });
         }
         cursor += usableW + gap;
         serial += 1;

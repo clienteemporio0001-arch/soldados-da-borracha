@@ -3,6 +3,7 @@ import { createBasicMobileControls } from '../mobileControls';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
 import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
+import { addMuddySwampWaterFromGroundSegments } from '../muddySwampWater.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 import { getAudioManager } from '../audio/AudioManager.js';
 import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
@@ -456,6 +457,11 @@ export class Level2Scene extends Scene
         const ground = [
             [0, 652, 800, 116], [860, 652, 600, 116], [1520, 652, 760, 116], [2340, 652, 960, 116]
         ];
+        this.muddySwampWater = addMuddySwampWaterFromGroundSegments(this, ground, {
+            phase: 2,
+            surfaceY: 700,
+            endX: 3300
+        });
 
         ground.forEach(([x, y, w, h], i) => {
             terrain.fillStyle(i % 2 === 0 ? 0x4b3423 : 0x513824, 1);

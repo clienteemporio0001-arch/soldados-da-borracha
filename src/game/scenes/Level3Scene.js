@@ -3,6 +3,7 @@ import { createBasicMobileControls } from '../mobileControls';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
 import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
+import { addMuddySwampWaterFromGroundSegments } from '../muddySwampWater.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 import { getAudioManager } from '../audio/AudioManager.js';
 import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
@@ -251,6 +252,11 @@ export class Level3Scene extends Scene
         add(560,595,150,28);add(900,525,170,28);add(1180,445,160,28);add(1460,585,145,30);add(1720,505,175,28);add(1980,415,165,28);add(2260,560,150,30);add(2470,470,170,28);add(2660,370,165,28);add(2860,500,165,28);add(3000,430,120,24);add(3550,390,150,30);add(3750,315,100,28);
         const g=this.add.graphics().setDepth(5);
         const ground=[[0,652,700,116],[750,652,500,116],[1300,652,420,116],[1840,652,520,116],[2490,652,420,116]];
+        this.muddySwampWater = addMuddySwampWaterFromGroundSegments(this, ground, {
+            phase: 3,
+            surfaceY: 700,
+            endX: 3800
+        });
         ground.forEach(([x,y,w,h],i)=>{g.fillStyle(i%2?0x513824:0x4b3423,1);g.fillRect(x,y,w,h);});
         this.decorateGroundVisual(g,ground,3);
         [[485,581,150,28,'root'],[815,511,170,28,'bank'],[1100,431,160,28,'log'],[1388,570,145,30,'bank'],[1632,491,175,28,'root'],[1898,401,165,28,'log'],[2185,545,150,30,'bank'],[2385,456,170,28,'root'],[2578,356,165,28,'log'],[2778,486,165,28,'bank'],[2940,418,120,24,'root'],[3475,375,150,30,'root'],[3700,301,100,28,'log']].forEach(([x,y,w,h,t])=>this.drawNaturalPlatform(g,x,y,w,h,t));
