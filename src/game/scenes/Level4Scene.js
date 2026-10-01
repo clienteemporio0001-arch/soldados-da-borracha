@@ -5,6 +5,7 @@ import { OncaEncounter } from '../oncaEncounter.js';
 import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 import { getAudioManager } from '../audio/AudioManager.js';
+import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
 
 export class Level4Scene extends Scene
 {
@@ -3326,6 +3327,11 @@ export class Level4Scene extends Scene
         }).setScrollFactor(0).setDepth(101).setVisible(showDesktopControls);
 
         this.createQuickMenuButton();
+        this.audioSettingsUi = createAudioSettingsControl(this, {
+            x: 900,
+            y: 27,
+            buttonSize: 40
+        });
     }
 
     cleanupSceneHazardsBeforeTransition ()
