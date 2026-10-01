@@ -4,6 +4,7 @@ import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
 import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
+import { getAudioManager } from '../audio/AudioManager.js';
 
 export class Level5Scene extends Scene
 {
@@ -178,6 +179,8 @@ export class Level5Scene extends Scene
         });
 
         this.weatherSystem = createTropicalStormSystem(this, { phase: 5 });
+        this.audioManager = getAudioManager(this);
+        this.audioManager?.startScene(this, { music: 'music_forest', ambient: 'forest_ambient' });
 
         this.horizontalExpansion = createHorizontalExpansion(this, {
             phase: 5,
@@ -2802,6 +2805,7 @@ export class Level5Scene extends Scene
         this.oncaEncounter?.destroy?.();
         this.horizontalExpansion?.cleanup?.();
         this.weatherSystem?.cleanup?.();
+        this.audioManager?.cleanupScene(this);
     }
 
     createQuickMenuButton ()
@@ -2997,6 +3001,7 @@ export class Level5Scene extends Scene
 
         this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.weatherSystem?.update(time);this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
 
+        this.audioManager?.updateScene(this, { grounded, time });
         this.horizontalExpansion?.update(this.time.now);
 }
 }

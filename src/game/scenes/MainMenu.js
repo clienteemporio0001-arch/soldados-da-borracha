@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { getAudioManager } from '../audio/AudioManager.js';
 
 export class MainMenu extends Scene
 {
@@ -9,6 +10,7 @@ export class MainMenu extends Scene
 
     create ()
     {
+        this.audioManager = getAudioManager(this);
         this.nameEntryOpen = false;
         this.nameValue = '';
 
@@ -86,7 +88,10 @@ export class MainMenu extends Scene
 
         button.on('pointerover', () => button.setFillStyle(0xb37638));
         button.on('pointerout', () => button.setFillStyle(0x8b5a2b));
-        button.on('pointerdown', onClick);
+        button.on('pointerdown', () => {
+            this.audioManager?.unlock?.();
+            onClick();
+        });
 
         return button;
     }
@@ -150,7 +155,10 @@ export class MainMenu extends Scene
 
         confirmButton.on('pointerover', () => confirmButton.setFillStyle(0xb37638));
         confirmButton.on('pointerout', () => confirmButton.setFillStyle(0x8b5a2b));
-        confirmButton.on('pointerdown', () => this.confirmPlayerName());
+        confirmButton.on('pointerdown', () => {
+            this.audioManager?.unlock?.();
+            this.confirmPlayerName();
+        });
     }
 
     handleNameKey (event)

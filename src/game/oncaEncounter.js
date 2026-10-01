@@ -79,6 +79,7 @@ export class OncaEncounter
 
         this.active = true;
         this.state = 'WARNING';
+        this.scene.audioManager?.playSfx?.('jaguar_growl', { cooldown: 1800, volume: 0.9 });
         this.attackCount = 0;
         this.hitRegistered = false;
         this.side = Math.random() < 0.5 ? -1 : 1;
@@ -173,6 +174,7 @@ export class OncaEncounter
         this.clearEffects();
         this.state = 'CHARGE';
         this.hitRegistered = false;
+        this.scene.audioManager?.playSfx?.('jaguar_charge', { cooldown: 420, volume: 0.9 });
         this.side = side;
 
         const cam = this.scene.cameras.main;

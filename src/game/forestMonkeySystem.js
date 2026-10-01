@@ -41,6 +41,7 @@ export function createForestMonkeySystem (scene, config = {})
         const x = projectile.rock?.x ?? 0;
         const y = projectile.rock?.y ?? 0;
         if (impact && !system.destroyed) {
+            scene.audioManager?.playAtDistance?.('rock_impact', x, { cooldown: 120, volume: 0.62, maxDistance: 760 });
             for (let i = 0; i < 4; i += 1) {
                 const dust = scene.add.circle(
                     x + (i - 1.5) * 4,
@@ -188,6 +189,8 @@ export function createForestMonkeySystem (scene, config = {})
         }
 
         const startX = monkey.visual.x + monkey.facing * 18;
+        scene.audioManager?.playAtDistance?.('monkey_throw', startX, { cooldown: 180, volume: 0.7, maxDistance: 720 });
+        scene.audioManager?.playAtDistance?.('rock_throw', startX, { cooldown: 120, volume: 0.62, maxDistance: 720 });
         const startY = monkey.visual.y - 18;
         const playerVelocityX = scene.player.body?.velocity?.x ?? 0;
         const targetX = scene.player.x +
@@ -307,6 +310,7 @@ export function createForestMonkeySystem (scene, config = {})
         };
         container.setScale(monkey.facing, 1);
         system.monkeys.push(monkey);
+        scene.audioManager?.playAtDistance?.('monkey_call', perch.x, { cooldown: 1400, volume: 0.72, maxDistance: 760 });
         setMonkeyState(monkey, 'IDLE');
         scheduleMonkeyThrow(monkey);
 

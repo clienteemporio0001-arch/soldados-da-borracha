@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
 import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
+import { getAudioManager } from '../audio/AudioManager.js';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 
 export class Game extends Scene
@@ -160,6 +161,8 @@ export class Game extends Scene
         });
 
         this.weatherSystem = createTropicalStormSystem(this, { phase: 1 });
+        this.audioManager = getAudioManager(this);
+        this.audioManager?.startScene(this, { music: 'music_forest', ambient: 'forest_ambient' });
 
         this.horizontalExpansion = createHorizontalExpansion(this, {
             phase: 1,
@@ -3368,6 +3371,7 @@ export class Game extends Scene
         this.oncaEncounter?.destroy?.();
         this.horizontalExpansion?.cleanup?.();
         this.weatherSystem?.cleanup?.();
+        this.audioManager?.cleanupScene(this);
     }
 
     createQuickMenuButton ()
@@ -3659,6 +3663,7 @@ export class Game extends Scene
         this.weatherSystem?.update(time);
         this.forestMonkeySystem?.update(time);
 
+        this.audioManager?.updateScene(this, { grounded, time });
         this.horizontalExpansion?.update(this.time.now);
 }
 }

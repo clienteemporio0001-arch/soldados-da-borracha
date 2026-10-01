@@ -49,6 +49,7 @@ export function createTropicalStormSystem (scene, config = {})
         stateTimer: null,
         lightningTimer: null,
         splashTimer: null,
+        thunderTimer: null,
         cloudsFar: null,
         cloudsNear: null,
         overlay: null,
@@ -205,6 +206,13 @@ export function createTropicalStormSystem (scene, config = {})
         g.setVisible(true).setAlpha(0.9);
 
         system.flash.setVisible(true).setAlpha(phase === 5 ? 0.07 : 0.11);
+        safeRemove(system.thunderTimer);
+        system.thunderTimer = scene.time.delayedCall(200 + Math.random() * 500, () => {
+            system.thunderTimer = null;
+            if (system.destroyed) return;
+            const key = Math.random() < 0.5 ? 'thunder_01' : 'thunder_02';
+            scene.audioManager?.playSfx?.(key, { cooldown: 650, volume: phase === 5 ? 0.68 : 0.82 });
+        });
         scene.tweens.add({
             targets: system.flash,
             alpha: 0,
@@ -282,6 +290,11 @@ export function createTropicalStormSystem (scene, config = {})
         system.state = 'RAIN';
         system.isRaining = true;
         setRainVisualAlpha(1);
+        scene.audioManager?.ensureLoop?.('rain_loop', 'rain_loop', {
+            volume: phase === 5 ? 0.72 : 0.86,
+            owner: scene.sys?.settings?.key
+        });
+        scene.audioManager?.setLoopVolume?.('forest_ambient', 0.45);
         system.overlay.setVisible(true);
         scene.tweens.add({ targets: system.overlay, alpha: phaseConfig.overlay, duration: 420, ease: 'Sine.Out' });
         scheduleLightning();
@@ -294,6 +307,8 @@ export function createTropicalStormSystem (scene, config = {})
         system.state = 'STORM_EXIT';
         system.isRaining = false;
         stopLightning();
+        scene.audioManager?.stopLoop?.('rain_loop');
+        scene.audioManager?.setLoopVolume?.('forest_ambient', 1);
         safeRemove(system.splashTimer);
         system.splashTimer = null;
         system.splashes.forEach(splash => {
@@ -363,9 +378,12 @@ export function createTropicalStormSystem (scene, config = {})
         safeRemove(system.stateTimer);
         safeRemove(system.lightningTimer);
         safeRemove(system.splashTimer);
+        safeRemove(system.thunderTimer);
         system.stateTimer = null;
         system.lightningTimer = null;
         system.splashTimer = null;
+        system.thunderTimer = null;
+        scene.audioManager?.stopLoop?.('rain_loop');
 
         const allTargets = [
             system.cloudsFar,

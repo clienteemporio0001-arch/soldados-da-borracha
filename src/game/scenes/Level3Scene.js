@@ -4,6 +4,7 @@ import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
 import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
+import { getAudioManager } from '../audio/AudioManager.js';
 
 export class Level3Scene extends Scene
 {
@@ -72,6 +73,8 @@ export class Level3Scene extends Scene
         });
 
         this.weatherSystem = createTropicalStormSystem(this, { phase: 3 });
+        this.audioManager = getAudioManager(this);
+        this.audioManager?.startScene(this, { music: 'music_forest', ambient: 'forest_ambient' });
 
         this.horizontalExpansion = createHorizontalExpansion(this, {
             phase: 3,
@@ -2437,6 +2440,7 @@ export class Level3Scene extends Scene
         if (world && arrow.collider) world.removeCollider(arrow.collider);
         if (world && arrow.overlap) world.removeCollider(arrow.overlap);
         if (impact && arrow.body?.active) {
+            this.audioManager?.playAtDistance?.('arrow_impact', arrow.body.x, { cooldown: 120, volume: 0.62, maxDistance: 760 });
             const puff = this.add.circle(arrow.body.x, arrow.body.y, 5, 0xa48d6e, 0.25).setDepth(23);
             this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 150, onComplete: () => puff.destroy() });
         }
@@ -4043,6 +4047,7 @@ export class Level3Scene extends Scene
         this.oncaEncounter?.destroy?.();
         this.horizontalExpansion?.cleanup?.();
         this.weatherSystem?.cleanup?.();
+        this.audioManager?.cleanupScene(this);
         this.cleanupCaboclinhoBoss?.();
     }
 
@@ -4151,6 +4156,7 @@ export class Level3Scene extends Scene
         }
         this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.weatherSystem?.update(time);this.updateCaboclinhoBoss(time);this.animateCaboclinhoVisual(time);this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
 
+        this.audioManager?.updateScene(this, { grounded, time });
         this.horizontalExpansion?.update(this.time.now);
 }
 
