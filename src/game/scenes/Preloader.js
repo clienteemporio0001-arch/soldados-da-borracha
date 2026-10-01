@@ -45,7 +45,10 @@ export class Preloader extends Scene
 
         Object.entries(AUDIO_ASSETS).forEach(([key, asset]) => {
             if (!asset?.path) return;
-            this.load.audio(key, asset.path);
+            const path = (key === 'player_jump' || key === 'player_double_jump')
+                ? `${asset.path}?v=jump-approved-2`
+                : asset.path;
+            this.load.audio(key, path);
         });
     }
 
