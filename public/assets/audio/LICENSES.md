@@ -18,6 +18,7 @@ Todos os arquivos abaixo foram selecionados somente de fontes identificadas como
 | `player/blade_02.ogg` | `blade_02.ogg` | rubberduck | https://opengameart.org/content/80-cc0-rpg-sfx | CC0 1.0 | shionn/Echoes-of-the-Forgotten-Depths |
 | `player/air_01.ogg` | `sfx100v2_air_01.ogg` | rubberduck | https://opengameart.org/content/100-cc0-sfx-2 | CC0 1.0 | marcel-st/war30k-adventure |
 | `player/air_02.ogg` | `sfx100v2_air_02.ogg` | rubberduck | https://opengameart.org/content/100-cc0-sfx-2 | CC0 1.0 | marcel-st/war30k-adventure |
+| `player/jump.wav` | `jump.wav` | MoxieCat | https://opengameart.org/content/8-bit-platformer-sfx-0 | CC0 1.0 | OpenGameArt (espelho verificado: schulerj89/sphere-3d-game) |
 | `player/player_hurt.ogg` | `human_01.ogg` | rubberduck | https://opengameart.org/content/80-cc0-creture-sfx-2 | CC0 1.0 | 1993velezpadilla-source/config-old-3 |
 | `player/player_death.ogg` | `human_02.ogg` | rubberduck | https://opengameart.org/content/80-cc0-creture-sfx-2 | CC0 1.0 | 1993velezpadilla-source/config-old-3 |
 | `enemies/snake_hiss.ogg` | `breath.ogg` | rubberduck | https://opengameart.org/content/80-cc0-creature-sfx | CC0 1.0 | 1993velezpadilla-source/config-old-3 |
