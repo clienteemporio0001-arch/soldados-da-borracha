@@ -8,8 +8,10 @@ export const AUDIO_ASSETS = {
     thunder_01: { category: 'sfx', path: 'audio/weather/thunder_01.ogg', license: 'CC0-1.0', gain: 0.9 },
     thunder_02: { category: 'sfx', path: 'audio/weather/thunder_02.ogg', license: 'CC0-1.0', gain: 0.82, detune: -160 },
 
-    player_step_01: { category: 'sfx', path: 'audio/player/player_step_01.ogg', license: 'CC0-1.0', gain: 0.68 },
-    player_step_02: { category: 'sfx', path: 'audio/player/player_step_02.ogg', license: 'CC0-1.0', gain: 0.68 },
+    player_step_01: { category: 'sfx', path: 'audio/player/player_step_01_v2.ogg', license: 'CC0-1.0', gain: 0.94 },
+    player_step_02: { category: 'sfx', path: 'audio/player/player_step_02_v2.ogg', license: 'CC0-1.0', gain: 0.94 },
+    player_step_03: { category: 'sfx', path: 'audio/player/player_step_03_v2.ogg', license: 'CC0-1.0', gain: 0.94 },
+    player_step_04: { category: 'sfx', path: 'audio/player/player_step_04_v2.ogg', license: 'CC0-1.0', gain: 0.94 },
     player_jump: { category: 'sfx', path: 'audio/player/player_jump_v2.ogg', license: 'CC0-1.0', gain: 0.64, rate: 1.0 },
     player_double_jump: { category: 'sfx', path: 'audio/player/player_jump_v2.ogg', license: 'CC0-1.0', gain: 0.64, rate: 1.0 },
     player_land: { category: 'sfx', path: 'audio/player/player_step_02.ogg', license: 'CC0-1.0', gain: 0.82, rate: 0.88 },

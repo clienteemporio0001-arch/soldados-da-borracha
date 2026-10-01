@@ -380,18 +380,18 @@ class AudioManager
         if (!walking) {
             state.nextStepAt = Math.max(state.nextStepAt, time);
         } else if (time >= state.nextStepAt) {
-            state.stepIndex = (state.stepIndex + 1) % 2;
+            const stepKeys = ['player_step_01', 'player_step_02', 'player_step_03', 'player_step_04'];
+            const stepRates = [0.98, 1.01, 0.97, 1.03];
+            state.stepIndex = (state.stepIndex + 1) % stepKeys.length;
             const raining = Boolean(scene.weatherSystem?.isRaining);
-            const stepRate = state.stepIndex
-                ? (raining ? 0.97 : 0.98)
-                : (raining ? 1.01 : 1.02);
+            const stepRate = stepRates[state.stepIndex] - (raining ? 0.01 : 0);
 
-            this.playSfx(state.stepIndex ? 'player_step_01' : 'player_step_02', {
+            this.playSfx(stepKeys[state.stepIndex], {
                 cooldown: 150,
-                volume: raining ? 0.74 : 0.82,
+                volume: raining ? 0.88 : 0.96,
                 rate: stepRate
             });
-            state.nextStepAt = time + (state.stepIndex ? 215 : 205);
+            state.nextStepAt = time + (state.stepIndex % 2 === 0 ? 205 : 215);
         }
 
         if (scene.snake?.active && scene.snakeVisual?.visible) {

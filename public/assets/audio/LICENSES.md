@@ -14,6 +14,10 @@ Todos os arquivos abaixo foram selecionados somente de fontes identificadas como
 | `weather/thunder_02.ogg` | `sfx100v2_thunder_01.ogg` (variação de reprodução) | rubberduck | https://opengameart.org/content/100-cc0-sfx-2 | CC0 1.0 | cópia CC0 usada com detune diferente |
 | `player/player_step_01.ogg` | `leaves01.ogg` | TinyWorlds | https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud | CC0 1.0 | fangzhangmnm/ZeldaLike |
 | `player/player_step_02.ogg` | `leaves02.ogg` | TinyWorlds | https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud | CC0 1.0 | fangzhangmnm/ZeldaLike |
+| `player/player_step_01_v2.ogg` | `Fantozzi-SandL1.ogg` | Fantozzi | https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 1.0 | OGG/Opus derivado do pacote CC0 (espelho verificado: roobie/skelly) |
+| `player/player_step_02_v2.ogg` | `Fantozzi-SandR1.ogg` | Fantozzi | https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 1.0 | OGG/Opus derivado do pacote CC0 (espelho verificado: roobie/skelly) |
+| `player/player_step_03_v2.ogg` | `Fantozzi-SandL2.ogg` | Fantozzi | https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 1.0 | OGG/Opus derivado do pacote CC0 (espelho verificado: roobie/skelly) |
+| `player/player_step_04_v2.ogg` | `Fantozzi-SandR2.ogg` | Fantozzi | https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 1.0 | OGG/Opus derivado do pacote CC0 (espelho verificado: roobie/skelly) |
 | `player/blade_01.ogg` | `blade_01.ogg` | rubberduck | https://opengameart.org/content/80-cc0-rpg-sfx | CC0 1.0 | shionn/Echoes-of-the-Forgotten-Depths |
 | `player/blade_02.ogg` | `blade_02.ogg` | rubberduck | https://opengameart.org/content/80-cc0-rpg-sfx | CC0 1.0 | shionn/Echoes-of-the-Forgotten-Depths |
 | `player/air_01.ogg` | `sfx100v2_air_01.ogg` | rubberduck | https://opengameart.org/content/100-cc0-sfx-2 | CC0 1.0 | marcel-st/war30k-adventure |
