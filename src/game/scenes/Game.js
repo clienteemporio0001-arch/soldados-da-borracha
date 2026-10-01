@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
+import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 
 export class Game extends Scene
@@ -11,7 +12,7 @@ export class Game extends Scene
 
     create ()
     {
-        const worldWidth = 3000;
+        const worldWidth = 9000;
         const worldHeight = 768;
 
         this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
@@ -156,7 +157,23 @@ export class Game extends Scene
             spawnChance: 0.56,
             isPaused: () => this.phaseCompleted || this.phaseCompleteScreenShown
         });
-    }
+
+        this.horizontalExpansion = createHorizontalExpansion(this, {
+            phase: 1,
+            startX: 3000,
+            endX: 8700,
+            traversalEndX: 8350,
+            resourceEndX: 8350,
+            groundY: 710,
+            checkpointXs: [3300, 6100],
+            checkpointY: 560,
+            enemyXs: [3820, 4720, 5680, 6760, 7580],
+            monkeyPerches: [
+                { x: 3470, y: 338 }, { x: 4310, y: 305 }, { x: 5150, y: 346 },
+                { x: 6020, y: 320 }, { x: 6880, y: 340 }, { x: 7720, y: 310 }
+            ]
+        });
+}
 
     createAmazonAtmosphere (worldWidth, worldHeight)
     {
@@ -538,7 +555,7 @@ export class Game extends Scene
 
     createLevelEnd ()
     {
-        const tapiri=this.add.container(2845,650).setDepth(11);
+        const tapiri=this.add.container(8545,650).setDepth(11);
 
         const floor=this.add.rectangle(0,-14,194,16,0x5a3d27).setAngle(-1);
         const floorBoardA=this.add.rectangle(-46,-19,88,5,0x725035,.75).setAngle(1);
@@ -572,18 +589,18 @@ export class Game extends Scene
 
         tapiri.add([floor,floorBoardA,floorBoardB,leftPost,rightPost,backPost,crossA,wallLeft,wallRight,wallSlat1,wallSlat2,doorway,roofBase,roofShade,...thatch,roofEdge,doorGlow,bench,benchLegA,benchLegB,pot,potLip]);
 
-        this.add.ellipse(2810,635,390,54,0xc2c79a,.055).setDepth(6);
+        this.add.ellipse(8510,635,390,54,0xc2c79a,.055).setDepth(6);
         const useArea=this.add.graphics().setDepth(7);
-        useArea.fillStyle(0x6f5238,.28);useArea.fillEllipse(2765,634,170,22);
+        useArea.fillStyle(0x6f5238,.28);useArea.fillEllipse(8465,634,170,22);
         useArea.fillStyle(0x806b43,.38);
-        [[2710,637],[2740,633],[2865,638],[2900,632]].forEach(([x,y],i)=>useArea.fillEllipse(x,y-(i%2)*2,13,5));
+        [[8410,637],[8440,633],[8565,638],[8600,632]].forEach(([x,y],i)=>useArea.fillEllipse(x,y-(i%2)*2,13,5));
 
         this.tweens.add({targets:doorGlow,alpha:{from:.05,to:.14},duration:1600,yoyo:true,repeat:-1,ease:'Sine.InOut'});
     }
 
     createCompletionZone ()
     {
-        this.completionZone = this.add.rectangle(2830, 585, 180, 135, 0x000000, 0);
+        this.completionZone = this.add.rectangle(8490, 585, 180, 135, 0x000000, 0);
         this.physics.add.existing(this.completionZone);
 
         this.completionZone.body.setAllowGravity(false);
@@ -3625,5 +3642,7 @@ export class Game extends Scene
         this.updateHunger(time);
         this.updateLivingAtmosphere();
         this.forestMonkeySystem?.update(time);
-    }
+
+        this.horizontalExpansion?.update(this.time.now);
+}
 }

@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
+import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
 
 export class Level2Scene extends Scene
 {
@@ -12,7 +13,7 @@ export class Level2Scene extends Scene
 
     create ()
     {
-        this.worldWidth = 3300;
+        this.worldWidth = 9900;
         const worldHeight = 768;
 
         this.physics.world.setBounds(0, 0, this.worldWidth, worldHeight);
@@ -158,7 +159,32 @@ export class Level2Scene extends Scene
                 };
             }
         });
-    }
+
+        this.horizontalExpansion = createHorizontalExpansion(this, {
+            phase: 2,
+            startX: 3300,
+            endX: 9500,
+            traversalEndX: 7200,
+            resourceEndX: 7200,
+            groundY: 710,
+            checkpointXs: [3600, 6750],
+            checkpointY: 560,
+            enemyXs: [3980, 4920, 5860, 6840],
+            monkeyPerches: [
+                { x: 3650, y: 300 }, { x: 4520, y: 280 }, { x: 5450, y: 315 },
+                { x: 6320, y: 275 }, { x: 7060, y: 300 }, { x: 8920, y: 292 }
+            ]
+        });
+
+        [
+            [8740,575,150],[8970,520,150],[9200,455,140],[9430,375,130]
+        ].forEach(([x,y,w])=>{
+            const body=this.add.rectangle(x,y,w,22,0x000000,0);
+            this.physics.add.existing(body,true);this.platforms.add(body);
+            this.add.rectangle(x,y,w,22,0x4a3425,.96).setDepth(10);
+            this.add.ellipse(x,y-12,w*.82,8,0x315a37,.62).setDepth(11);
+        });
+}
 
     createDeepForest ()
     {
@@ -1994,41 +2020,41 @@ export class Level2Scene extends Scene
     {
         this.arenaStarted = false;
         this.arenaCleared = false;
-        this.arenaMinX = 2450;
-        this.arenaMaxX = 2860;
+        this.arenaMinX = 7350;
+        this.arenaMaxX = 8580;
 
         // Clareira do guardião: decoração estática, sem alterar física ou limites.
         const arenaVisual = this.add.graphics().setDepth(6);
         arenaVisual.fillStyle(0x13291d, 0.34);
-        arenaVisual.fillEllipse(2655, 635, 450, 62);
+        arenaVisual.fillEllipse(7965, 635, 1280, 62);
         arenaVisual.lineStyle(15, 0x3a281c, 0.82);
-        [[2460,650,2515,600],[2825,650,2770,596]].forEach(([x1,y1,x2,y2]) => {
+        [[7360,650,7420,600],[8560,650,8500,596]].forEach(([x1,y1,x2,y2]) => {
             arenaVisual.beginPath();
             arenaVisual.moveTo(x1, y1);
             arenaVisual.lineTo(x2, y2);
             arenaVisual.strokePath();
         });
         arenaVisual.fillStyle(0x315a37, 0.64);
-        [[2495,626,26],[2530,634,18],[2795,628,24],[2762,636,17]].forEach(([x,y,r]) => arenaVisual.fillCircle(x, y, r));
+        [[7400,626,26],[7440,634,18],[8530,628,24],[8492,636,17]].forEach(([x,y,r]) => arenaVisual.fillCircle(x, y, r));
 
-        this.add.rectangle(2650, 520, 520, 138, 0xc8d8ce, 0.045)
+        this.add.rectangle(7965, 520, 1280, 138, 0xc8d8ce, 0.045)
             .setDepth(-8)
             .setScrollFactor(0.72);
 
-        this.arenaTrigger = this.add.rectangle(2520, 570, 120, 150, 0x000000, 0);
+        this.arenaTrigger = this.add.rectangle(7480, 570, 140, 150, 0x000000, 0);
         this.physics.add.existing(this.arenaTrigger);
         this.arenaTrigger.body.setAllowGravity(false);
         this.arenaTrigger.body.setImmovable(true);
         this.physics.add.overlap(this.player, this.arenaTrigger, () => this.startCurupiraEncounter());
 
-        this.arenaBarrier = this.add.rectangle(2420, 560, 26, 190, 0x203c28, 0.9).setDepth(16).setVisible(false);
+        this.arenaBarrier = this.add.rectangle(7320, 560, 26, 190, 0x203c28, 0.9).setDepth(16).setVisible(false);
         this.physics.add.existing(this.arenaBarrier, true);
         this.arenaBarrier.body.enable = false;
     }
 
     createCurupira ()
     {
-        this.curupira = this.add.rectangle(2730, 590, 50, 76, 0x000000, 0);
+        this.curupira = this.add.rectangle(8170, 590, 50, 76, 0x000000, 0);
         this.physics.add.existing(this.curupira);
         this.curupira.body.setSize(50, 76);
         this.curupira.body.setCollideWorldBounds(true);
@@ -3835,7 +3861,7 @@ export class Level2Scene extends Scene
 
     createFinalZone ()
     {
-        this.finalZone = this.add.rectangle(3200, 320, 150, 190, 0x000000, 0);
+        this.finalZone = this.add.rectangle(9600, 320, 150, 190, 0x000000, 0);
         this.physics.add.existing(this.finalZone);
         this.finalZone.body.setAllowGravity(false);
         this.finalZone.body.setImmovable(true);
@@ -4956,6 +4982,8 @@ export class Level2Scene extends Scene
         this.forestMonkeySystem?.update(time);
         this.updateHunger(time);
         this.updateLivingAtmosphere();
-    }
+
+        this.horizontalExpansion?.update(this.time.now);
+}
 
 }

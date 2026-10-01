@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
+import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
 
 export class Level3Scene extends Scene
 {
@@ -9,7 +10,7 @@ export class Level3Scene extends Scene
 
     create ()
     {
-        this.worldWidth=3800;
+        this.worldWidth=11400;
         this.physics.world.setBounds(0,0,this.worldWidth,768);
         this.cameras.main.setBounds(0,0,this.worldWidth,768);
         this.cameras.main.setBackgroundColor('#526750');
@@ -69,7 +70,32 @@ export class Level3Scene extends Scene
                 };
             }
         });
-    }
+
+        this.horizontalExpansion = createHorizontalExpansion(this, {
+            phase: 3,
+            startX: 3800,
+            endX: 11320,
+            groundY: 710,
+            checkpointXs: [4050, 6750, 9050],
+            checkpointY: 560,
+            enemyXs: [4380, 5280, 6180, 8720, 9800],
+            monkeyPerches: [
+                { x: 4050, y: 285 }, { x: 4920, y: 250 }, { x: 5840, y: 300 },
+                { x: 6670, y: 245 }, { x: 7500, y: 280 }, { x: 8920, y: 250 },
+                { x: 9860, y: 275 }, { x: 10720, y: 245 }
+            ]
+        });
+
+        [
+            [7200,500,150],[7540,445,140],[7860,390,150],[8200,455,150],
+            [10860,500,150],[10970,425,135],[11080,350,125],[11200,285,120]
+        ].forEach(([x,y,w])=>{
+            const body=this.add.rectangle(x,y,w,22,0x000000,0);
+            this.physics.add.existing(body,true);this.platforms.add(body);
+            this.add.rectangle(x,y,w,22,0x4f3826,.96).setDepth(10);
+            this.add.ellipse(x,y-12,w*.82,8,0x3e7142,.62).setDepth(11);
+        });
+}
 
     createHighForest ()
     {
@@ -1709,9 +1735,9 @@ export class Level3Scene extends Scene
         this.caboclinhoStage = 0;
         this.caboclinhoMoving = false;
         this.caboclinhoPositions = [
-            { x: 2470, y: 405 },
-            { x: 2660, y: 305 },
-            { x: 3000, y: 375 }
+            { x: 7350, y: 405 },
+            { x: 7780, y: 335 },
+            { x: 8300, y: 375 }
         ];
 
         this.caboclinhoVisual = this.createCaboclinhoVisual();
@@ -1724,7 +1750,7 @@ export class Level3Scene extends Scene
         this.caboclinhoReachZone.body.enable = false;
         this.physics.add.overlap(this.player, this.caboclinhoReachZone, () => this.reachCaboclinho());
 
-        this.caboclinhoTrigger = this.add.rectangle(2260, 535, 150, 190, 0x000000, 0);
+        this.caboclinhoTrigger = this.add.rectangle(7000, 535, 170, 190, 0x000000, 0);
         this.physics.add.existing(this.caboclinhoTrigger);
         this.caboclinhoTrigger.body.setAllowGravity(false);
         this.caboclinhoTrigger.body.setImmovable(true);
@@ -2281,7 +2307,7 @@ export class Level3Scene extends Scene
 
     createFinalZone ()
     {
-        this.finalZone=this.add.rectangle(3745,235,100,165,0x000000,0);this.physics.add.existing(this.finalZone);this.finalZone.body.setAllowGravity(false);this.finalZone.body.setImmovable(true);this.physics.add.overlap(this.player,this.finalZone,()=>this.completeLevel3());
+        this.finalZone=this.add.rectangle(11235,235,100,165,0x000000,0);this.physics.add.existing(this.finalZone);this.finalZone.body.setAllowGravity(false);this.finalZone.body.setImmovable(true);this.physics.add.overlap(this.player,this.finalZone,()=>this.completeLevel3());
     }
 
     completeLevel3 ()
@@ -3288,7 +3314,9 @@ export class Level3Scene extends Scene
             this.handlePlayerDeath();
         }
         this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
-    }
+
+        this.horizontalExpansion?.update(this.time.now);
+}
 
     createStaminaHud ()
     {

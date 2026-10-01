@@ -2,6 +2,7 @@ import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
+import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
 
 export class Level5Scene extends Scene
 {
@@ -9,7 +10,7 @@ export class Level5Scene extends Scene
 
     create ()
     {
-        this.worldWidth = 4000;
+        this.worldWidth = 12000;
         this.physics.world.setBounds(0, 0, this.worldWidth, 768);
         this.cameras.main.setBounds(0, 0, this.worldWidth, 768);
         this.cameras.main.setBackgroundColor('#07100f');
@@ -104,7 +105,7 @@ export class Level5Scene extends Scene
         this.bossNextActionAt = 0;
         this.bossAttackSerial = 0;
         this.bossAttackHitRegistered = false;
-        this.bossCheckpoint = { x: 2960, y: 535 };
+        this.bossCheckpoint = { x: 8960, y: 535 };
 
         this.createRecentClues();
         this.createFruits();
@@ -174,7 +175,23 @@ export class Level5Scene extends Scene
                 };
             }
         });
-    }
+
+        this.horizontalExpansion = createHorizontalExpansion(this, {
+            phase: 5,
+            startX: 4000,
+            endX: 9000,
+            traversalEndX: 8700,
+            resourceEndX: 8700,
+            groundY: 710,
+            checkpointXs: [4250, 7350],
+            checkpointY: 530,
+            enemyXs: [4580, 5480, 6420, 7480, 8250],
+            monkeyPerches: [
+                { x: 4300, y: 270 }, { x: 5150, y: 250 }, { x: 6020, y: 290 },
+                { x: 6920, y: 260 }, { x: 7780, y: 285 }, { x: 8500, y: 255 }
+            ]
+        });
+}
 
     createTerritory ()
     {
@@ -656,7 +673,7 @@ export class Level5Scene extends Scene
 
     createCompanionEncounter ()
     {
-        this.companionArea=this.add.container(2870,520).setDepth(18);
+        this.companionArea=this.add.container(8870,520).setDepth(18);
         const shelter=this.add.graphics();
         shelter.lineStyle(18,0x3d2b20,.96);shelter.beginPath();shelter.moveTo(-75,95);shelter.lineTo(-25,-70);shelter.lineTo(40,95);shelter.strokePath();
         shelter.fillStyle(0x102419,.85);shelter.fillEllipse(0,70,160,60);
@@ -665,7 +682,7 @@ export class Level5Scene extends Scene
         const cloth=this.add.rectangle(-12,7,18,30,0x7e3a48,.9).setAngle(5);
         this.companionArea.add([shelter,body,head,cloth]);
 
-        this.companionSensor=this.add.rectangle(2860,510,150,220,0x000000,0);
+        this.companionSensor=this.add.rectangle(8860,510,150,220,0x000000,0);
         this.physics.add.existing(this.companionSensor);
         this.companionSensor.body.setAllowGravity(false);this.companionSensor.body.setImmovable(true);
         this.physics.add.overlap(this.player,this.companionSensor,()=>this.meetCompanion());
@@ -697,23 +714,25 @@ export class Level5Scene extends Scene
 
     moveCompanionToSafety ()
     {
-        this.tweens.add({targets:this.companionArea,x:3030,y:410,duration:680,ease:'Sine.InOut'});
+        this.tweens.add({targets:this.companionArea,x:9050,y:410,duration:680,ease:'Sine.InOut'});
     }
 
     createBossArena ()
     {
-        this.arenaMinX=3000;
-        this.arenaMaxX=3940;
+        this.arenaMinX=9000;
+        this.arenaMaxX=11820;
         const g=this.add.graphics().setDepth(8);
-        g.fillStyle(0x3d2b20,1);g.fillRect(2980,592,960,116);g.fillStyle(0x1f432b,1);g.fillRect(2980,592,960,11);
-        this.arenaLeftPlatform=this.add.rectangle(3260,500,170,25,0x4a3425,1).setDepth(9);
-        this.arenaRightPlatform=this.add.rectangle(3670,465,180,25,0x4a3425,1).setDepth(9);
+        g.fillStyle(0x3d2b20,1);g.fillRect(8980,592,2840,116);g.fillStyle(0x1f432b,1);g.fillRect(8980,592,2840,11);
+        const arenaFloor=this.add.rectangle(10400,650,2840,116,0x000000,0);
+        this.physics.add.existing(arenaFloor,true);this.platforms.add(arenaFloor);
+        this.arenaLeftPlatform=this.add.rectangle(9660,500,170,25,0x4a3425,1).setDepth(9);
+        this.arenaRightPlatform=this.add.rectangle(11160,465,180,25,0x4a3425,1).setDepth(9);
         this.physics.add.existing(this.arenaLeftPlatform,true);this.physics.add.existing(this.arenaRightPlatform,true);
         this.platforms.add(this.arenaLeftPlatform);this.platforms.add(this.arenaRightPlatform);
-        this.addArenaUnstablePlatform(3470,555,140,18);
+        this.addArenaUnstablePlatform(10750,555,140,18);
 
-        this.bossTree=this.add.rectangle(3820,365,44,360,0x3a291e,.96).setDepth(7);
-        this.bossTreeLeaves=this.add.container(3820,185).setDepth(6);
+        this.bossTree=this.add.rectangle(11680,365,44,360,0x3a291e,.96).setDepth(7);
+        this.bossTreeLeaves=this.add.container(11680,185).setDepth(6);
         for(let i=0;i<7;i++)this.bossTreeLeaves.add(this.add.circle((i-3)*24,(i%2)*16,38,0x113220,.92));
     }
 
@@ -727,13 +746,13 @@ export class Level5Scene extends Scene
 
     createMapinguari ()
     {
-        this.mapinguari=this.add.rectangle(3550,470,120,220,0x000000,0);
+        this.mapinguari=this.add.rectangle(10700,470,120,220,0x000000,0);
         this.physics.add.existing(this.mapinguari);
         this.mapinguari.body.setAllowGravity(false);
         this.mapinguari.body.setImmovable(true);
         this.mapinguari.body.enable=false;
 
-        const v=this.add.container(3550,470).setDepth(22).setVisible(false);
+        const v=this.add.container(10700,470).setDepth(22).setVisible(false);
         const shadow=this.add.ellipse(0,105,150,28,0x020302,.35);
         const leftLeg=this.add.rectangle(-34,58,34,92,0x392f24).setOrigin(.5,.1);
         const rightLeg=this.add.rectangle(34,58,34,92,0x392f24).setOrigin(.5,.1);
@@ -764,11 +783,11 @@ export class Level5Scene extends Scene
         });
         this.time.delayedCall(760,()=>this.cameras.main.shake(180,.003));
         this.time.delayedCall(1100,()=>{
-            this.mapinguariVisual.setVisible(true).setAlpha(0).setPosition(3900,470);
-            this.tweens.add({targets:this.mapinguariVisual,x:3550,alpha:1,duration:850,ease:'Quad.Out'});
+            this.mapinguariVisual.setVisible(true).setAlpha(0).setPosition(11700,470);
+            this.tweens.add({targets:this.mapinguariVisual,x:10700,alpha:1,duration:850,ease:'Quad.Out'});
         });
         this.time.delayedCall(1950,()=>{
-            this.mapinguari.setPosition(3550,470);this.mapinguari.body.enable=true;
+            this.mapinguari.setPosition(10700,470);this.mapinguari.body.enable=true;
             this.bossState='RECOVERY';
             this.bossNextActionAt=this.time.now+700;
             this.bossHud.setVisible(true);
@@ -1199,7 +1218,7 @@ export class Level5Scene extends Scene
     telegraphTree ()
     {
         this.bossState='TELEGRAPH';this.bossAttackHitRegistered=false;
-        this.tweens.add({targets:this.mapinguariVisual,x:3700,duration:230});
+        this.tweens.add({targets:this.mapinguariVisual,x:11450,duration:230});
         this.shakeArenaLeaves();
         this.tweens.add({targets:this.bossTree,angle:{from:0,to:-4},duration:120,yoyo:true,repeat:2});
         this.time.delayedCall(500,()=>this.executeBossTree());
@@ -1210,7 +1229,7 @@ export class Level5Scene extends Scene
         if(this.bossDefeated)return;
         this.bossState='ATTACK';
         this.resetBossTreeOnly();
-        const tree=this.add.rectangle(3690,390,300,34,0x3b291e,.98).setOrigin(.5).setAngle(-78).setDepth(25);
+        const tree=this.add.rectangle(11440,390,300,34,0x3b291e,.98).setOrigin(.5).setAngle(-78).setDepth(25);
         this.activeBossFallenTree=tree;
         this.tweens.add({targets:tree,angle:-8,y:575,duration:560,ease:'Quad.In',onUpdate:()=>{
             if(!this.bossAttackHitRegistered&&Math.abs(this.player.x-tree.x)<125&&this.player.y>490){this.bossAttackHitRegistered=true;this.damagePlayer(25,this.player.x<tree.x?-170:170,-250);}
@@ -1282,9 +1301,9 @@ export class Level5Scene extends Scene
     resetBossFight ()
     {
         this.bossStage=1;this.bossProgress=0;this.bossStageProgress=0;this.bossVulnerable=false;this.bossState='RECOVERY';this.bossNextActionAt=this.time.now+900;this.bossAttackSerial=0;this.bossAttackHitRegistered=false;
-        this.mapinguariVisual.setPosition(3550,470).setAngle(0).setAlpha(1).setVisible(true);
+        this.mapinguariVisual.setPosition(10700,470).setAngle(0).setAlpha(1).setVisible(true);
         this.mapinguariVisual.parts.torso.setScale(1);this.mapinguariVisual.parts.leftArm.setAngle(8);this.mapinguariVisual.parts.rightArm.setAngle(-8);
-        this.mapinguari.setPosition(3550,470);this.mapinguari.body.enable=true;
+        this.mapinguari.setPosition(10700,470);this.mapinguari.body.enable=true;
         if(this.arenaUnstable){this.tweens.killTweensOf(this.arenaUnstable.visual);this.arenaUnstable.triggered=false;this.arenaUnstable.body.body.enable=true;this.arenaUnstable.visual.setPosition(this.arenaUnstable.x,this.arenaUnstable.y).setAngle(0).setAlpha(1);}
         this.resetBossTreeOnly();this.bossTree.setAngle(0);this.updateBossHud();
     }
@@ -1309,7 +1328,7 @@ export class Level5Scene extends Scene
 
     retreatMapinguari ()
     {
-        this.tweens.add({targets:this.mapinguariVisual,x:4050,alpha:.25,duration:1450,ease:'Sine.InOut',onComplete:()=>{
+        this.tweens.add({targets:this.mapinguariVisual,x:11950,alpha:.25,duration:1450,ease:'Sine.InOut',onComplete:()=>{
             this.mapinguariVisual.setVisible(false);this.beginFinalNarrative();
         }});
     }
@@ -2963,5 +2982,7 @@ export class Level5Scene extends Scene
         }
 
         this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
-    }
+
+        this.horizontalExpansion?.update(this.time.now);
+}
 }
