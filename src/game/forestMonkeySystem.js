@@ -295,6 +295,32 @@ export function createForestMonkeySystem (scene, config = {})
         monkey.timers.push(timer);
     };
 
+    const scheduleMonkeyCall = (monkey) => {
+        if (!monkey || monkey.removed) return;
+        const timer = scene.time.delayedCall(
+            randomBetween(4000, 7000),
+            () => {
+                const index = monkey.timers.indexOf(timer);
+                if (index >= 0) monkey.timers.splice(index, 1);
+                if (
+                    monkey.removed ||
+                    system.destroyed ||
+                    scene.isPlayerDead ||
+                    scene.phaseCompleted ||
+                    system.isPaused()
+                ) {
+                    return;
+                }
+                scene.audioManager?.playAtDistance?.('monkey_call', monkey.visual.x, {
+                    cooldown: 1200,
+                    volume: 0.95,
+                    maxDistance: 900
+                });
+            }
+        );
+        monkey.timers.push(timer);
+    };
+
     const spawnMonkey = (perch, perchIndex) => {
         const { container, parts } = createMonkeyVisual(perch.x, perch.y);
         const monkey = {
@@ -310,9 +336,10 @@ export function createForestMonkeySystem (scene, config = {})
         };
         container.setScale(monkey.facing, 1);
         system.monkeys.push(monkey);
-        scene.audioManager?.playAtDistance?.('monkey_call', perch.x, { cooldown: 1400, volume: 0.72, maxDistance: 760 });
+        scene.audioManager?.playAtDistance?.('monkey_call', perch.x, { cooldown: 1200, volume: 0.95, maxDistance: 900 });
         setMonkeyState(monkey, 'IDLE');
         scheduleMonkeyThrow(monkey);
+        scheduleMonkeyCall(monkey);
 
         const stayTimer = scene.time.delayedCall(
             randomBetween(8000, 16000),
