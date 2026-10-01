@@ -26,7 +26,7 @@ export class MainMenu extends Scene
             letterSpacing: 4
         }).setOrigin(0.5);
 
-        this.add.text(512, 215, 'SOLDADOS\nDA BORRACHA', {
+        this.add.text(512, 215, 'SOLDADO\nDA BORRACHA', {
             fontFamily: 'Arial Black',
             fontSize: '62px',
             color: '#f1e1ae',
