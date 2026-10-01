@@ -65,19 +65,19 @@ class AudioManager
         if (category === 'master' && this.scene?.sound) this.scene.sound.volume = this.volumes.master;
     }
 
-    canPlay (key, cooldown = 0)
+    canPlay (key, cooldown = 0, cooldownKey = key)
     {
         if (!this.has(key)) return false;
         const now = this.scene?.time?.now ?? 0;
-        const until = this.cooldowns.get(key) ?? 0;
+        const until = this.cooldowns.get(cooldownKey) ?? 0;
         if (now < until) return false;
-        if (cooldown > 0) this.cooldowns.set(key, now + cooldown);
+        if (cooldown > 0) this.cooldowns.set(cooldownKey, now + cooldown);
         return true;
     }
 
     playSfx (key, options = {})
     {
-        if (!this.canPlay(key, options.cooldown ?? 0)) return null;
+        if (!this.canPlay(key, options.cooldown ?? 0, options.cooldownKey ?? key)) return null;
         const asset = AUDIO_ASSETS[key] ?? {};
         const category = asset.category ?? 'sfx';
         const volume = this.categoryVolume(category, (options.volume ?? 1) * (asset.gain ?? 1));
@@ -304,16 +304,31 @@ class AudioManager
             state.nextStepAt = time + 240 + (state.stepIndex ? 25 : 0);
         }
 
-        if (scene.snake?.active && scene.snakeVisual?.visible && Math.abs(scene.snake.x - scene.player.x) < 260) {
-            this.playAtDistance('snake_hiss', scene.snake.x, { cooldown: 3200, volume: 0.72, maxDistance: 420 });
+        if (scene.snake?.active && scene.snakeVisual?.visible) {
+            const snakeDistance = Math.abs(scene.snake.x - scene.player.x);
+            if (snakeDistance < 90) {
+                this.playAtDistance('snake_hiss', scene.snake.x, {
+                    cooldown: 1800,
+                    cooldownKey: 'snake_hiss_contact',
+                    volume: 1,
+                    maxDistance: 420
+                });
+            } else if (snakeDistance < 370) {
+                this.playAtDistance('snake_hiss', scene.snake.x, {
+                    cooldown: 2500,
+                    cooldownKey: 'snake_hiss_near',
+                    volume: 1,
+                    maxDistance: 460
+                });
+            }
         }
 
         const carapanaAlive = scene.carapana?.active && scene.carapanaVisual?.visible && scene.carapana?.body?.enable !== false;
         if (carapanaAlive) {
-            const gain = this.distanceGain(scene.carapana.x, 620, 0);
+            const gain = this.distanceGain(scene.carapana.x, 780, 0);
             if (gain > 0.04) {
-                this.ensureLoop('carapana_buzz', 'carapana_buzz', { volume: 0.42 * gain, owner: scene.sys?.settings?.key });
-                this.setLoopVolume('carapana_buzz', 0.42 * gain);
+                this.ensureLoop('carapana_buzz', 'carapana_buzz', { volume: 0.48 * gain, owner: scene.sys?.settings?.key });
+                this.setLoopVolume('carapana_buzz', 0.48 * gain);
             } else {
                 this.stopLoop('carapana_buzz');
             }
