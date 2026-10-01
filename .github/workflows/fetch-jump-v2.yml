@@ -25,78 +25,19 @@ jobs:
 
       - name: Fetch exact Game-ish jump sound and convert to OGG
         run: |
-          python -m pip install --disable-pip-version-check playwright
-          python -m playwright install chromium
           python - <<'PY'
-          import re
-          from urllib.parse import urljoin
-          from playwright.sync_api import sync_playwright
-
-          sound_page = "https://www.101soundboards.com/sounds/26904642-game-ish-jump-sound-jump-game-sound-effect-at-someordinary"
-          with sync_playwright() as p:
-              browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
-              context = browser.new_context(
-                  user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36"
-              )
-              page = context.new_page()
-              response = page.goto(sound_page, wait_until="domcontentloaded", timeout=60000)
-              page.wait_for_timeout(8000)
-              print("Page status:", response.status if response else None)
-              print("Page title:", page.title())
-
-              candidates = []
-              for selector in ["audio", "audio source"]:
-                  for el in page.locator(selector).all():
-                      src = el.get_attribute("src")
-                      if src:
-                          candidates.append(urljoin(sound_page, src))
-
-              html = page.content()
-              for pattern in [
-                  r'"sound_file_url"\s*:\s*"([^"]+)"',
-                  r'(\/storage\/board_sounds_rendered\/26904642[^"\\]+(?:\\u0026|&)[^"]+)',
-                  r'(https://[^"\']+26904642[^"\']+\.mp3[^"\']*)'
-              ]:
-                  m = re.search(pattern, html)
-                  if m:
-                      candidates.append(urljoin(sound_page, m.group(1).replace("\\/","/").replace("\\u0026","&")))
-
-              resources = page.evaluate("""() => performance.getEntriesByType('resource').map(e => e.name)""")
-              candidates.extend([u for u in resources if "26904642" in u and (".mp3" in u or "/storage/" in u)])
-
-              if not candidates:
-                  try:
-                      page.get_by_text("Play", exact=True).first.click(timeout=5000)
-                      page.wait_for_timeout(3000)
-                  except Exception:
-                      pass
-                  resources = page.evaluate("""() => performance.getEntriesByType('resource').map(e => e.name)""")
-                  candidates.extend([u for u in resources if "26904642" in u and (".mp3" in u or "/storage/" in u)])
-
-              candidates = list(dict.fromkeys(candidates))
-              print("Candidates:", candidates)
-              if not candidates:
-                  raise SystemExit("Could not find target audio URL in browser session")
-
-              audio = None
-              for url in candidates:
-                  try:
-                      r = context.request.get(url, timeout=30000)
-                      body = r.body()
-                      print("Candidate response:", r.status, len(body), url)
-                      if r.ok and len(body) > 1000:
-                          audio = body
-                          break
-                  except Exception as exc:
-                      print("Candidate failed:", exc)
-
-              if not audio:
-                  raise SystemExit("Could not download target audio in browser session")
-              open("/tmp/player_jump_v2.mp3","wb").write(audio)
-              browser.close()
+          import urllib.request
+          url = 'https://cdn.freesound.org/previews/584/584350_12373286-hq.ogg'
+          req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
+          with urllib.request.urlopen(req, timeout=30) as r:
+              data = r.read()
+          if len(data) < 1000:
+              raise SystemExit('Unexpectedly small Freesound preview')
+          open('public/assets/audio/player/player_jump_v2.ogg','wb').write(data)
+          print('Downloaded bytes:', len(data))
           PY
-          ffmpeg -y -hide_banner -loglevel error -i /tmp/player_jump_v2.mp3 -c:a libvorbis -q:a 5 public/assets/audio/player/player_jump_v2.ogg
           ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 public/assets/audio/player/player_jump_v2.ogg
+
       - name: Update jump manifest and license only
         run: |
           python - <<'PY'
