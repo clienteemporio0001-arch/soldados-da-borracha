@@ -273,9 +273,9 @@ class AudioManager
 
         const currentJumps = scene.jumpsUsed ?? 0;
         if (currentJumps > state.jumpsUsed) {
-            this.playSfx(currentJumps > 1 ? 'player_double_jump' : 'player_jump', { cooldown: 100 });
+            this.playSfx('player_double_jump', { cooldown: 100 });
         } else if (state.grounded && !grounded && velocityY < -120) {
-            this.playSfx('player_jump', { cooldown: 100 });
+            this.playSfx('player_double_jump', { cooldown: 100 });
         } else if (!state.grounded && grounded) {
             state.jumpsUsed = 0;
         }
