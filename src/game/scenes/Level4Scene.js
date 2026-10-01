@@ -1948,6 +1948,7 @@ export class Level4Scene extends Scene
         }
 
         fruit.collected = true;
+        this.audioManager?.playSfx?.('fruit_bite', { cooldown: 100, volume: 0.8 });
         fruit.sensor.body.enable = false;
 
         this.hunger = Math.min(this.maxHunger, this.hunger + 25);
