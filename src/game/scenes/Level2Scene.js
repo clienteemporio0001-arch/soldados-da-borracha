@@ -1992,9 +1992,9 @@ export class Level2Scene extends Scene
 
     createCurupira ()
     {
-        this.curupira = this.add.rectangle(2730, 590, 44, 74, 0x000000, 0);
+        this.curupira = this.add.rectangle(2730, 590, 50, 76, 0x000000, 0);
         this.physics.add.existing(this.curupira);
-        this.curupira.body.setSize(44, 74);
+        this.curupira.body.setSize(50, 76);
         this.curupira.body.setCollideWorldBounds(true);
         this.physics.add.collider(this.curupira, this.platforms);
         this.physics.add.overlap(this.player, this.curupira, () => this.handleCurupiraContact());
@@ -2003,130 +2003,148 @@ export class Level2Scene extends Scene
         this.curupiraState = 'INTRO';
         this.curupiraNextActionAt = 0;
         this.curupiraAttackPattern = 0;
+        this.curupiraAttackSerial = 0;
+        this.curupiraComboCount = 0;
+        this.curupiraWillChain = false;
         this.curupiraLandingDangerUntil = 0;
         this.curupiraLandingImpactShown = false;
         this.curupiraLandingMarker = null;
+        this.curupiraAttackTimers = [];
+        this.curupiraBaseScale = 1.78;
 
-        this.curupiraVisual = this.add.container(this.curupira.x, this.curupira.y).setDepth(21).setVisible(false);
+        this.curupiraVisual = this.add.container(this.curupira.x, this.curupira.y)
+            .setDepth(21)
+            .setScale(this.curupiraBaseScale)
+            .setVisible(false);
 
-        // Rig visual remodelado do Curupira. A física continua no retângulo 44x74 acima.
+        // Rig procedural do Curupira: boss maior, robusto e com silhueta de guardião.
         const rig = this.add.container(0, 0);
-        const shadow = this.add.ellipse(0, 36, 54, 12, 0x07100d, 0.3);
+        const shadow = this.add.ellipse(0, 38, 61, 13, 0x07100d, 0.34);
 
-        // Silhueta de guardião: pequena capa de folhas atrás do corpo.
         const backLeaves = this.add.container(0, -7);
         [
-            [-18,-8,-28,-1,0x294f31],[-13,2,-25,10,0x365f39],[-7,8,-16,18,0x3f6f40],
-            [18,-8,28,-1,0x294f31],[13,2,25,10,0x365f39],[7,8,16,18,0x3f6f40]
-        ].forEach(([x,y,tx,ty,color])=>{
-            backLeaves.add(this.add.ellipse(x,y,17,7,color,0.94).setAngle(Math.atan2(ty-y,tx-x) * 180 / Math.PI));
+            [-23,-11,-30,0x294f31],[-18,0,-18,0x365f39],[-12,11,-9,0x3f6f40],
+            [23,-11,30,0x294f31],[18,0,18,0x365f39],[12,11,9,0x3f6f40]
+        ].forEach(([x,y,angle,color])=>{
+            backLeaves.add(this.add.ellipse(x,y,20,8,color,0.94).setAngle(angle));
         });
 
-        // Tronco mais largo e legível, com fibras e adorno de cipó.
         const torsoRig = this.add.container(0, -2);
         const torso = this.add.polygon(0, 0, [
-            -19,-20, 19,-20, 17,8, 12,20, 0,24, -12,20, -17,8
+            -24,-22, 24,-22, 22,7, 16,23, 0,28, -16,23, -22,7
         ], 0x355d38, 1).setStrokeStyle(2, 0x172d1d, 0.95);
-        const chest = this.add.ellipse(-4,-4,20,31,0x4c794a,0.48);
+        const chest = this.add.ellipse(-5,-4,26,34,0x4c794a,0.48);
         const chestFiber = this.add.graphics();
         chestFiber.lineStyle(2,0x87a25a,0.5);
-        chestFiber.beginPath(); chestFiber.moveTo(-9,-15); chestFiber.lineTo(5,17); chestFiber.strokePath();
-        chestFiber.beginPath(); chestFiber.moveTo(7,-15); chestFiber.lineTo(-4,16); chestFiber.strokePath();
-        const belt = this.add.rectangle(0,15,34,6,0x5a3b22,0.98).setStrokeStyle(1,0x2f2118,0.8);
-        const frontLeafL = this.add.triangle(-10,18,-8,-3,8,-3,0,16,0x4e7b3e,1).setAngle(-10);
-        const frontLeafR = this.add.triangle(10,18,-8,-3,8,-3,0,16,0x668f48,1).setAngle(10);
+        chestFiber.beginPath(); chestFiber.moveTo(-12,-16); chestFiber.lineTo(7,19); chestFiber.strokePath();
+        chestFiber.beginPath(); chestFiber.moveTo(10,-16); chestFiber.lineTo(-5,18); chestFiber.strokePath();
+        const belt = this.add.rectangle(0,17,42,7,0x5a3b22,0.98).setStrokeStyle(1,0x2f2118,0.8);
+        const frontLeafL = this.add.ellipse(-13,20,19,8,0x4e7b3e,1).setAngle(-18);
+        const frontLeafR = this.add.ellipse(13,20,19,8,0x668f48,1).setAngle(18);
         torsoRig.add([torso,chest,chestFiber,belt,frontLeafL,frontLeafR]);
 
-        // Ombros com folhas deixam a silhueta mais forte.
-        const shoulderL = this.add.ellipse(-20,-16,18,8,0x527d3e,0.98).setAngle(-24);
-        const shoulderR = this.add.ellipse(20,-16,18,8,0x527d3e,0.98).setAngle(24);
+        const shoulderL = this.add.ellipse(-24,-17,23,11,0x527d3e,0.98).setAngle(-24);
+        const shoulderR = this.add.ellipse(24,-17,23,11,0x527d3e,0.98).setAngle(24);
 
-        // Braços segmentados com pivôs corretos.
-        const leftArmRig = this.add.container(-18,-14);
-        const leftUpperArm = this.add.rectangle(0,12,9,25,0x9c5f40).setOrigin(0.5,0.06).setStrokeStyle(1,0x613a29,0.8);
-        const leftForearmRig = this.add.container(0,23);
-        const leftForearm = this.add.rectangle(0,9,8,20,0xa46645).setOrigin(0.5,0.06);
-        const leftBracer = this.add.rectangle(0,15,10,6,0x3d6236).setStrokeStyle(1,0x203c27,0.8);
-        const leftHand = this.add.circle(0,20,5,0xad704f).setStrokeStyle(1,0x673c2a,0.8);
+        const leftArmRig = this.add.container(-22,-15);
+        const leftUpperArm = this.add.rectangle(0,13,12,28,0x9c5f40).setOrigin(0.5,0.06).setStrokeStyle(1,0x613a29,0.8);
+        const leftForearmRig = this.add.container(0,26);
+        const leftForearm = this.add.rectangle(0,10,11,23,0xa46645).setOrigin(0.5,0.06);
+        const leftBracer = this.add.rectangle(0,17,13,7,0x3d6236).setStrokeStyle(1,0x203c27,0.8);
+        const leftHand = this.add.circle(0,23,6.2,0xad704f).setStrokeStyle(1,0x673c2a,0.8);
         leftForearmRig.add([leftForearm,leftBracer,leftHand]);
         leftArmRig.add([leftUpperArm,leftForearmRig]);
 
-        const rightArmRig = this.add.container(18,-14);
-        const rightUpperArm = this.add.rectangle(0,12,9,25,0x9c5f40).setOrigin(0.5,0.06).setStrokeStyle(1,0x613a29,0.8);
-        const rightForearmRig = this.add.container(0,23);
-        const rightForearm = this.add.rectangle(0,9,8,20,0xa46645).setOrigin(0.5,0.06);
-        const rightBracer = this.add.rectangle(0,15,10,6,0x3d6236).setStrokeStyle(1,0x203c27,0.8);
-        const rightHand = this.add.circle(0,20,5,0xad704f).setStrokeStyle(1,0x673c2a,0.8);
+        const rightArmRig = this.add.container(22,-15);
+        const rightUpperArm = this.add.rectangle(0,13,12,28,0x9c5f40).setOrigin(0.5,0.06).setStrokeStyle(1,0x613a29,0.8);
+        const rightForearmRig = this.add.container(0,26);
+        const rightForearm = this.add.rectangle(0,10,11,23,0xa46645).setOrigin(0.5,0.06);
+        const rightBracer = this.add.rectangle(0,17,13,7,0x3d6236).setStrokeStyle(1,0x203c27,0.8);
+        const rightHand = this.add.circle(0,23,6.2,0xad704f).setStrokeStyle(1,0x673c2a,0.8);
         rightForearmRig.add([rightForearm,rightBracer,rightHand]);
         rightArmRig.add([rightUpperArm,rightForearmRig]);
 
-        // Pernas fortes e compactas.
-        const leftLegRig = this.add.container(-9,16);
-        const leftThigh = this.add.rectangle(0,11,10,24,0x754832).setOrigin(0.5,0.05).setStrokeStyle(1,0x4b3023,0.8);
-        const leftShinRig = this.add.container(0,22);
-        const leftShin = this.add.rectangle(0,8,9,18,0x845239).setOrigin(0.5,0.05);
-        const leftFoot = this.add.container(0,18);
-        const leftHeel = this.add.ellipse(5,1,12,8,0x66402d);
-        const leftBackToe = this.add.ellipse(-10,2,23,8,0x74452f).setAngle(-8);
-        const leftToeMark = this.add.rectangle(-14,2,6,2,0x9a6a45,0.75);
+        const leftLegRig = this.add.container(-11,18);
+        const leftThigh = this.add.rectangle(0,12,13,27,0x754832).setOrigin(0.5,0.05).setStrokeStyle(1,0x4b3023,0.8);
+        const leftShinRig = this.add.container(0,25);
+        const leftShin = this.add.rectangle(0,9,12,21,0x845239).setOrigin(0.5,0.05);
+        const leftFoot = this.add.container(0,21);
+        const leftHeel = this.add.ellipse(6,1,14,9,0x66402d);
+        const leftBackToe = this.add.ellipse(-12,2,27,9,0x74452f).setAngle(-8);
+        const leftToeMark = this.add.rectangle(-17,2,7,2,0x9a6a45,0.75);
         leftFoot.add([leftHeel,leftBackToe,leftToeMark]);
         leftShinRig.add([leftShin,leftFoot]);
         leftLegRig.add([leftThigh,leftShinRig]);
 
-        const rightLegRig = this.add.container(9,16);
-        const rightThigh = this.add.rectangle(0,11,10,24,0x754832).setOrigin(0.5,0.05).setStrokeStyle(1,0x4b3023,0.8);
-        const rightShinRig = this.add.container(0,22);
-        const rightShin = this.add.rectangle(0,8,9,18,0x845239).setOrigin(0.5,0.05);
-        const rightFoot = this.add.container(0,18);
-        const rightHeel = this.add.ellipse(5,1,12,8,0x66402d);
-        const rightBackToe = this.add.ellipse(-10,2,23,8,0x74452f).setAngle(8);
-        const rightToeMark = this.add.rectangle(-14,2,6,2,0x9a6a45,0.75);
+        const rightLegRig = this.add.container(11,18);
+        const rightThigh = this.add.rectangle(0,12,13,27,0x754832).setOrigin(0.5,0.05).setStrokeStyle(1,0x4b3023,0.8);
+        const rightShinRig = this.add.container(0,25);
+        const rightShin = this.add.rectangle(0,9,12,21,0x845239).setOrigin(0.5,0.05);
+        const rightFoot = this.add.container(0,21);
+        const rightHeel = this.add.ellipse(6,1,14,9,0x66402d);
+        const rightBackToe = this.add.ellipse(-12,2,27,9,0x74452f).setAngle(8);
+        const rightToeMark = this.add.rectangle(-17,2,7,2,0x9a6a45,0.75);
         rightFoot.add([rightHeel,rightBackToe,rightToeMark]);
         rightShinRig.add([rightShin,rightFoot]);
         rightLegRig.add([rightThigh,rightShinRig]);
 
-        // Cabeça maior e mais agressiva.
-        const headRig = this.add.container(0,-37);
-        const neck = this.add.rectangle(0,14,11,10,0x8d5438);
-        const earL = this.add.polygon(-16,0,[-4,-5,3,0,-4,5],0x985b3e,1);
-        const earR = this.add.polygon(16,0,[4,-5,-3,0,4,5],0x985b3e,1);
-        const head = this.add.ellipse(0,0,33,35,0xaa6847).setStrokeStyle(2,0x593024,0.9);
-        const faceShade = this.add.ellipse(5,4,14,22,0x7f4937,0.24);
+        const headRig = this.add.container(0,-42);
+        const neck = this.add.rectangle(0,15,13,11,0x8d5438);
+        const earL = this.add.polygon(-18,0,[-5,-6,3,0,-5,6],0x985b3e,1);
+        const earR = this.add.polygon(18,0,[5,-6,-3,0,5,6],0x985b3e,1);
+        const head = this.add.ellipse(0,0,37,39,0xaa6847).setStrokeStyle(2,0x593024,0.9);
+        const jaw = this.add.ellipse(0,10,25,15,0x8d523b,0.42);
+        const faceShade = this.add.ellipse(6,4,16,24,0x7f4937,0.26);
 
-        // Sobrancelhas inclinadas e olhos quentes para "cara de mau".
-        const browL = this.add.rectangle(-7,-6,9,3,0x3d211a).setAngle(18);
-        const browR = this.add.rectangle(7,-6,9,3,0x3d211a).setAngle(-18);
-        const eyeGlowL = this.add.circle(-7,-1,3.3,0xf3b238,0.4);
-        const eyeGlowR = this.add.circle(7,-1,3.3,0xf3b238,0.4);
-        const eyeL = this.add.circle(-7,-1,2.2,0xffdc63);
-        const eyeR = this.add.circle(7,-1,2.2,0xffdc63);
-        const pupilL = this.add.circle(-7,-1,1.1,0x170e0b);
-        const pupilR = this.add.circle(7,-1,1.1,0x170e0b);
+        const browL = this.add.rectangle(-8,-7,11,3.5,0x321913).setAngle(24);
+        const browR = this.add.rectangle(8,-7,11,3.5,0x321913).setAngle(-24);
+        const eyeGlowL = this.add.circle(-8,-1,4.2,0xff6a1f,0.36);
+        const eyeGlowR = this.add.circle(8,-1,4.2,0xff6a1f,0.36);
+        const eyeL = this.add.ellipse(-8,-1,5.2,2.8,0xffbd35);
+        const eyeR = this.add.ellipse(8,-1,5.2,2.8,0xffbd35);
+        const pupilL = this.add.ellipse(-8,-1,1.5,2.2,0x120a08);
+        const pupilR = this.add.ellipse(8,-1,1.5,2.2,0x120a08);
         const nose = this.add.triangle(0,5,-3,3,3,3,0,-4,0x7b4431);
-        const mouth = this.add.graphics();
-        mouth.lineStyle(2,0x3e2119,1);
-        mouth.beginPath(); mouth.moveTo(-7,9); mouth.lineTo(0,7); mouth.lineTo(7,9); mouth.strokePath();
-        const fangL = this.add.triangle(-4,10,-2,0,2,0,0,4,0xf0e1bf);
-        const fangR = this.add.triangle(4,10,-2,0,2,0,0,4,0xf0e1bf);
+        const mouthDark = this.add.ellipse(0,11,15,7,0x351a16,0.95);
+        const fangL = this.add.triangle(-4.5,10,-2.1,0,2.1,0,0,4.7,0xf0e1bf);
+        const fangR = this.add.triangle(4.5,10,-2.1,0,2.1,0,0,4.7,0xf0e1bf);
 
-        // Cabelo em chama com massa e pontas grandes, principal assinatura visual.
-        const hairRig = this.add.container(0,-16);
-        const hairMass = this.add.ellipse(0,-1,48,25,0xbf3e20).setStrokeStyle(1,0x7b2818,0.7);
-        const hairInner = this.add.ellipse(-2,-3,34,17,0xec612c,0.98);
-        const flameBack = [
-            this.add.triangle(-18,-8,-8,1,-28,-2,-16,-24,0xa9321d),
-            this.add.triangle(-10,-12,-6,1,-16,-3,-8,-28,0xd74722),
-            this.add.triangle(0,-14,-7,0,7,0,1,-31,0xf06a2c),
-            this.add.triangle(10,-12,5,1,17,-2,10,-28,0xdf4d23),
-            this.add.triangle(18,-8,9,1,28,-1,18,-23,0xb5361e)
+        // Cabelo-fogo sem triângulos soltos: todas as chamas nascem e se sobrepõem à massa do cabelo.
+        const hairRig = this.add.container(0,-18);
+        const hairMass = this.add.ellipse(0,0,52,27,0x9f2f1c).setStrokeStyle(1,0x6f2117,0.78);
+        const hairMid = this.add.ellipse(-1,-3,43,22,0xd94420,0.98);
+        const hairHot = this.add.ellipse(-2,-5,29,14,0xf36f25,0.88);
+        const flameData = [
+            [-20,-11,13,29,-16,0xb52f1c,0xef5a23],
+            [-13,-16,14,34,-9,0xc93a1d,0xf47a27],
+            [-5,-19,14,39,-3,0xe14b20,0xff9230],
+            [4,-20,15,41,4,0xe85521,0xffa337],
+            [13,-16,14,34,10,0xd7431f,0xf47a27],
+            [20,-11,13,29,16,0xb9341d,0xef5a23]
         ];
-        hairRig.add([hairMass,hairInner,...flameBack]);
-        const hairLeafL = this.add.ellipse(-18,-17,12,5,0x557b3b,0.96).setAngle(-28);
-        const hairLeafR = this.add.ellipse(17,-15,11,5,0x608842,0.96).setAngle(30);
+        const hairFlames = [];
+        const hairInnerFlames = [];
+        flameData.forEach(([x,y,w,h,angle,outerColor,innerColor],index)=>{
+            const flame=this.add.ellipse(x,y,w,h,outerColor,0.98).setAngle(angle).setOrigin(0.5,0.72);
+            const inner=this.add.ellipse(x,y+3,w*0.45,h*0.52,innerColor,0.82).setAngle(angle).setOrigin(0.5,0.76);
+            hairFlames.push(flame);
+            hairInnerFlames.push(inner);
+            hairRig.add([flame,inner]);
+            if(index===2||index===3){
+                const core=this.add.ellipse(x,y+7,w*0.22,h*0.27,0xffcf4a,0.82).setAngle(angle).setOrigin(0.5,0.8);
+                hairInnerFlames.push(core);
+                hairRig.add(core);
+            }
+        });
+        hairRig.addAt(hairMass,0);
+        hairRig.addAt(hairMid,1);
+        hairRig.addAt(hairHot,2);
+        const hairLeafL = this.add.ellipse(-21,-13,13,5,0x557b3b,0.96).setAngle(-30);
+        const hairLeafR = this.add.ellipse(21,-12,12,5,0x608842,0.96).setAngle(30);
 
         headRig.add([
-            neck,earL,earR,head,faceShade,browL,browR,
-            eyeGlowL,eyeGlowR,eyeL,eyeR,pupilL,pupilR,nose,mouth,fangL,fangR,
+            neck,earL,earR,head,jaw,faceShade,browL,browR,
+            eyeGlowL,eyeGlowR,eyeL,eyeR,pupilL,pupilR,nose,mouthDark,fangL,fangR,
             hairRig,hairLeafL,hairLeafR
         ]);
 
@@ -2139,12 +2157,14 @@ export class Level2Scene extends Scene
         ]);
         this.curupiraVisual.add(rig);
         this.curupiraVisual.parts = {
-            rig,shadow,backLeaves,torsoRig,torso,headRig,head,hairRig,
+            rig,shadow,backLeaves,torsoRig,torso,headRig,head,hairRig,hairMass,hairMid,hairHot,
+            hairFlames,hairInnerFlames,hairLeafL,hairLeafR,
             leftArmRig,rightArmRig,leftForearmRig,rightForearmRig,
             leftLegRig,rightLegRig,leftShinRig,rightShinRig,leftFoot,rightFoot,
             shoulderL,shoulderR,eyeGlowL,eyeGlowR
         };
         this.curupiraVisualFacing = 1;
+
         this.curupiraBossHud = this.add.container(512, 155).setScrollFactor(0).setDepth(160).setVisible(false);
         const bg = this.add.rectangle(0, 0, 430, 58, 0x06100d, 0.9).setOrigin(0.5, 0);
         bg.setStrokeStyle(1, 0x8c7558, 0.55);
@@ -2191,33 +2211,34 @@ export class Level2Scene extends Scene
 
     beginCurupiraPreparation (startAt = this.time.now)
     {
-        if (this.arenaCleared) return;
+        if (this.arenaCleared || this.curupiraState === 'DEFEATED' || !this.curupira?.body?.enable) return;
 
         this.curupiraState = 'PREPARE';
         this.curupira.body.setVelocity(0, 0);
         this.curupiraAttackPattern = (this.curupiraAttackPattern + 1) % 3;
-        this.curupiraNextActionAt = startAt + 300;
+        this.curupiraNextActionAt = startAt + 250;
 
+        if (!this.curupiraVisual) return;
         this.curupiraVisual.setAlpha(1);
-        this.curupiraVisual.setScale(1, 1);
+        this.curupiraVisual.setAngle(0);
+        this.curupiraVisual.setScale(this.curupiraBaseScale);
 
-        if (this.curupiraAttackPattern === 1) {
-            this.curupiraVisual.setAngle(0);
-            this.curupiraVisual.setScale(1.08, 0.84);
-        } else {
-            const lean = this.player.x < this.curupira.x ? -9 : 9;
-            this.curupiraVisual.setAngle(this.curupiraAttackPattern === 2 ? -lean : lean);
-            this.curupiraVisual.setScale(1.04, 0.97);
+        const p = this.curupiraVisual.parts;
+        if (p) {
+            p.eyeGlowL.setAlpha(0.72);
+            p.eyeGlowR.setAlpha(0.72);
+            p.hairRig.setScale(1.04, 1.08);
+            p.backLeaves.setAngle(this.player.x < this.curupira.x ? 6 : -6);
         }
     }
 
     animateCurupiraVisual (time)
     {
-        if (!this.curupiraVisual || !this.curupiraVisual.parts) return;
+        if (!this.curupiraVisual || !this.curupiraVisual.parts || !this.curupira?.body?.enable) return;
 
         const p = this.curupiraVisual.parts;
-        const vx = this.curupira.body?.velocity?.x || 0;
-        const vy = this.curupira.body?.velocity?.y || 0;
+        const vx = this.curupira.body.velocity?.x || 0;
+        const vy = this.curupira.body.velocity?.y || 0;
         const speedX = Math.abs(vx);
         const moving = speedX > 24;
         const airborne = Math.abs(vy) > 35 && !this.curupira.body.blocked.down;
@@ -2230,127 +2251,148 @@ export class Level2Scene extends Scene
         this.curupiraVisualFacing = facing;
         p.rig.setScale(facing, 1);
 
-        const walkPhase = time * (moving ? 0.020 : 0.006);
+        const walkPhase = time * (moving ? 0.022 : 0.006);
         const step = Math.sin(walkPhase);
         const opposite = -step;
         const breath = Math.sin(time * 0.0045);
-        const hairPulse = Math.sin(time * 0.011);
-        const menace = Math.sin(time * 0.008);
+        const menace = Math.sin(time * 0.009);
 
-        // Vida contínua: respiração, cabeça e cabelo nunca ficam totalmente congelados.
-        p.torsoRig.y = -2 + breath * 1.4;
-        p.headRig.y = -37 + breath * 0.8;
-        p.headRig.angle = breath * 1.2;
-        p.hairRig.y = -16 + hairPulse * 1.3;
-        p.hairRig.angle = -hairPulse * 2.8;
+        p.torsoRig.y = -2 + breath * 1.5;
+        p.headRig.y = -42 + breath * 0.75;
+        const playerDelta = this.player ? Phaser.Math.Clamp((this.player.x - this.curupira.x) / 220, -1, 1) : 0;
+        p.headRig.angle = breath * 1.0 + playerDelta * 2.2;
         p.backLeaves.angle = -breath * 1.8;
-        p.eyeGlowL.alpha = 0.28 + (menace + 1) * 0.09;
-        p.eyeGlowR.alpha = p.eyeGlowL.alpha;
-        p.shadow.scaleX = moving ? 1.10 : 1;
-        p.shadow.alpha = airborne ? 0.12 : 0.3;
+        p.shadow.scaleX = moving ? 1.12 : 1;
+        p.shadow.alpha = airborne ? 0.12 : 0.34;
+
+        const prepareBoost = state === 'PREPARE' ? 0.32 : 0;
+        const attackBoost = state === 'ATTACK' ? 0.5 : 0;
+        const vulnerableDrop = (state === 'VULNERABLE' || state === 'HIT') ? -0.18 : 0;
+        const glowAlpha = Phaser.Math.Clamp(0.28 + (menace + 1) * 0.08 + prepareBoost + attackBoost + vulnerableDrop, 0.12, 0.95);
+        p.eyeGlowL.alpha = glowAlpha;
+        p.eyeGlowR.alpha = glowAlpha;
+
+        const fireStateBoost = state === 'PREPARE' ? 1.1 : state === 'ATTACK' ? 1.18 : state === 'VULNERABLE' ? 0.88 : 1;
+        p.hairRig.y = -18 + Math.sin(time * 0.012) * 1.1;
+        p.hairRig.angle = Math.sin(time * 0.009) * 2.1 - facing * (moving ? Math.min(5, speedX / 70) : 0);
+        p.hairRig.setScale(1, fireStateBoost);
+        p.hairFlames.forEach((flame,index)=>{
+            const wave = Math.sin(time * (0.0105 + index * 0.0013) + index * 0.9);
+            const sway = Math.sin(time * (0.008 + index * 0.0009) + index * 1.7);
+            flame.y = [-11,-16,-19,-20,-16,-11][index] + wave * (1.6 + (index % 2) * 0.7);
+            flame.scaleY = 1 + wave * 0.07;
+            flame.scaleX = 1 - wave * 0.035;
+            flame.angle = [-16,-9,-3,4,10,16][index] + sway * 4.2;
+            flame.alpha = 0.88 + (wave + 1) * 0.055;
+        });
+        p.hairInnerFlames.forEach((flame,index)=>{
+            const pulse = Math.sin(time * (0.013 + (index % 4) * 0.0011) + index);
+            flame.alpha = Phaser.Math.Clamp(0.68 + pulse * 0.14 + attackBoost * 0.25, 0.48, 1);
+            flame.scaleY = 1 + pulse * 0.05;
+        });
 
         if (airborne) {
-            // Salto: joelhos recolhem, braços abrem e cabeça acompanha arco.
             const rising = vy < 0;
-            p.leftLegRig.angle = rising ? -26 : 18;
-            p.rightLegRig.angle = rising ? 24 : -18;
-            p.leftShinRig.angle = rising ? 42 : 22;
-            p.rightShinRig.angle = rising ? 34 : 28;
-            p.leftArmRig.angle = rising ? 48 : 30;
-            p.rightArmRig.angle = rising ? -48 : -30;
-            p.leftForearmRig.angle = -30;
-            p.rightForearmRig.angle = 30;
-            p.torsoRig.angle = facing * (rising ? -6 : 7);
+            p.leftLegRig.angle = rising ? -28 : 20;
+            p.rightLegRig.angle = rising ? 26 : -20;
+            p.leftShinRig.angle = rising ? 44 : 24;
+            p.rightShinRig.angle = rising ? 36 : 30;
+            p.leftArmRig.angle = rising ? 52 : 34;
+            p.rightArmRig.angle = rising ? -52 : -34;
+            p.leftForearmRig.angle = -32;
+            p.rightForearmRig.angle = 32;
+            p.torsoRig.angle = facing * (rising ? -7 : 8);
             p.headRig.angle += facing * (rising ? -3 : 5);
+            p.hairRig.angle -= facing * 8;
             return;
         }
 
         if (attack) {
             if (this.curupiraAttackPattern === 0) {
-                // Dash: passada curta e rápida, tronco lançado para frente.
-                p.leftLegRig.angle = step * 34;
-                p.rightLegRig.angle = opposite * 34;
-                p.leftShinRig.angle = Math.max(0,-step) * 32;
-                p.rightShinRig.angle = Math.max(0,step) * 32;
-                p.leftArmRig.angle = opposite * 38 - 18;
-                p.rightArmRig.angle = step * 38 + 22;
-                p.leftForearmRig.angle = -28;
-                p.rightForearmRig.angle = -38;
-                p.torsoRig.angle = facing * -11;
+                p.leftLegRig.angle = step * 38;
+                p.rightLegRig.angle = opposite * 38;
+                p.leftShinRig.angle = Math.max(0,-step) * 34;
+                p.rightShinRig.angle = Math.max(0,step) * 34;
+                p.leftArmRig.angle = opposite * 40 - 22;
+                p.rightArmRig.angle = step * 40 + 25;
+                p.leftForearmRig.angle = -30;
+                p.rightForearmRig.angle = -42;
+                p.torsoRig.angle = facing * -13;
                 p.headRig.angle += facing * 6;
-                p.backLeaves.angle = -facing * 8;
+                p.backLeaves.angle = -facing * 12;
             } else if (this.curupiraAttackPattern === 1) {
-                // Ataque aéreo: pose ampla antes da aterrissagem.
-                p.leftLegRig.angle = -28;
-                p.rightLegRig.angle = 28;
-                p.leftShinRig.angle = 44;
-                p.rightShinRig.angle = 44;
-                p.leftArmRig.angle = 62;
-                p.rightArmRig.angle = -62;
-                p.leftForearmRig.angle = -36;
-                p.rightForearmRig.angle = 36;
+                p.leftLegRig.angle = -30;
+                p.rightLegRig.angle = 30;
+                p.leftShinRig.angle = 46;
+                p.rightShinRig.angle = 46;
+                p.leftArmRig.angle = 66;
+                p.rightArmRig.angle = -66;
+                p.leftForearmRig.angle = -38;
+                p.rightForearmRig.angle = 38;
                 p.torsoRig.angle = 0;
                 p.headRig.angle += facing * 3;
             } else {
-                // Finta: guarda alta, braço dianteiro ameaçador e troca rápida de peso.
-                const feint = Math.sin(time * 0.024);
-                p.leftLegRig.angle = feint * 22;
-                p.rightLegRig.angle = -feint * 22;
-                p.leftShinRig.angle = Math.max(0,-feint) * 18;
-                p.rightShinRig.angle = Math.max(0,feint) * 18;
-                p.leftArmRig.angle = 52 + feint * 10;
-                p.rightArmRig.angle = -68 - feint * 8;
-                p.leftForearmRig.angle = -55;
-                p.rightForearmRig.angle = 48;
-                p.torsoRig.angle = facing * 10;
+                const feint = Math.sin(time * 0.026);
+                p.leftLegRig.angle = feint * 24;
+                p.rightLegRig.angle = -feint * 24;
+                p.leftShinRig.angle = Math.max(0,-feint) * 20;
+                p.rightShinRig.angle = Math.max(0,feint) * 20;
+                p.leftArmRig.angle = 56 + feint * 11;
+                p.rightArmRig.angle = -72 - feint * 9;
+                p.leftForearmRig.angle = -58;
+                p.rightForearmRig.angle = 50;
+                p.torsoRig.angle = facing * 11;
                 p.headRig.angle += facing * -5;
             }
             return;
         }
 
         if (moving) {
-            // Corrida/patrulha visual: braços e pernas alternam com amplitude forte.
-            p.leftLegRig.angle = step * 30;
-            p.rightLegRig.angle = opposite * 30;
-            p.leftShinRig.angle = Math.max(0,-step) * 30;
-            p.rightShinRig.angle = Math.max(0,step) * 30;
-            p.leftArmRig.angle = opposite * 31;
-            p.rightArmRig.angle = step * 31;
-            p.leftForearmRig.angle = -12 + Math.max(0,opposite) * 20;
-            p.rightForearmRig.angle = 12 - Math.max(0,step) * 20;
-            p.torsoRig.y += Math.abs(step) * 2.2;
+            p.leftLegRig.angle = step * 33;
+            p.rightLegRig.angle = opposite * 33;
+            p.leftShinRig.angle = Math.max(0,-step) * 31;
+            p.rightShinRig.angle = Math.max(0,step) * 31;
+            p.leftArmRig.angle = opposite * 34;
+            p.rightArmRig.angle = step * 34;
+            p.leftForearmRig.angle = -14 + Math.max(0,opposite) * 21;
+            p.rightForearmRig.angle = 14 - Math.max(0,step) * 21;
+            p.torsoRig.y += Math.abs(step) * 2.3;
             p.headRig.y += Math.abs(step) * 1.1;
-            p.torsoRig.angle = facing * step * 3.2;
+            p.torsoRig.angle = facing * step * 3.4;
             p.headRig.angle += -facing * step * 1.8;
-            p.backLeaves.angle = -facing * (3 + Math.abs(step) * 4);
+            p.backLeaves.angle = -facing * (5 + Math.abs(step) * 5);
         } else {
-            // Idle ameaçador: respiração, leve flexão de joelhos e guarda viva.
-            p.leftLegRig.angle = -5 + breath * 2.5;
-            p.rightLegRig.angle = 5 - breath * 2.5;
-            p.leftShinRig.angle = 5 + Math.max(0,breath) * 3;
-            p.rightShinRig.angle = -2 + Math.max(0,-breath) * 3;
-            p.leftArmRig.angle = 18 + breath * 5;
-            p.rightArmRig.angle = -18 - breath * 5;
-            p.leftForearmRig.angle = -24 + breath * 4;
-            p.rightForearmRig.angle = 24 - breath * 4;
-            p.torsoRig.angle = breath * 1.6;
+            p.leftLegRig.angle = -6 + breath * 3;
+            p.rightLegRig.angle = 6 - breath * 3;
+            p.leftShinRig.angle = 6 + Math.max(0,breath) * 3;
+            p.rightShinRig.angle = -3 + Math.max(0,-breath) * 3;
+            p.leftArmRig.angle = 22 + breath * 5;
+            p.rightArmRig.angle = -22 - breath * 5;
+            p.leftForearmRig.angle = -28 + breath * 4;
+            p.rightForearmRig.angle = 28 - breath * 4;
+            p.torsoRig.angle = breath * 1.7;
         }
 
         if (state === 'PREPARE') {
-            // Leve antecipação visual sem alterar qualquer timing funcional.
-            p.leftArmRig.angle += 14;
-            p.rightArmRig.angle -= 18;
-            p.leftForearmRig.angle -= 12;
-            p.rightForearmRig.angle += 12;
-            p.torsoRig.angle += facing * 4;
+            p.leftLegRig.angle *= 0.45;
+            p.rightLegRig.angle *= 0.45;
+            p.leftShinRig.angle += 8;
+            p.rightShinRig.angle += 8;
+            p.leftArmRig.angle += 18;
+            p.rightArmRig.angle -= 22;
+            p.leftForearmRig.angle -= 14;
+            p.rightForearmRig.angle += 14;
+            p.torsoRig.y += 3;
+            p.torsoRig.angle += facing * 5;
             p.headRig.angle -= facing * 3;
+            p.backLeaves.angle = -facing * 9;
         }
 
         if (state === 'VULNERABLE' || state === 'RECOVERY' || state === 'HIT') {
-            p.leftArmRig.angle += 22;
-            p.rightArmRig.angle -= 22;
-            p.leftForearmRig.angle += 10;
-            p.rightForearmRig.angle -= 10;
+            p.leftArmRig.angle += 24;
+            p.rightArmRig.angle -= 24;
+            p.leftForearmRig.angle += 11;
+            p.rightForearmRig.angle -= 11;
             p.leftLegRig.angle *= 0.45;
             p.rightLegRig.angle *= 0.45;
             p.headRig.angle += facing * 7;
@@ -2360,16 +2402,24 @@ export class Level2Scene extends Scene
 
     updateCurupira (time)
     {
-        this.curupiraVisual.setPosition(this.curupira.x, this.curupira.y);
-        this.animateCurupiraVisual(time);
-        if (!this.arenaStarted || this.arenaCleared || this.curupiraState === 'INTRO' || this.curupiraState === 'DEFEATED') return;
+        if (!this.arenaStarted) return;
+        if (this.arenaCleared || this.curupiraState === 'DEFEATED' || !this.curupira?.body?.enable) return;
+
+        if (this.curupiraVisual) {
+            this.curupiraVisual.setPosition(this.curupira.x, this.curupira.y);
+            this.animateCurupiraVisual(time);
+        }
+        if (this.curupiraState === 'INTRO') return;
 
         if (this.curupiraState === 'PREPARE') {
             this.curupira.body.setVelocity(0, 0);
             if (time >= this.curupiraNextActionAt) {
-                this.curupiraVisual.setAngle(0);
-                this.curupiraVisual.setScale(1, 1);
+                if (this.curupiraVisual) {
+                    this.curupiraVisual.setAngle(0);
+                    this.curupiraVisual.setScale(this.curupiraBaseScale);
+                }
                 this.curupiraState = 'ATTACK';
+                this.curupiraAttackSerial += 1;
 
                 if (this.curupiraAttackPattern === 0) this.curupiraDash(time);
                 else if (this.curupiraAttackPattern === 1) this.curupiraJump(time);
@@ -2381,7 +2431,13 @@ export class Level2Scene extends Scene
         if (this.curupiraState === 'RECOVERY') {
             this.curupira.body.setVelocityX(0);
             if (time >= this.curupiraNextActionAt) {
-                this.enterCurupiraVulnerable(time);
+                if (this.curupiraWillChain && this.curupiraComboCount < 1) {
+                    this.curupiraWillChain = false;
+                    this.curupiraComboCount += 1;
+                    this.beginCurupiraPreparation(time);
+                } else {
+                    this.enterCurupiraVulnerable(time);
+                }
             }
             return;
         }
@@ -2390,7 +2446,7 @@ export class Level2Scene extends Scene
             this.curupira.body.setVelocity(0, 0);
             if (time >= this.curupiraNextActionAt) {
                 this.resetCurupiraPose();
-                this.beginCurupiraPreparation(time + 120);
+                this.beginCurupiraPreparation(time + 90);
             }
             return;
         }
@@ -2399,7 +2455,7 @@ export class Level2Scene extends Scene
             this.curupira.body.setVelocity(0, 0);
             if (time >= this.curupiraNextActionAt) {
                 this.resetCurupiraPose();
-                this.beginCurupiraPreparation(time + 120);
+                this.beginCurupiraPreparation(time + 90);
             }
             return;
         }
@@ -2421,7 +2477,7 @@ export class Level2Scene extends Scene
             } else {
                 this.clearCurupiraLandingMarker();
                 this.curupiraLandingDangerUntil = 0;
-                this.enterCurupiraRecovery(time, 240);
+                this.enterCurupiraRecovery(time, 200);
             }
         }
     }
@@ -2429,14 +2485,16 @@ export class Level2Scene extends Scene
     curupiraDash (time)
     {
         const fromLeft = this.curupira.x < (this.arenaMinX + this.arenaMaxX) / 2;
+        const direction = fromLeft ? 1 : -1;
         this.curupira.setPosition(fromLeft ? this.arenaMinX + 40 : this.arenaMaxX - 40, 590);
-        this.curupira.body.setVelocityX(fromLeft ? 330 : -330);
-        this.showCurupiraDashLeaves(fromLeft ? 1 : -1);
+        this.curupira.body.setVelocityX(direction * 340);
+        this.showCurupiraDashLeaves(direction);
+        this.showCurupiraDashTrail(direction);
 
-        this.time.delayedCall(760, () => {
-            if (!this.arenaCleared && this.curupiraState === 'ATTACK') {
+        this.scheduleCurupiraAttackCall(720, () => {
+            if (this.curupiraState === 'ATTACK') {
                 this.curupira.body.setVelocityX(0);
-                this.enterCurupiraRecovery(this.time.now, 240);
+                this.enterCurupiraRecovery(this.time.now, 200);
             }
         });
     }
@@ -2446,54 +2504,82 @@ export class Level2Scene extends Scene
         const direction = this.player.x < this.curupira.x ? -1 : 1;
         this.curupiraLandingImpactShown = false;
         this.createCurupiraLandingMarker();
-        this.curupira.body.setVelocity(direction * 150, -520);
-        this.curupiraLandingDangerUntil = time + 1250;
+        if (this.curupiraVisual?.parts) {
+            this.curupiraVisual.parts.torsoRig.y += 3;
+            this.curupiraVisual.parts.hairRig.setScale(1.03, 1.16);
+        }
+        this.curupira.body.setVelocity(direction * 155, -520);
+        this.curupiraLandingDangerUntil = time + 1220;
     }
 
     curupiraFeint (time)
     {
         const direction = this.player.x < this.curupira.x ? -1 : 1;
-        this.curupira.body.setVelocityX(-direction * 210);
-        this.curupiraVisual.setAngle(-direction * 7);
+        this.curupira.body.setVelocityX(-direction * 220);
+        if (this.curupiraVisual) this.curupiraVisual.setAngle(-direction * 7);
 
-        this.time.delayedCall(260, () => {
-            if (!this.arenaCleared && this.curupiraState === 'ATTACK') {
-                this.curupiraVisual.setAngle(direction * 9);
-                this.curupira.body.setVelocityX(direction * 280);
+        this.scheduleCurupiraAttackCall(220, () => {
+            if (this.curupiraState === 'ATTACK') {
+                if (this.curupiraVisual) this.curupiraVisual.setAngle(direction * 9);
+                this.curupira.body.setVelocityX(direction * 300);
+                this.showCurupiraDashTrail(direction, 3);
             }
         });
 
-        this.time.delayedCall(720, () => {
-            if (!this.arenaCleared && this.curupiraState === 'ATTACK') {
+        this.scheduleCurupiraAttackCall(650, () => {
+            if (this.curupiraState === 'ATTACK') {
                 this.curupira.body.setVelocityX(0);
-                this.curupiraVisual.setAngle(0);
-                this.enterCurupiraRecovery(this.time.now, 240);
+                if (this.curupiraVisual) this.curupiraVisual.setAngle(0);
+                this.enterCurupiraRecovery(this.time.now, 190);
             }
         });
     }
 
-    enterCurupiraRecovery (time, duration = 240)
+    scheduleCurupiraAttackCall (delay, callback)
     {
+        const timer = this.time.delayedCall(delay, () => {
+            const index = this.curupiraAttackTimers.indexOf(timer);
+            if (index >= 0) this.curupiraAttackTimers.splice(index, 1);
+            if (this.arenaCleared || this.curupiraState === 'DEFEATED' || !this.curupira?.body?.enable) return;
+            callback();
+        });
+        this.curupiraAttackTimers.push(timer);
+        return timer;
+    }
+
+    enterCurupiraRecovery (time, duration = 200)
+    {
+        if (this.arenaCleared || this.curupiraState === 'DEFEATED' || !this.curupira?.body?.enable) return;
         this.curupira.body.setVelocity(0, 0);
         this.curupiraState = 'RECOVERY';
         this.curupiraNextActionAt = time + duration;
-        this.curupiraVisual.setAlpha(0.9);
-        this.curupiraVisual.setAngle(this.player.x < this.curupira.x ? 4 : -4);
-        this.curupiraVisual.setScale(1, 0.96);
+        this.curupiraWillChain = this.curupiraComboCount === 0 && this.curupiraAttackSerial > 0 && this.curupiraAttackSerial % 3 === 0;
+
+        if (this.curupiraVisual) {
+            this.curupiraVisual.setAlpha(0.92);
+            this.curupiraVisual.setAngle(this.player.x < this.curupira.x ? 4 : -4);
+            this.curupiraVisual.setScale(this.curupiraBaseScale, this.curupiraBaseScale * 0.97);
+        }
     }
 
     enterCurupiraVulnerable (time)
     {
+        if (this.arenaCleared || this.curupiraState === 'DEFEATED' || !this.curupira?.body?.enable) return;
         this.curupira.body.setVelocity(0, 0);
         this.curupiraState = 'VULNERABLE';
-        this.curupiraNextActionAt = time + 1200;
-        this.curupiraVisual.setAlpha(0.52);
-        this.curupiraVisual.setAngle(this.player.x < this.curupira.x ? 10 : -10);
-        this.curupiraVisual.setScale(1, 0.86);
+        this.curupiraComboCount = 0;
+        this.curupiraWillChain = false;
+        this.curupiraNextActionAt = time + 920;
+
+        if (this.curupiraVisual) {
+            this.curupiraVisual.setAlpha(0.62);
+            this.curupiraVisual.setAngle(this.player.x < this.curupira.x ? 9 : -9);
+            this.curupiraVisual.setScale(this.curupiraBaseScale, this.curupiraBaseScale * 0.90);
+        }
 
         const tiredLeaf = this.add.ellipse(
             this.curupira.x,
-            this.curupira.y - 74,
+            this.curupira.y - 112,
             13,
             6,
             0x8aa85e,
@@ -2501,25 +2587,26 @@ export class Level2Scene extends Scene
         ).setDepth(24);
         this.tweens.add({
             targets: tiredLeaf,
-            y: tiredLeaf.y - 18,
+            y: tiredLeaf.y - 20,
             x: tiredLeaf.x + 8,
             angle: 35,
             alpha: 0,
-            duration: 720,
+            duration: 650,
             onComplete: () => tiredLeaf.destroy()
         });
     }
 
     resetCurupiraPose ()
     {
+        if (!this.curupiraVisual) return;
         this.curupiraVisual.setAlpha(1);
         this.curupiraVisual.setAngle(0);
-        this.curupiraVisual.setScale(1, 1);
+        this.curupiraVisual.setScale(this.curupiraBaseScale);
     }
 
     handleCurupiraContact ()
     {
-        if (!this.arenaStarted || this.arenaCleared || this.curupiraState !== 'ATTACK') return;
+        if (!this.arenaStarted || this.arenaCleared || this.curupiraState === 'DEFEATED' || !this.curupira?.body?.enable || this.curupiraState !== 'ATTACK') return;
         this.damagePlayer(15, this.player.x < this.curupira.x ? -180 : 180, -80);
     }
 
@@ -2561,34 +2648,53 @@ export class Level2Scene extends Scene
 
     showCurupiraBlockFeedback ()
     {
+        if (!this.curupiraVisual || this.curupiraState === 'DEFEATED') return;
         const originalAngle = this.curupiraVisual.angle;
         this.showBlockDeflect(
             this.curupira.x - this.attackDirection * 18,
             this.curupira.y - 6,
             false
         );
-        this.curupiraVisual.setAlpha(0.35);
-        this.curupiraVisual.setAngle(originalAngle + (this.attackDirection * 7));
+        this.curupiraVisual.setAlpha(0.42);
+        this.curupiraVisual.setAngle(originalAngle + (this.attackDirection * 6));
 
         const block = this.add.circle(
-            this.curupira.x - this.attackDirection * 20,
-            this.curupira.y - 5,
-            8,
+            this.curupira.x - this.attackDirection * 24,
+            this.curupira.y - 8,
+            10,
             0xd6b56c,
-            0.22
+            0.26
         ).setDepth(25);
-        block.setStrokeStyle(2, 0xe7e1cf, 0.55);
+        block.setStrokeStyle(2, 0xffe0a3, 0.72);
+
+        for (let i = 0; i < 4; i += 1) {
+            const spark = this.add.circle(
+                block.x,
+                block.y,
+                2.2,
+                i % 2 === 0 ? 0xffd36a : 0xe9782d,
+                0.8
+            ).setDepth(26);
+            this.tweens.add({
+                targets: spark,
+                x: spark.x + this.attackDirection * (10 + i * 5),
+                y: spark.y - 12 + i * 7,
+                alpha: 0,
+                duration: 150 + i * 25,
+                onComplete: () => spark.destroy()
+            });
+        }
 
         this.tweens.add({
             targets: block,
-            scale: 1.8,
+            scale: 1.9,
             alpha: 0,
             duration: 180,
             onComplete: () => block.destroy()
         });
 
-        this.time.delayedCall(110, () => {
-            if (!this.arenaCleared && this.curupiraState !== 'VULNERABLE') {
+        this.time.delayedCall(105, () => {
+            if (!this.arenaCleared && this.curupiraState !== 'DEFEATED' && this.curupiraState !== 'VULNERABLE' && this.curupiraVisual) {
                 this.curupiraVisual.setAlpha(1);
                 this.curupiraVisual.setAngle(originalAngle);
             }
@@ -2597,6 +2703,7 @@ export class Level2Scene extends Scene
 
     showCurupiraValidHitFeedback ()
     {
+        if (!this.curupiraVisual || this.curupiraState === 'DEFEATED') return;
         const hitDirection = this.player.x < this.curupira.x ? 1 : -1;
         this.showCombatImpact(
             this.curupira.x,
@@ -2604,26 +2711,75 @@ export class Level2Scene extends Scene
             this.curupiraVisual,
             { boss: true }
         );
-        this.curupiraVisual.setAlpha(0.25);
-        this.curupiraVisual.setAngle(hitDirection * 11);
-        this.curupiraVisual.setScale(1.04, 0.92);
+        this.curupiraVisual.setAlpha(0.24);
+        this.curupiraVisual.setAngle(hitDirection * 12);
+        this.curupiraVisual.setScale(this.curupiraBaseScale * 1.04, this.curupiraBaseScale * 0.92);
 
-        const hitFlash = this.add.circle(this.curupira.x, this.curupira.y - 5, 16, 0xf1e1ae, 0.42).setDepth(25);
+        if (this.curupiraVisual.parts) {
+            this.curupiraVisual.parts.headRig.angle += hitDirection * 10;
+            this.curupiraVisual.parts.torsoRig.angle += hitDirection * 7;
+            this.curupiraVisual.parts.hairRig.setScale(1.12, 1.04);
+        }
+
+        const hitFlash = this.add.circle(this.curupira.x, this.curupira.y - 8, 18, 0xf1e1ae, 0.46).setDepth(25);
         this.tweens.add({
             targets: hitFlash,
-            scale: 2.1,
+            scale: 2.2,
             alpha: 0,
             duration: 150,
             onComplete: () => hitFlash.destroy()
         });
 
+        for (let i = 0; i < 6; i += 1) {
+            const particle = this.add.ellipse(
+                this.curupira.x,
+                this.curupira.y - 10,
+                i % 2 === 0 ? 7 : 5,
+                3,
+                i % 2 === 0 ? 0x8aa85e : 0xe15a26,
+                0.8
+            ).setDepth(26);
+            const side = i % 2 === 0 ? -1 : 1;
+            this.tweens.add({
+                targets: particle,
+                x: particle.x + side * (22 + i * 5),
+                y: particle.y - 18 - (i % 3) * 7,
+                angle: side * (35 + i * 18),
+                alpha: 0,
+                duration: 230 + i * 25,
+                onComplete: () => particle.destroy()
+            });
+        }
+
         this.time.delayedCall(110, () => {
-            if (!this.arenaCleared && this.curupiraState === 'HIT') {
+            if (!this.arenaCleared && this.curupiraState === 'HIT' && this.curupiraVisual) {
                 this.curupiraVisual.setAlpha(0.82);
                 this.curupiraVisual.setAngle(hitDirection * 7);
-                this.curupiraVisual.setScale(1, 0.94);
+                this.curupiraVisual.setScale(this.curupiraBaseScale, this.curupiraBaseScale * 0.94);
             }
         });
+    }
+
+    showCurupiraDashTrail (direction, count = 4)
+    {
+        for (let i = 0; i < count; i += 1) {
+            const trail = this.add.ellipse(
+                this.curupira.x - direction * (18 + i * 12),
+                this.curupira.y - 6 + (i % 2) * 10,
+                28 - i * 3,
+                12 - i,
+                i % 2 === 0 ? 0xe05a28 : 0x6f8f4e,
+                0.16
+            ).setDepth(19);
+            this.tweens.add({
+                targets: trail,
+                x: trail.x - direction * (20 + i * 8),
+                scaleX: 1.45,
+                alpha: 0,
+                duration: 170 + i * 35,
+                onComplete: () => trail.destroy()
+            });
+        }
     }
 
     showCurupiraDashLeaves (direction)
@@ -2679,34 +2835,43 @@ export class Level2Scene extends Scene
             this.curupiraLandingMarker.setPosition(this.curupira.x, 640);
         }
 
-        const ring = this.add.ellipse(this.curupira.x, 640, 80, 18, 0xd6b56c, 0.25).setDepth(18);
+        const ring = this.add.ellipse(this.curupira.x, 640, 88, 20, 0xd6b56c, 0.28).setDepth(18);
         this.tweens.add({
             targets: ring,
-            scaleX: 2.1,
-            scaleY: 1.45,
+            scaleX: 2.25,
+            scaleY: 1.55,
             alpha: 0,
-            duration: 300,
+            duration: 320,
             onComplete: () => ring.destroy()
         });
 
-        for (let i = 0; i < 6; i += 1) {
-            const direction = i < 3 ? -1 : 1;
-            const leaf = this.add.ellipse(
-                this.curupira.x,
-                630,
-                9,
-                4,
-                i % 2 === 0 ? 0x6d874b : 0x755137,
-                0.7
-            ).setDepth(19);
+        for (let i = 0; i < 9; i += 1) {
+            const direction = i < 4 ? -1 : 1;
+            const isDust = i >= 6;
+            const particle = isDust
+                ? this.add.circle(this.curupira.x, 634, 4 + (i % 2), 0x8b6b4e, 0.32).setDepth(18)
+                : this.add.ellipse(this.curupira.x, 630, 9, 4, i % 2 === 0 ? 0x6d874b : 0x755137, 0.7).setDepth(19);
             this.tweens.add({
-                targets: leaf,
-                x: this.curupira.x + direction * (30 + (i % 3) * 18),
-                y: 612 - (i % 3) * 9,
+                targets: particle,
+                x: this.curupira.x + direction * (30 + (i % 4) * 18),
+                y: 610 - (i % 4) * 8,
                 angle: direction * (35 + i * 16),
+                scale: isDust ? 1.7 : 1,
                 alpha: 0,
-                duration: 360,
-                onComplete: () => leaf.destroy()
+                duration: 330 + i * 25,
+                onComplete: () => particle.destroy()
+            });
+        }
+
+        this.cameras.main.shake(95, 0.0026);
+        if (this.curupiraVisual) {
+            this.tweens.add({
+                targets: this.curupiraVisual,
+                scaleX: this.curupiraBaseScale * 1.05,
+                scaleY: this.curupiraBaseScale * 0.90,
+                duration: 70,
+                yoyo: true,
+                ease: 'Quad.Out'
             });
         }
     }
@@ -2722,10 +2887,21 @@ export class Level2Scene extends Scene
 
     defeatCurupira ()
     {
+        if (this.curupiraState === 'DEFEATED') return;
+
         this.arenaCleared = true;
         this.curupiraState = 'DEFEATED';
-        this.curupira.body.setVelocity(0, 0);
+        this.curupiraLandingDangerUntil = 0;
+        this.curupiraWillChain = false;
+
+        this.curupiraAttackTimers.forEach(timer => timer?.remove(false));
+        this.curupiraAttackTimers.length = 0;
         this.clearCurupiraLandingMarker();
+
+        if (this.curupira?.body) {
+            this.curupira.body.setVelocity(0, 0);
+            this.curupira.body.enable = false;
+        }
 
         this.curupiraBossText.setText('0/100');
         this.tweens.killTweensOf(this.curupiraBossBar);
@@ -2736,17 +2912,61 @@ export class Level2Scene extends Scene
             ease: 'Quad.Out'
         });
 
-        const recoil = this.player.x < this.curupira.x ? 28 : -28;
-        this.curupira.setPosition(
-            Math.max(this.arenaMinX + 30, Math.min(this.arenaMaxX - 30, this.curupira.x + recoil)),
-            this.curupira.y
-        );
-        this.curupiraVisual.setPosition(this.curupira.x, this.curupira.y + 7);
-        this.curupiraVisual.setAlpha(0.88);
-        this.curupiraVisual.setAngle(recoil > 0 ? 12 : -12);
-        this.curupiraVisual.setScale(1, 0.76);
+        const recoil = this.player.x < this.curupira.x ? 22 : -22;
+        const visual = this.curupiraVisual;
+        if (visual) {
+            visual.setPosition(this.curupira.x + recoil, this.curupira.y + 4);
+            this.tweens.killTweensOf(visual);
+            if (visual.parts) {
+                Object.values(visual.parts).forEach(part => {
+                    if (Array.isArray(part)) part.forEach(item => item && this.tweens.killTweensOf(item));
+                    else if (part) this.tweens.killTweensOf(part);
+                });
+                visual.parts.eyeGlowL.setAlpha(0);
+                visual.parts.eyeGlowR.setAlpha(0);
+                visual.parts.hairRig.setScale(1, 0.72);
+                visual.parts.headRig.angle += recoil > 0 ? 8 : -8;
+                visual.parts.torsoRig.angle += recoil > 0 ? 10 : -10;
+            }
+            visual.setAngle(recoil > 0 ? 10 : -10);
 
-        this.time.delayedCall(420, () => {
+            for (let i = 0; i < 10; i += 1) {
+                const ember = i % 2 === 0;
+                const particle = ember
+                    ? this.add.circle(this.curupira.x, this.curupira.y - 42, 2.5, i % 4 === 0 ? 0xffb137 : 0xe45a27, 0.82).setDepth(25)
+                    : this.add.ellipse(this.curupira.x, this.curupira.y - 10, 9, 4, 0x6f8f4e, 0.72).setDepth(24);
+                const side = i % 2 === 0 ? -1 : 1;
+                this.tweens.add({
+                    targets: particle,
+                    x: particle.x + side * (25 + i * 4),
+                    y: particle.y - 22 - (i % 4) * 9,
+                    angle: side * i * 28,
+                    alpha: 0,
+                    duration: 300 + i * 24,
+                    onComplete: () => particle.destroy()
+                });
+            }
+
+            this.tweens.add({
+                targets: visual,
+                y: visual.y + 18,
+                angle: recoil > 0 ? 18 : -18,
+                scaleX: this.curupiraBaseScale * 0.94,
+                scaleY: this.curupiraBaseScale * 0.80,
+                alpha: 0,
+                duration: 430,
+                ease: 'Quad.In',
+                onComplete: () => {
+                    if (visual.active) {
+                        visual.setVisible(false);
+                        visual.destroy(true);
+                    }
+                    if (this.curupiraVisual === visual) this.curupiraVisual = null;
+                }
+            });
+        }
+
+        this.time.delayedCall(440, () => {
             this.curupiraBossHud.setVisible(false);
             this.arenaBarrier.setVisible(false);
             this.arenaBarrier.body.enable = false;
