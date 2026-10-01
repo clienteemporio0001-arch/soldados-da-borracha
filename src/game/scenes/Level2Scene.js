@@ -2012,7 +2012,16 @@ export class Level2Scene extends Scene
         this.curupiraAttackTimers = [];
         this.curupiraBaseScale = 1.78;
 
-        this.curupiraVisual = this.add.container(this.curupira.x, this.curupira.y)
+        // Bottom-most point of the procedural feet at scale 1:
+        // leg Y 18 + shin Y 25 + foot Y 21 + toe half-height 4.5 + toe local Y 2 = 70.5.
+        // Keep that exact foot baseline when the whole visual is scaled to 1.78.
+        this.curupiraRigFootBaselineY = 70.5;
+        this.curupiraVisualOffsetY = this.curupiraRigFootBaselineY * (1 - this.curupiraBaseScale);
+
+        this.curupiraVisual = this.add.container(
+            this.curupira.x,
+            this.curupira.y + this.curupiraVisualOffsetY
+        )
             .setDepth(21)
             .setScale(this.curupiraBaseScale)
             .setVisible(false);
@@ -2192,19 +2201,32 @@ export class Level2Scene extends Scene
     startCurupiraEncounter ()
     {
         if (this.arenaStarted || this.arenaCleared) return;
+        if (!this.curupira || !this.curupira.body || !this.curupiraVisual ||
+            !this.curupiraVisual.active || !this.curupiraVisual.parts) return;
+
         this.arenaStarted = true;
         this.arenaBarrier.setVisible(true);
         this.arenaBarrier.body.enable = true;
-        this.curupiraVisual.setVisible(true);
-        this.curupiraBossHud.setVisible(true);
+
         this.curupira.body.setVelocity(0, 0);
         this.curupiraState = 'INTRO';
+
+        this.resetCurupiraRigParts();
+        this.curupiraVisual
+            .setPosition(this.curupira.x, this.curupira.y + this.curupiraVisualOffsetY)
+            .setScale(this.curupiraBaseScale)
+            .setAngle(0)
+            .setAlpha(1)
+            .setVisible(true);
+
+        this.curupiraBossHud.setVisible(true);
 
         const panel = this.add.rectangle(512, 360, 580, 100, 0x06100d, 0.9).setScrollFactor(0).setDepth(180);
         const text = this.add.text(512, 360, '“A mata não permite sua passagem.”', { fontFamily: 'Arial', fontSize: '25px', color: '#f1e1ae' }).setOrigin(0.5).setScrollFactor(0).setDepth(181);
         this.time.delayedCall(1500, () => {
             panel.destroy();
             text.destroy();
+            if (this.arenaCleared || this.curupiraState === 'DEFEATED') return;
             this.beginCurupiraPreparation(this.time.now + 180);
         });
     }
@@ -2225,18 +2247,73 @@ export class Level2Scene extends Scene
 
         const p = this.curupiraVisual.parts;
         if (p) {
-            p.eyeGlowL.setAlpha(0.72);
-            p.eyeGlowR.setAlpha(0.72);
-            p.hairRig.setScale(1.04, 1.08);
-            p.backLeaves.setAngle(this.player.x < this.curupira.x ? 6 : -6);
+            if (p.eyeGlowL && p.eyeGlowL.active !== false) p.eyeGlowL.setAlpha(0.72);
+            if (p.eyeGlowR && p.eyeGlowR.active !== false) p.eyeGlowR.setAlpha(0.72);
+            if (p.hairRig && p.hairRig.active !== false) p.hairRig.setScale(1.04, 1.08);
+            if (p.backLeaves && p.backLeaves.active !== false) {
+                p.backLeaves.setAngle(this.player.x < this.curupira.x ? 6 : -6);
+            }
         }
+    }
+
+    resetCurupiraRigParts ()
+    {
+        const visual = this.curupiraVisual;
+        if (!visual || !visual.active || !visual.parts) return;
+
+        const p = visual.parts;
+        const setPose = (object, x, y, angle = 0) => {
+            if (!object || object.active === false) return;
+            object.setPosition(x, y);
+            object.setAngle(angle);
+            object.setScale(1);
+            object.setAlpha(1);
+        };
+
+        setPose(p.torsoRig, 0, -2);
+        setPose(p.headRig, 0, -42);
+        setPose(p.backLeaves, 0, -7);
+        setPose(p.hairRig, 0, -18);
+        setPose(p.leftArmRig, -22, -15);
+        setPose(p.rightArmRig, 22, -15);
+        setPose(p.leftForearmRig, 0, 26);
+        setPose(p.rightForearmRig, 0, 26);
+        setPose(p.leftLegRig, -11, 18);
+        setPose(p.rightLegRig, 11, 18);
+        setPose(p.leftShinRig, 0, 25);
+        setPose(p.rightShinRig, 0, 25);
+        setPose(p.leftFoot, 0, 21);
+        setPose(p.rightFoot, 0, 21);
+
+        if (p.shadow && p.shadow.active !== false) {
+            p.shadow.setScale(1);
+            p.shadow.setAlpha(0.34);
+        }
+        if (p.eyeGlowL && p.eyeGlowL.active !== false) p.eyeGlowL.setAlpha(0.36);
+        if (p.eyeGlowR && p.eyeGlowR.active !== false) p.eyeGlowR.setAlpha(0.36);
     }
 
     animateCurupiraVisual (time)
     {
-        if (!this.curupiraVisual || !this.curupiraVisual.parts || !this.curupira?.body?.enable) return;
+        if (!this.curupiraVisual ||
+            !this.curupiraVisual.active ||
+            !this.curupiraVisual.parts ||
+            !this.curupira ||
+            !this.curupira.body ||
+            !this.curupira.body.enable) {
+            return;
+        }
 
         const p = this.curupiraVisual.parts;
+        const required = [
+            p.rig,p.torsoRig,p.headRig,p.backLeaves,p.hairRig,
+            p.leftArmRig,p.rightArmRig,p.leftForearmRig,p.rightForearmRig,
+            p.leftLegRig,p.rightLegRig,p.leftShinRig,p.rightShinRig
+        ];
+        if (required.some(object => !object || object.active === false)) return;
+
+        this.resetCurupiraRigParts();
+
         const vx = this.curupira.body.velocity?.x || 0;
         const vy = this.curupira.body.velocity?.y || 0;
         const speedX = Math.abs(vx);
@@ -2260,36 +2337,64 @@ export class Level2Scene extends Scene
         p.torsoRig.y = -2 + breath * 1.5;
         p.headRig.y = -42 + breath * 0.75;
         const playerDelta = this.player ? Phaser.Math.Clamp((this.player.x - this.curupira.x) / 220, -1, 1) : 0;
-        p.headRig.angle = breath * 1.0 + playerDelta * 2.2;
+        p.headRig.angle = breath + playerDelta * 2.2;
         p.backLeaves.angle = -breath * 1.8;
-        p.shadow.scaleX = moving ? 1.12 : 1;
-        p.shadow.alpha = airborne ? 0.12 : 0.34;
+
+        if (p.shadow && p.shadow.active !== false) {
+            p.shadow.scaleX = moving ? 1.12 : 1;
+            p.shadow.scaleY = 1;
+            p.shadow.alpha = airborne ? 0.12 : 0.34;
+        }
 
         const prepareBoost = state === 'PREPARE' ? 0.32 : 0;
         const attackBoost = state === 'ATTACK' ? 0.5 : 0;
         const vulnerableDrop = (state === 'VULNERABLE' || state === 'HIT') ? -0.18 : 0;
-        const glowAlpha = Phaser.Math.Clamp(0.28 + (menace + 1) * 0.08 + prepareBoost + attackBoost + vulnerableDrop, 0.12, 0.95);
-        p.eyeGlowL.alpha = glowAlpha;
-        p.eyeGlowR.alpha = glowAlpha;
+        const glowAlpha = Phaser.Math.Clamp(
+            0.28 + (menace + 1) * 0.08 + prepareBoost + attackBoost + vulnerableDrop,
+            0.12,
+            0.95
+        );
+        if (p.eyeGlowL && p.eyeGlowL.active !== false) p.eyeGlowL.alpha = glowAlpha;
+        if (p.eyeGlowR && p.eyeGlowR.active !== false) p.eyeGlowR.alpha = glowAlpha;
 
-        const fireStateBoost = state === 'PREPARE' ? 1.1 : state === 'ATTACK' ? 1.18 : state === 'VULNERABLE' ? 0.88 : 1;
-        p.hairRig.y = -18 + Math.sin(time * 0.012) * 1.1;
-        p.hairRig.angle = Math.sin(time * 0.009) * 2.1 - facing * (moving ? Math.min(5, speedX / 70) : 0);
-        p.hairRig.setScale(1, fireStateBoost);
-        p.hairFlames.forEach((flame,index)=>{
-            const wave = Math.sin(time * (0.0105 + index * 0.0013) + index * 0.9);
-            const sway = Math.sin(time * (0.008 + index * 0.0009) + index * 1.7);
-            flame.y = [-11,-16,-19,-20,-16,-11][index] + wave * (1.6 + (index % 2) * 0.7);
-            flame.scaleY = 1 + wave * 0.07;
-            flame.scaleX = 1 - wave * 0.035;
-            flame.angle = [-16,-9,-3,4,10,16][index] + sway * 4.2;
-            flame.alpha = 0.88 + (wave + 1) * 0.055;
-        });
-        p.hairInnerFlames.forEach((flame,index)=>{
-            const pulse = Math.sin(time * (0.013 + (index % 4) * 0.0011) + index);
-            flame.alpha = Phaser.Math.Clamp(0.68 + pulse * 0.14 + attackBoost * 0.25, 0.48, 1);
-            flame.scaleY = 1 + pulse * 0.05;
-        });
+        const fireStateBoost = state === 'PREPARE' ? 1.08 : state === 'ATTACK' ? 1.14 : state === 'VULNERABLE' ? 0.9 : 1;
+        p.hairRig.y = -18 + Math.sin(time * 0.012) * 1.0;
+        p.hairRig.angle = Math.sin(time * 0.009) * 2 - facing * (moving ? Math.min(4, speedX / 85) : 0);
+        p.hairRig.scaleX = 1;
+        p.hairRig.scaleY = fireStateBoost;
+
+        const flameBaseY = [-11,-16,-19,-20,-16,-11];
+        const flameBaseAngle = [-16,-9,-3,4,10,16];
+        if (Array.isArray(p.hairFlames)) {
+            p.hairFlames.forEach((flame,index)=>{
+                if (!flame || flame.active === false) return;
+                const wave = Math.sin(time * (0.0105 + index * 0.0013) + index * 0.9);
+                flame.y = (flameBaseY[index] ?? flame.y) + wave * 1.4;
+                flame.scaleX = 1 - wave * 0.025;
+                flame.scaleY = 1 + wave * 0.055;
+                flame.angle = (flameBaseAngle[index] ?? 0) + wave * 3.2;
+                flame.alpha = 0.9 + (wave + 1) * 0.04;
+            });
+        }
+        if (Array.isArray(p.hairInnerFlames)) {
+            p.hairInnerFlames.forEach((flame,index)=>{
+                if (!flame || flame.active === false) return;
+                const pulse = Math.sin(time * (0.012 + (index % 4) * 0.001) + index);
+                flame.scaleX = 1;
+                flame.scaleY = 1 + pulse * 0.035;
+                flame.alpha = Phaser.Math.Clamp(0.72 + pulse * 0.1 + attackBoost * 0.18, 0.52, 1);
+            });
+        }
+
+        if (state === 'INTRO') {
+            p.leftLegRig.angle = -4 + breath * 2;
+            p.rightLegRig.angle = 4 - breath * 2;
+            p.leftArmRig.angle = 18 + breath * 3;
+            p.rightArmRig.angle = -18 - breath * 3;
+            p.leftForearmRig.angle = -22;
+            p.rightForearmRig.angle = 22;
+            return;
+        }
 
         if (airborne) {
             const rising = vy < 0;
@@ -2302,8 +2407,8 @@ export class Level2Scene extends Scene
             p.leftForearmRig.angle = -32;
             p.rightForearmRig.angle = 32;
             p.torsoRig.angle = facing * (rising ? -7 : 8);
-            p.headRig.angle += facing * (rising ? -3 : 5);
-            p.hairRig.angle -= facing * 8;
+            p.headRig.angle = breath + playerDelta * 2.2 + facing * (rising ? -3 : 5);
+            p.hairRig.angle = Math.sin(time * 0.009) * 2 - facing * 8;
             return;
         }
 
@@ -2318,7 +2423,7 @@ export class Level2Scene extends Scene
                 p.leftForearmRig.angle = -30;
                 p.rightForearmRig.angle = -42;
                 p.torsoRig.angle = facing * -13;
-                p.headRig.angle += facing * 6;
+                p.headRig.angle = breath + playerDelta * 2.2 + facing * 6;
                 p.backLeaves.angle = -facing * 12;
             } else if (this.curupiraAttackPattern === 1) {
                 p.leftLegRig.angle = -30;
@@ -2330,7 +2435,7 @@ export class Level2Scene extends Scene
                 p.leftForearmRig.angle = -38;
                 p.rightForearmRig.angle = 38;
                 p.torsoRig.angle = 0;
-                p.headRig.angle += facing * 3;
+                p.headRig.angle = breath + playerDelta * 2.2 + facing * 3;
             } else {
                 const feint = Math.sin(time * 0.026);
                 p.leftLegRig.angle = feint * 24;
@@ -2342,7 +2447,7 @@ export class Level2Scene extends Scene
                 p.leftForearmRig.angle = -58;
                 p.rightForearmRig.angle = 50;
                 p.torsoRig.angle = facing * 11;
-                p.headRig.angle += facing * -5;
+                p.headRig.angle = breath + playerDelta * 2.2 - facing * 5;
             }
             return;
         }
@@ -2356,10 +2461,10 @@ export class Level2Scene extends Scene
             p.rightArmRig.angle = step * 34;
             p.leftForearmRig.angle = -14 + Math.max(0,opposite) * 21;
             p.rightForearmRig.angle = 14 - Math.max(0,step) * 21;
-            p.torsoRig.y += Math.abs(step) * 2.3;
-            p.headRig.y += Math.abs(step) * 1.1;
+            p.torsoRig.y = -2 + breath * 1.5 + Math.abs(step) * 2.3;
+            p.headRig.y = -42 + breath * 0.75 + Math.abs(step) * 1.1;
             p.torsoRig.angle = facing * step * 3.4;
-            p.headRig.angle += -facing * step * 1.8;
+            p.headRig.angle = breath + playerDelta * 2.2 - facing * step * 1.8;
             p.backLeaves.angle = -facing * (5 + Math.abs(step) * 5);
         } else {
             p.leftLegRig.angle = -6 + breath * 3;
@@ -2382,9 +2487,9 @@ export class Level2Scene extends Scene
             p.rightArmRig.angle -= 22;
             p.leftForearmRig.angle -= 14;
             p.rightForearmRig.angle += 14;
-            p.torsoRig.y += 3;
+            p.torsoRig.y = -2 + breath * 1.5 + 3;
             p.torsoRig.angle += facing * 5;
-            p.headRig.angle -= facing * 3;
+            p.headRig.angle = breath + playerDelta * 2.2 - facing * 3;
             p.backLeaves.angle = -facing * 9;
         }
 
@@ -2395,8 +2500,8 @@ export class Level2Scene extends Scene
             p.rightForearmRig.angle -= 11;
             p.leftLegRig.angle *= 0.45;
             p.rightLegRig.angle *= 0.45;
-            p.headRig.angle += facing * 7;
-            p.torsoRig.y += 2;
+            p.headRig.angle = breath + playerDelta * 2.2 + facing * 7;
+            p.torsoRig.y = -2 + breath * 1.5 + 2;
         }
     }
 
@@ -2405,8 +2510,11 @@ export class Level2Scene extends Scene
         if (!this.arenaStarted) return;
         if (this.arenaCleared || this.curupiraState === 'DEFEATED' || !this.curupira?.body?.enable) return;
 
-        if (this.curupiraVisual) {
-            this.curupiraVisual.setPosition(this.curupira.x, this.curupira.y);
+        if (this.curupiraVisual && this.curupiraVisual.active) {
+            this.curupiraVisual.setPosition(
+                this.curupira.x,
+                this.curupira.y + this.curupiraVisualOffsetY
+            );
             this.animateCurupiraVisual(time);
         }
         if (this.curupiraState === 'INTRO') return;
@@ -2598,10 +2706,13 @@ export class Level2Scene extends Scene
 
     resetCurupiraPose ()
     {
-        if (!this.curupiraVisual) return;
-        this.curupiraVisual.setAlpha(1);
-        this.curupiraVisual.setAngle(0);
-        this.curupiraVisual.setScale(this.curupiraBaseScale);
+        if (!this.curupiraVisual || !this.curupiraVisual.active) return;
+        this.resetCurupiraRigParts();
+        this.curupiraVisual
+            .setAlpha(1)
+            .setAngle(0)
+            .setScale(this.curupiraBaseScale)
+            .setPosition(this.curupira.x, this.curupira.y + this.curupiraVisualOffsetY);
     }
 
     handleCurupiraContact ()
@@ -2915,7 +3026,10 @@ export class Level2Scene extends Scene
         const recoil = this.player.x < this.curupira.x ? 22 : -22;
         const visual = this.curupiraVisual;
         if (visual) {
-            visual.setPosition(this.curupira.x + recoil, this.curupira.y + 4);
+            visual.setPosition(
+                this.curupira.x + recoil,
+                this.curupira.y + this.curupiraVisualOffsetY + 4
+            );
             this.tweens.killTweensOf(visual);
             if (visual.parts) {
                 Object.values(visual.parts).forEach(part => {
