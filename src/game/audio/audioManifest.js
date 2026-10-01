@@ -10,8 +10,8 @@ export const AUDIO_ASSETS = {
 
     player_step_01: { category: 'sfx', path: 'audio/player/player_step_01.ogg', license: 'CC0-1.0', gain: 0.68 },
     player_step_02: { category: 'sfx', path: 'audio/player/player_step_02.ogg', license: 'CC0-1.0', gain: 0.68 },
-    player_jump: { category: 'sfx', path: 'audio/player/jump.wav', license: 'CC0-1.0', gain: 0.65, rate: 1.0 },
-    player_double_jump: { category: 'sfx', path: 'audio/player/jump.wav', license: 'CC0-1.0', gain: 0.65, rate: 1.0 },
+    player_jump: { category: 'sfx', path: 'audio/player/player_jump_v2.ogg', license: 'CC0-1.0', gain: 0.64, rate: 1.0 },
+    player_double_jump: { category: 'sfx', path: 'audio/player/player_jump_v2.ogg', license: 'CC0-1.0', gain: 0.64, rate: 1.0 },
     player_land: { category: 'sfx', path: 'audio/player/player_step_02.ogg', license: 'CC0-1.0', gain: 0.82, rate: 0.88 },
     player_dash: { category: 'sfx', path: 'audio/player/air_02.ogg', license: 'CC0-1.0', gain: 0.82, rate: 0.92 },
     player_machete_swing: { category: 'sfx', path: 'audio/player/blade_01.ogg', license: 'CC0-1.0', gain: 0.82 },
