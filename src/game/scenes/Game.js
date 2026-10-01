@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
 import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
+import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 
 export class Game extends Scene
@@ -157,6 +158,8 @@ export class Game extends Scene
             spawnChance: 0.56,
             isPaused: () => this.phaseCompleted || this.phaseCompleteScreenShown
         });
+
+        this.weatherSystem = createTropicalStormSystem(this, { phase: 1 });
 
         this.horizontalExpansion = createHorizontalExpansion(this, {
             phase: 1,
@@ -3364,6 +3367,7 @@ export class Game extends Scene
         this.forestMonkeySystem?.cleanup?.();
         this.oncaEncounter?.destroy?.();
         this.horizontalExpansion?.cleanup?.();
+        this.weatherSystem?.cleanup?.();
     }
 
     createQuickMenuButton ()
@@ -3625,7 +3629,7 @@ export class Game extends Scene
                 const direction = moveLeft && !moveRight ? -1 : moveRight && !moveLeft ? 1 : 0;
                 if (direction !== 0 && this.lastMoveDirection !== 0 && direction !== this.lastMoveDirection) this.showDirectionChangeFeedback(direction);
                 if (direction !== 0) this.lastMoveDirection = direction;
-                this.player.body.setVelocityX(direction * moveSpeed);
+                if (!applyWetGroundMovement(this, direction, moveSpeed, grounded, time)) this.player.body.setVelocityX(direction * moveSpeed);
             }
 
             this.updateGroundedState(grounded);
@@ -3652,6 +3656,7 @@ export class Game extends Scene
         this.updateFruits(time);
         this.updateHunger(time);
         this.updateLivingAtmosphere();
+        this.weatherSystem?.update(time);
         this.forestMonkeySystem?.update(time);
 
         this.horizontalExpansion?.update(this.time.now);

@@ -3,6 +3,7 @@ import { createBasicMobileControls } from '../mobileControls';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
 import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
+import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 
 export class Level3Scene extends Scene
 {
@@ -69,6 +70,8 @@ export class Level3Scene extends Scene
                 };
             }
         });
+
+        this.weatherSystem = createTropicalStormSystem(this, { phase: 3 });
 
         this.horizontalExpansion = createHorizontalExpansion(this, {
             phase: 3,
@@ -4039,6 +4042,7 @@ export class Level3Scene extends Scene
         this.forestMonkeySystem?.cleanup?.();
         this.oncaEncounter?.destroy?.();
         this.horizontalExpansion?.cleanup?.();
+        this.weatherSystem?.cleanup?.();
         this.cleanupCaboclinhoBoss?.();
     }
 
@@ -4132,7 +4136,7 @@ export class Level3Scene extends Scene
                 const direction=left&&!right?-1:right&&!left?1:0;
                 if(direction!==0&&this.lastMoveDirection!==0&&direction!==this.lastMoveDirection)this.showDirectionChangeFeedback(direction);
                 if(direction!==0)this.lastMoveDirection=direction;
-                this.player.body.setVelocityX(direction*moveSpeed);
+                if (!applyWetGroundMovement(this, direction, moveSpeed, grounded, time)) this.player.body.setVelocityX(direction*moveSpeed);
             }
             this.updateGroundedState(grounded);
             this.consumeJumpBuffer(grounded);
@@ -4145,7 +4149,7 @@ export class Level3Scene extends Scene
         if(this.player.y>720&&!this.isPlayerDead){
             this.handlePlayerDeath();
         }
-        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.updateCaboclinhoBoss(time);this.animateCaboclinhoVisual(time);this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
+        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.weatherSystem?.update(time);this.updateCaboclinhoBoss(time);this.animateCaboclinhoVisual(time);this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
 
         this.horizontalExpansion?.update(this.time.now);
 }

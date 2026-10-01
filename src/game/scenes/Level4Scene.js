@@ -3,6 +3,7 @@ import { createBasicMobileControls } from '../mobileControls';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
 import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
+import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 
 export class Level4Scene extends Scene
 {
@@ -166,6 +167,8 @@ export class Level4Scene extends Scene
                 bossActive: false
             })
         });
+
+        this.weatherSystem = createTropicalStormSystem(this, { phase: 4 });
 
         this.horizontalExpansion = createHorizontalExpansion(this, {
             phase: 4,
@@ -3326,6 +3329,7 @@ export class Level4Scene extends Scene
         this.forestMonkeySystem?.cleanup?.();
         this.oncaEncounter?.destroy?.();
         this.horizontalExpansion?.cleanup?.();
+        this.weatherSystem?.cleanup?.();
     }
 
     createQuickMenuButton ()
@@ -3412,7 +3416,7 @@ export class Level4Scene extends Scene
                 const direction=left&&!right?-1:right&&!left?1:0;
                 if(direction!==0&&this.lastMoveDirection!==0&&direction!==this.lastMoveDirection)this.showDirectionChangeFeedback(direction);
                 if(direction!==0)this.lastMoveDirection=direction;
-                this.player.body.setVelocityX(direction*moveSpeed);
+                if (!applyWetGroundMovement(this, direction, moveSpeed, grounded, time)) this.player.body.setVelocityX(direction*moveSpeed);
             }
             this.updateGroundedState(grounded);
             this.consumeJumpBuffer(grounded);
@@ -3435,6 +3439,7 @@ export class Level4Scene extends Scene
         this.updateFruits(time);
         this.updateHunger(time);
         this.updateLivingAtmosphere();
+        this.weatherSystem?.update(time);
         this.oncaEncounter?.update(time);
         this.forestMonkeySystem?.update(time);
 
