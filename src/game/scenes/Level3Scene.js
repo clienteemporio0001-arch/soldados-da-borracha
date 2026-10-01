@@ -1734,6 +1734,9 @@ export class Level3Scene extends Scene
         this.caboclinhoTestComplete = false;
         this.caboclinhoStage = 0;
         this.caboclinhoMoving = false;
+        this.caboclinhoVisualState = 'IDLE';
+        this.caboclinhoFacing = 1;
+        this.caboclinhoVisualDestroyed = false;
         this.caboclinhoPositions = [
             { x: 7350, y: 405 },
             { x: 7780, y: 335 },
@@ -1760,15 +1763,232 @@ export class Level3Scene extends Scene
     createCaboclinhoVisual ()
     {
         const c = this.add.container(-200, -200).setDepth(22);
-        c.add([
-            this.add.rectangle(0, 18, 15, 24, 0x4b3825),
-            this.add.rectangle(0, -4, 24, 34, 0x355b38),
-            this.add.rectangle(0, -2, 38, 7, 0x8d6547),
-            this.add.circle(0, -30, 10, 0x9a704f),
-            this.add.ellipse(0, -42, 32, 10, 0x66502f),
-            this.add.rectangle(7, -52, 4, 17, 0x477248).setAngle(16)
+        const rig = this.add.container(0, 0);
+        const aura = this.add.ellipse(0, -11, 62, 88, 0x6f9b57, 0.055).setDepth(-1);
+        const shadow = this.add.ellipse(0, 35, 46, 10, 0x07100c, 0.28);
+
+        const leftLegRig = this.add.container(-8, 12);
+        const rightLegRig = this.add.container(8, 12);
+        const leftShin = this.add.rectangle(0, 15, 7, 25, 0x9f6847).setOrigin(0.5, 0.12);
+        const rightShin = this.add.rectangle(0, 15, 7, 25, 0x9f6847).setOrigin(0.5, 0.12);
+        const leftFoot = this.add.ellipse(2, 35, 13, 6, 0x6e422d).setAngle(-8);
+        const rightFoot = this.add.ellipse(2, 35, 13, 6, 0x6e422d).setAngle(-8);
+        leftLegRig.add([leftShin, leftFoot]);
+        rightLegRig.add([rightShin, rightFoot]);
+
+        const torsoRig = this.add.container(0, -4);
+        const waistFibers = this.add.container(0, 18);
+        [-15, -9, -3, 4, 10, 15].forEach((x, index) => {
+            waistFibers.add(
+                this.add.triangle(
+                    x,
+                    0,
+                    0, 0,
+                    7, 0,
+                    3.5, 17 + (index % 3) * 3,
+                    index % 2 ? 0x56713b : 0x6d7842,
+                    0.96
+                )
+            );
+        });
+
+        const torso = this.add.ellipse(0, -1, 28, 38, 0xa46b48);
+        const chestShade = this.add.ellipse(2, 2, 18, 29, 0x8b543b, 0.48);
+        const chestPaintA = this.add.rectangle(-5, -4, 3, 24, 0xb7472e, 0.9).setAngle(-18);
+        const chestPaintB = this.add.rectangle(5, -4, 3, 24, 0x2d211d, 0.82).setAngle(18);
+        const shoulderLeafL = this.add.ellipse(-15, -12, 18, 8, 0x315f39, 0.95).setAngle(-28);
+        const shoulderLeafR = this.add.ellipse(15, -12, 18, 8, 0x315f39, 0.95).setAngle(28);
+        torsoRig.add([torso, chestShade, chestPaintA, chestPaintB, shoulderLeafL, shoulderLeafR, waistFibers]);
+
+        const leftArmRig = this.add.container(-15, -12);
+        const rightArmRig = this.add.container(15, -12);
+        const leftUpperArm = this.add.rectangle(0, 0, 7, 25, 0xa46b48).setOrigin(0.5, 0.1);
+        const rightUpperArm = this.add.rectangle(0, 0, 7, 25, 0xa46b48).setOrigin(0.5, 0.1);
+        const leftForearmRig = this.add.container(0, 21);
+        const rightForearmRig = this.add.container(0, 21);
+        const leftForearm = this.add.rectangle(0, 0, 6, 22, 0x985f42).setOrigin(0.5, 0.08);
+        const rightForearm = this.add.rectangle(0, 0, 6, 22, 0x985f42).setOrigin(0.5, 0.08);
+        const leftHand = this.add.circle(0, 20, 4.5, 0xb47751);
+        const rightHand = this.add.circle(0, 20, 4.5, 0xb47751);
+        const vineBracelet = this.add.ellipse(0, 10, 10, 4, 0x315e36, 0.95);
+        leftForearmRig.add([leftForearm, leftHand, vineBracelet]);
+        rightForearmRig.add([rightForearm, rightHand]);
+        leftArmRig.add([leftUpperArm, leftForearmRig]);
+        rightArmRig.add([rightUpperArm, rightForearmRig]);
+
+        const headRig = this.add.container(0, -34);
+        const earL = this.add.ellipse(-12, 0, 7, 11, 0x965d41);
+        const earR = this.add.ellipse(12, 0, 7, 11, 0x965d41);
+        const face = this.add.ellipse(0, 0, 27, 30, 0xaa704d);
+        const jaw = this.add.ellipse(1, 8, 18, 11, 0x985f42, 0.7);
+        const browL = this.add.rectangle(-6, -5, 9, 2.5, 0x2a201c).setAngle(14);
+        const browR = this.add.rectangle(6, -5, 9, 2.5, 0x2a201c).setAngle(-14);
+        const eyeL = this.add.ellipse(-5, -2, 5, 3, 0xf0c564);
+        const eyeR = this.add.ellipse(5, -2, 5, 3, 0xf0c564);
+        const pupilL = this.add.circle(-5, -2, 1.2, 0x120f0d);
+        const pupilR = this.add.circle(5, -2, 1.2, 0x120f0d);
+        const nose = this.add.triangle(0, 3, 0, 0, 4, 7, -2, 7, 0x7e4b35, 0.88);
+        const mouth = this.add.ellipse(1, 8, 11, 4, 0x3b201d);
+        const tooth = this.add.triangle(4, 8, 0, 0, 3, 0, 1.5, 3, 0xe6d8b5);
+        const cheekPaintL = this.add.rectangle(-8, 4, 7, 2, 0xc1482f).setAngle(-12);
+        const cheekPaintR = this.add.rectangle(8, 4, 7, 2, 0xc1482f).setAngle(12);
+
+        const hairBack = this.add.ellipse(0, -9, 31, 20, 0x191a16);
+        const hairTufts = this.add.container(0, -12);
+        [-11, -6, 0, 6, 11].forEach((x, index) => {
+            hairTufts.add(
+                this.add.triangle(
+                    x,
+                    -2 - (index % 2) * 2,
+                    0, 0,
+                    8, 1,
+                    3 + (index % 2), -11 - (index % 3) * 2,
+                    index % 2 ? 0x20231d : 0x171914
+                )
+            );
+        });
+
+        const adornment = this.add.container(0, -17);
+        adornment.add([
+            this.add.ellipse(-9, -4, 7, 19, 0x426c3d).setAngle(-26),
+            this.add.ellipse(-2, -7, 7, 22, 0x587d43).setAngle(-8),
+            this.add.ellipse(6, -7, 6, 21, 0x8b5b36).setAngle(12),
+            this.add.ellipse(12, -3, 6, 17, 0x456b3b).setAngle(28),
+            this.add.circle(0, 1, 3, 0xb84931)
         ]);
+
+        headRig.add([
+            hairBack, hairTufts, adornment,
+            earL, earR, face, jaw,
+            browL, browR, eyeL, eyeR, pupilL, pupilR,
+            nose, mouth, tooth, cheekPaintL, cheekPaintR
+        ]);
+
+        rig.add([
+            shadow,
+            leftLegRig, rightLegRig,
+            torsoRig, leftArmRig, rightArmRig,
+            headRig
+        ]);
+        c.add([aura, rig]);
+
+        c.parts = {
+            rig, aura, shadow,
+            leftLegRig, rightLegRig,
+            leftForearmRig, rightForearmRig,
+            torsoRig, leftArmRig, rightArmRig,
+            headRig, hairTufts, adornment,
+            eyeL, eyeR, pupilL, pupilR,
+            browL, browR, mouth,
+            shoulderLeafL, shoulderLeafR,
+            waistFibers
+        };
         return c;
+    }
+
+    resetCaboclinhoVisualPose ()
+    {
+        const c = this.caboclinhoVisual;
+        if (!c || !c.active || !c.parts) return;
+        const p = c.parts;
+
+        p.rig.setScale(this.caboclinhoFacing || 1, 1).setAngle(0);
+        p.torsoRig.setPosition(0, -4).setAngle(0).setScale(1);
+        p.headRig.setPosition(0, -34).setAngle(0).setScale(1);
+        p.leftArmRig.setPosition(-15, -12).setAngle(18).setScale(1);
+        p.rightArmRig.setPosition(15, -12).setAngle(-18).setScale(1);
+        p.leftForearmRig.setPosition(0, 21).setAngle(-18).setScale(1);
+        p.rightForearmRig.setPosition(0, 21).setAngle(18).setScale(1);
+        p.leftLegRig.setPosition(-8, 12).setAngle(-6).setScale(1);
+        p.rightLegRig.setPosition(8, 12).setAngle(6).setScale(1);
+        p.hairTufts.setPosition(0, -12).setAngle(0).setScale(1);
+        p.adornment.setPosition(0, -17).setAngle(0).setScale(1);
+        p.aura.setAlpha(0.055).setScale(1);
+        p.shadow.setAlpha(0.28).setScale(1);
+        p.eyeL.setFillStyle(0xf0c564);
+        p.eyeR.setFillStyle(0xf0c564);
+        p.browL.setAngle(14);
+        p.browR.setAngle(-14);
+        p.mouth.setScale(1);
+    }
+
+    animateCaboclinhoVisual (time)
+    {
+        const c = this.caboclinhoVisual;
+        if (!c || !c.active || !c.visible || !c.parts || this.caboclinhoVisualDestroyed) return;
+        const p = c.parts;
+        this.resetCaboclinhoVisualPose();
+
+        const breath = Math.sin(time * 0.006);
+        const twitch = Math.sin(time * 0.011);
+        const state = this.caboclinhoVisualState || 'IDLE';
+
+        p.torsoRig.y = -4 + breath * 1.4;
+        p.headRig.y = -34 + breath * 0.7;
+        p.headRig.angle = twitch * 1.8;
+        p.hairTufts.angle = -twitch * 2.4;
+        p.adornment.angle = twitch * 2;
+        p.aura.alpha = 0.045 + (breath + 1) * 0.018;
+        p.shadow.scaleX = 1 + Math.abs(breath) * 0.05;
+        p.leftArmRig.angle = 20 + breath * 4;
+        p.rightArmRig.angle = -22 - breath * 4;
+        p.leftForearmRig.angle = -24 + twitch * 4;
+        p.rightForearmRig.angle = 22 - twitch * 4;
+        p.leftLegRig.angle = -8 + breath * 3;
+        p.rightLegRig.angle = 8 - breath * 3;
+
+        if (state === 'PREPARE') {
+            p.torsoRig.y += 3;
+            p.torsoRig.angle = -(this.caboclinhoFacing || 1) * 8;
+            p.headRig.angle = (this.caboclinhoFacing || 1) * 5;
+            p.leftArmRig.angle = 46;
+            p.rightArmRig.angle = -52;
+            p.leftLegRig.angle = -18;
+            p.rightLegRig.angle = 20;
+            p.hairTufts.setScale(1.04, 1.10);
+            p.aura.setAlpha(0.11).setScale(1.08, 1.02);
+        } else if (state === 'MOVING') {
+            const stride = Math.sin(time * 0.034);
+            p.torsoRig.angle = -(this.caboclinhoFacing || 1) * 10;
+            p.headRig.angle = (this.caboclinhoFacing || 1) * 4;
+            p.leftLegRig.angle = stride * 34;
+            p.rightLegRig.angle = -stride * 34;
+            p.leftArmRig.angle = -stride * 38;
+            p.rightArmRig.angle = stride * 38;
+            p.leftForearmRig.angle = -36;
+            p.rightForearmRig.angle = 36;
+            p.hairTufts.angle = -(this.caboclinhoFacing || 1) * 8;
+            p.adornment.angle = -(this.caboclinhoFacing || 1) * 6;
+            p.aura.setAlpha(0.09);
+            p.shadow.setAlpha(0.18).setScale(0.82);
+        } else if (state === 'RECOVER') {
+            p.torsoRig.y += 2;
+            p.torsoRig.angle = (this.caboclinhoFacing || 1) * 5;
+            p.headRig.angle = -(this.caboclinhoFacing || 1) * 6;
+            p.leftArmRig.angle = 34;
+            p.rightArmRig.angle = -34;
+            p.leftLegRig.angle = -13;
+            p.rightLegRig.angle = 13;
+        } else if (state === 'RECOIL') {
+            p.torsoRig.angle = -(this.caboclinhoFacing || 1) * 13;
+            p.headRig.angle = (this.caboclinhoFacing || 1) * 11;
+            p.leftArmRig.angle = 58;
+            p.rightArmRig.angle = -58;
+            p.eyeL.setFillStyle(0xff8f58);
+            p.eyeR.setFillStyle(0xff8f58);
+            p.mouth.setScale(1.18, 1.15);
+            p.aura.setAlpha(0.14).setScale(1.12);
+        } else if (state === 'DEFEATED') {
+            p.torsoRig.angle = 12;
+            p.headRig.angle = -14;
+            p.leftArmRig.angle = 72;
+            p.rightArmRig.angle = -70;
+            p.leftLegRig.angle = -24;
+            p.rightLegRig.angle = 28;
+            p.eyeL.setFillStyle(0x8a7152);
+            p.eyeR.setFillStyle(0x8a7152);
+            p.aura.setAlpha(0.03);
+        }
     }
 
     startCaboclinhoTrial ()
@@ -1794,10 +2014,14 @@ export class Level3Scene extends Scene
         if (!this.caboclinhoTestActive || this.caboclinhoTestComplete) return;
         this.caboclinhoStage = 0;
         this.caboclinhoMoving = false;
+        this.caboclinhoVisualState = 'IDLE';
+        this.caboclinhoVisualDestroyed = false;
         if (this.caboclinhoMoveShadow) { this.caboclinhoMoveShadow.destroy(); this.caboclinhoMoveShadow = null; }
         const p = this.caboclinhoPositions[0];
         this.tweens.killTweensOf(this.caboclinhoVisual);
+        this.caboclinhoFacing = 1;
         this.caboclinhoVisual.setPosition(p.x, p.y).setAlpha(1).setAngle(0).setScale(1).setVisible(true);
+        this.resetCaboclinhoVisualPose();
         this.caboclinhoReachZone.setPosition(p.x, p.y);
         this.caboclinhoReachZone.body.enable = false;
     }
@@ -1828,6 +2052,8 @@ export class Level3Scene extends Scene
         if (this.caboclinhoMoving) return;
         this.caboclinhoMoving = true;
         const direction = this.caboclinhoPositions[nextStage].x >= this.caboclinhoVisual.x ? 1 : -1;
+        this.caboclinhoFacing = direction;
+        this.caboclinhoVisualState = 'PREPARE';
 
         this.tweens.add({
             targets: this.caboclinhoVisual,
@@ -1844,6 +2070,7 @@ export class Level3Scene extends Scene
 
     moveCaboclinhoTo (nextStage)
     {
+        this.caboclinhoVisualState = 'MOVING';
         const from = this.caboclinhoPositions[this.caboclinhoStage];
         const to = this.caboclinhoPositions[nextStage];
         const direction = to.x >= from.x ? 1 : -1;
@@ -1903,6 +2130,11 @@ export class Level3Scene extends Scene
                         }
 
                         this.caboclinhoStage = nextStage;
+                        this.caboclinhoVisualState = 'RECOVER';
+                        this.time.delayedCall(180, () => {
+                            if (this.caboclinhoTestComplete || !this.caboclinhoVisual?.active) return;
+                            this.caboclinhoVisualState = 'IDLE';
+                        });
                         this.caboclinhoMoving = false;
                         this.enableCaboclinhoReachZone();
                     }
@@ -1915,6 +2147,7 @@ export class Level3Scene extends Scene
     {
         if (this.caboclinhoMoving || this.caboclinhoTestComplete) return;
         this.caboclinhoMoving = true;
+        this.caboclinhoVisualState = 'RECOIL';
         this.tweens.add({
             targets: this.caboclinhoVisual,
             y: this.caboclinhoVisual.y - 5,
@@ -1924,6 +2157,7 @@ export class Level3Scene extends Scene
             ease: 'Sine.InOut',
             onComplete: () => {
                 this.caboclinhoVisual.setAngle(0);
+                this.caboclinhoVisualState = 'RECOVER';
                 this.time.delayedCall(260, () => this.completeCaboclinhoTrial());
             }
         });
@@ -1935,6 +2169,7 @@ export class Level3Scene extends Scene
         this.caboclinhoTestComplete = true;
         this.caboclinhoMoving = false;
         this.caboclinhoReachZone.body.enable = false;
+        this.defeatCaboclinhoVisual();
 
         const panel = this.add.rectangle(512, 350, 650, 190, 0x06100d, 0.92).setScrollFactor(0).setDepth(190);
         const line = this.add.text(512, 318, 'Agora seus passos alcançam onde a mata se abre.', {
@@ -1957,6 +2192,51 @@ export class Level3Scene extends Scene
                 skill.destroy();
                 this.showDashTutorial();
             });
+        });
+    }
+
+    defeatCaboclinhoVisual ()
+    {
+        const c = this.caboclinhoVisual;
+        if (!c || !c.active || this.caboclinhoVisualDestroyed) return;
+
+        this.caboclinhoVisualState = 'DEFEATED';
+        this.tweens.killTweensOf(c);
+
+        for (let i = 0; i < 7; i += 1) {
+            const leaf = this.add.ellipse(
+                c.x,
+                c.y - 12,
+                9 + (i % 3) * 2,
+                4 + (i % 2),
+                i % 2 ? 0x6d7842 : 0x315f39,
+                0.72
+            ).setDepth(23);
+            this.tweens.add({
+                targets: leaf,
+                x: c.x + (i - 3) * 18,
+                y: c.y - 36 - (i % 3) * 12,
+                angle: (i - 3) * 42,
+                alpha: 0,
+                duration: 420 + i * 30,
+                onComplete: () => leaf.destroy()
+            });
+        }
+
+        this.tweens.add({
+            targets: c,
+            y: c.y - 18,
+            scaleX: 0.86,
+            scaleY: 0.92,
+            angle: this.caboclinhoFacing * -8,
+            alpha: 0,
+            duration: 520,
+            ease: 'Sine.In',
+            onComplete: () => {
+                if (c.active) c.destroy();
+                if (this.caboclinhoVisual === c) this.caboclinhoVisual = null;
+                this.caboclinhoVisualDestroyed = true;
+            }
         });
     }
 
@@ -3323,7 +3603,7 @@ export class Level3Scene extends Scene
             if(this.caboclinhoTestActive&&!this.caboclinhoTestComplete)this.resetCaboclinhoTest();
             this.handlePlayerDeath();
         }
-        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
+        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.animateCaboclinhoVisual(time);this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
 
         this.horizontalExpansion?.update(this.time.now);
 }
