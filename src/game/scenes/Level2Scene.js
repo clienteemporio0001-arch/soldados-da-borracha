@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
+import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
 
 export class Level2Scene extends Scene
@@ -123,6 +124,28 @@ export class Level2Scene extends Scene
         this.createPorongaLightSystem();
 
         this.spawnPoint = { x: 150, y: 560 };
+        this.forestMonkeySystem = createForestMonkeySystem(this, {
+            phase: 2,
+            perches: [
+                { x: 392, y: 292 },
+                { x: 1042, y: 315 },
+                { x: 1630, y: 278 },
+                { x: 2268, y: 305 },
+                { x: 2874, y: 286 }
+            ],
+            damage: 12,
+            maxMonkeys: 2,
+            throwMin: 2500,
+            throwMax: 3200,
+            maxProjectiles: 3,
+            aimLead: 0.22,
+            aimError: 31,
+            spawnChance: 0.64,
+            isPaused: () =>
+                this.phaseCompleted ||
+                (this.arenaStarted && !this.arenaCleared) ||
+                this.firstDoubleJumpPending
+        });
         this.oncaEncounter = new OncaEncounter(this, {
             phase: 2,
             canSpawn: () => {
@@ -4930,6 +4953,7 @@ export class Level2Scene extends Scene
         this.updateFruits(time);
         this.updateCurupira(time);
         this.oncaEncounter?.update(time);
+        this.forestMonkeySystem?.update(time);
         this.updateHunger(time);
         this.updateLivingAtmosphere();
     }

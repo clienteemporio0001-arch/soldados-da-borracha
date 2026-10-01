@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
+import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
 
 export class Level5Scene extends Scene
@@ -141,6 +142,27 @@ export class Level5Scene extends Scene
         this.createPorongaLightSystem();
 
         this.spawnPoint = { x: 150, y: 530 };
+        this.forestMonkeySystem = createForestMonkeySystem(this, {
+            phase: 5,
+            perches: [
+                { x: 530, y: 258 },
+                { x: 1280, y: 282 },
+                { x: 2030, y: 258 },
+                { x: 2780, y: 286 },
+                { x: 3530, y: 255 }
+            ],
+            damage: 20,
+            maxMonkeys: 2,
+            throwMin: 1800,
+            throwMax: 2600,
+            maxProjectiles: 4,
+            aimLead: 0.28,
+            aimError: 20,
+            spawnChance: 0.78,
+            isPaused: () =>
+                this.phaseCompleted ||
+                (this.bossStarted && !this.bossDefeated)
+        });
         this.oncaEncounter = new OncaEncounter(this, {
             phase: 5,
             canSpawn: () => {
@@ -2940,6 +2962,6 @@ export class Level5Scene extends Scene
             this.handlePlayerDeath();
         }
 
-        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.oncaEncounter?.update(time);
+        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
     }
 }

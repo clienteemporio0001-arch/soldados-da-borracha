@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
+import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 
 export class Game extends Scene
 {
@@ -137,6 +138,24 @@ export class Game extends Scene
         this.createPorongaLightSystem();
 
         this.spawnPoint = { x: 150, y: 560 };
+        this.forestMonkeySystem = createForestMonkeySystem(this, {
+            phase: 1,
+            perches: [
+                { x: 330, y: 350 },
+                { x: 1250, y: 338 },
+                { x: 2040, y: 352 },
+                { x: 2768, y: 332 }
+            ],
+            damage: 10,
+            maxMonkeys: 1,
+            throwMin: 2800,
+            throwMax: 3500,
+            maxProjectiles: 2,
+            aimLead: 0.20,
+            aimError: 35,
+            spawnChance: 0.56,
+            isPaused: () => this.phaseCompleted || this.phaseCompleteScreenShown
+        });
     }
 
     createAmazonAtmosphere (worldWidth, worldHeight)
@@ -2207,6 +2226,26 @@ export class Game extends Scene
         }
     }
 
+    damagePlayer (amount, vx = 0, vy = 0)
+    {
+        if (this.phaseCompleted || this.isPlayerDead || this.time.now < this.invulnerableUntil)
+        {
+            return;
+        }
+
+        this.health = Math.max(0, this.health - amount);
+        this.invulnerableUntil = this.time.now + 1000;
+        this.knockbackUntil = this.time.now + 150;
+        this.player.body.setVelocity(vx, vy);
+        this.updateHealthHud();
+        this.flashPlayerDamage();
+
+        if (this.health <= 0)
+        {
+            this.handlePlayerDeath();
+        }
+    }
+
     flashPlayerDamage ()
     {
         this.tweens.killTweensOf(this.playerVisual);
@@ -3585,5 +3624,6 @@ export class Game extends Scene
         this.updateFruits(time);
         this.updateHunger(time);
         this.updateLivingAtmosphere();
+        this.forestMonkeySystem?.update(time);
     }
 }

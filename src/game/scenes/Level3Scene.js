@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { createBasicMobileControls } from '../mobileControls';
+import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 import { OncaEncounter } from '../oncaEncounter.js';
 
 export class Level3Scene extends Scene
@@ -36,6 +37,27 @@ export class Level3Scene extends Scene
         createBasicMobileControls(this); this.keyShift.on('down',()=>this.tryDash());
         this.cameras.main.startFollow(this.player,true,0.08,0.08); this.cameras.main.setDeadzone(220,160);
         this.createHud(); this.createHealthHud(); this.createHungerHud(); this.createStaminaHud(); this.showLevelTitle(); this.createLivingAtmosphere(); this.createPorongaLightSystem(); this.spawnPoint={x:150,y:560};
+        this.forestMonkeySystem = createForestMonkeySystem(this, {
+            phase: 3,
+            perches: [
+                { x: 458, y: 282 },
+                { x: 1140, y: 268 },
+                { x: 1840, y: 250 },
+                { x: 2540, y: 270 },
+                { x: 3240, y: 245 }
+            ],
+            damage: 15,
+            maxMonkeys: 2,
+            throwMin: 2200,
+            throwMax: 3000,
+            maxProjectiles: 4,
+            aimLead: 0.24,
+            aimError: 27,
+            spawnChance: 0.70,
+            isPaused: () =>
+                this.phaseCompleted ||
+                (this.caboclinhoTestActive && !this.caboclinhoTestComplete)
+        });
         this.oncaEncounter = new OncaEncounter(this, {
             phase: 3,
             canSpawn: () => {
@@ -3265,7 +3287,7 @@ export class Level3Scene extends Scene
             if(this.caboclinhoTestActive&&!this.caboclinhoTestComplete)this.resetCaboclinhoTest();
             this.handlePlayerDeath();
         }
-        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.oncaEncounter?.update(time);
+        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
     }
 
     createStaminaHud ()
