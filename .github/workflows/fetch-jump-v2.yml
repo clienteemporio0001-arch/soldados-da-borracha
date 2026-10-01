@@ -25,47 +25,78 @@ jobs:
 
       - name: Fetch exact Game-ish jump sound and convert to OGG
         run: |
-          python -m pip install --disable-pip-version-check curl_cffi
+          python -m pip install --disable-pip-version-check playwright
+          python -m playwright install chromium
           python - <<'PY'
-          import json, re
-          from curl_cffi import requests
+          import re
+          from urllib.parse import urljoin
+          from playwright.sync_api import sync_playwright
 
-          session = requests.Session(impersonate="chrome")
-          api = "https://www.101soundboards.com/api/v1/boards/699819"
-          response = session.get(api, timeout=30)
-          if response.status_code == 200:
-              data = response.json()
-              sounds = data.get("sounds") or data.get("board", {}).get("sounds") or []
-              target = next((s for s in sounds if "Game Ish Jump Sound" in str(s.get("sound_transcript",""))), None)
-              if not target:
-                  raise SystemExit("Target sound not found in Jump SFX board")
-              rel = target.get("sound_file_url")
-              print("Found sound:", target.get("id"), target.get("sound_transcript"))
-          else:
-              sound_page = "https://www.101soundboards.com/sounds/26904642-game-ish-jump-sound-jump-game-sound-effect-at-someordinary"
-              page = session.get(sound_page, timeout=30)
-              page.raise_for_status()
-              m = re.search(r'"sound_file_url"\s*:\s*"([^"]+)"', page.text)
-              if not m:
-                  m = re.search(r'(\/storage\/board_sounds_rendered\/26904642[^"\\]+(?:\\u0026|&)[^"]+)', page.text)
-              if not m:
-                  raise SystemExit("Could not extract target sound URL from sound page")
-              rel = m.group(1).replace("\\/","/").replace("\\u0026","&")
+          sound_page = "https://www.101soundboards.com/sounds/26904642-game-ish-jump-sound-jump-game-sound-effect-at-someordinary"
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+              context = browser.new_context(
+                  user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36"
+              )
+              page = context.new_page()
+              response = page.goto(sound_page, wait_until="domcontentloaded", timeout=60000)
+              page.wait_for_timeout(8000)
+              print("Page status:", response.status if response else None)
+              print("Page title:", page.title())
 
-          if not rel:
-              raise SystemExit("Target sound has no sound_file_url")
-          url = rel if rel.startswith("http") else "https://www.101soundboards.com" + rel
-          audio_response = session.get(url, timeout=30)
-          audio_response.raise_for_status()
-          audio = audio_response.content
-          if len(audio) < 1000:
-              raise SystemExit(f"Downloaded audio is unexpectedly small: {len(audio)} bytes")
-          open("/tmp/player_jump_v2.mp3","wb").write(audio)
-          print("Downloaded bytes:", len(audio))
+              candidates = []
+              for selector in ["audio", "audio source"]:
+                  for el in page.locator(selector).all():
+                      src = el.get_attribute("src")
+                      if src:
+                          candidates.append(urljoin(sound_page, src))
+
+              html = page.content()
+              for pattern in [
+                  r'"sound_file_url"\s*:\s*"([^"]+)"',
+                  r'(\/storage\/board_sounds_rendered\/26904642[^"\\]+(?:\\u0026|&)[^"]+)',
+                  r'(https://[^"\']+26904642[^"\']+\.mp3[^"\']*)'
+              ]:
+                  m = re.search(pattern, html)
+                  if m:
+                      candidates.append(urljoin(sound_page, m.group(1).replace("\\/","/").replace("\\u0026","&")))
+
+              resources = page.evaluate("""() => performance.getEntriesByType('resource').map(e => e.name)""")
+              candidates.extend([u for u in resources if "26904642" in u and (".mp3" in u or "/storage/" in u)])
+
+              if not candidates:
+                  try:
+                      page.get_by_text("Play", exact=True).first.click(timeout=5000)
+                      page.wait_for_timeout(3000)
+                  except Exception:
+                      pass
+                  resources = page.evaluate("""() => performance.getEntriesByType('resource').map(e => e.name)""")
+                  candidates.extend([u for u in resources if "26904642" in u and (".mp3" in u or "/storage/" in u)])
+
+              candidates = list(dict.fromkeys(candidates))
+              print("Candidates:", candidates)
+              if not candidates:
+                  raise SystemExit("Could not find target audio URL in browser session")
+
+              audio = None
+              for url in candidates:
+                  try:
+                      r = context.request.get(url, timeout=30000)
+                      body = r.body()
+                      print("Candidate response:", r.status, len(body), url)
+                      if r.ok and len(body) > 1000:
+                          audio = body
+                          break
+                  except Exception as exc:
+                      print("Candidate failed:", exc)
+
+              if not audio:
+                  raise SystemExit("Could not download target audio in browser session")
+              open("/tmp/player_jump_v2.mp3","wb").write(audio)
+              browser.close()
           PY
           ffmpeg -y -hide_banner -loglevel error -i /tmp/player_jump_v2.mp3 -c:a libvorbis -q:a 5 public/assets/audio/player/player_jump_v2.ogg
           ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 public/assets/audio/player/player_jump_v2.ogg
-
       - name: Update jump manifest and license only
         run: |
           python - <<'PY'
