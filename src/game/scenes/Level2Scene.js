@@ -2336,7 +2336,9 @@ export class Level2Scene extends Scene
 
         p.torsoRig.y = -2 + breath * 1.5;
         p.headRig.y = -42 + breath * 0.75;
-        const playerDelta = this.player ? Phaser.Math.Clamp((this.player.x - this.curupira.x) / 220, -1, 1) : 0;
+        const playerDelta = this.player
+            ? Math.max(-1, Math.min(1, (this.player.x - this.curupira.x) / 220))
+            : 0;
         p.headRig.angle = breath + playerDelta * 2.2;
         p.backLeaves.angle = -breath * 1.8;
 
@@ -2349,10 +2351,12 @@ export class Level2Scene extends Scene
         const prepareBoost = state === 'PREPARE' ? 0.32 : 0;
         const attackBoost = state === 'ATTACK' ? 0.5 : 0;
         const vulnerableDrop = (state === 'VULNERABLE' || state === 'HIT') ? -0.18 : 0;
-        const glowAlpha = Phaser.Math.Clamp(
-            0.28 + (menace + 1) * 0.08 + prepareBoost + attackBoost + vulnerableDrop,
+        const glowAlpha = Math.max(
             0.12,
-            0.95
+            Math.min(
+                0.95,
+                0.28 + (menace + 1) * 0.08 + prepareBoost + attackBoost + vulnerableDrop
+            )
         );
         if (p.eyeGlowL && p.eyeGlowL.active !== false) p.eyeGlowL.alpha = glowAlpha;
         if (p.eyeGlowR && p.eyeGlowR.active !== false) p.eyeGlowR.alpha = glowAlpha;
@@ -2382,7 +2386,13 @@ export class Level2Scene extends Scene
                 const pulse = Math.sin(time * (0.012 + (index % 4) * 0.001) + index);
                 flame.scaleX = 1;
                 flame.scaleY = 1 + pulse * 0.035;
-                flame.alpha = Phaser.Math.Clamp(0.72 + pulse * 0.1 + attackBoost * 0.18, 0.52, 1);
+                flame.alpha = Math.max(
+                    0.52,
+                    Math.min(
+                        1,
+                        0.72 + pulse * 0.1 + attackBoost * 0.18
+                    )
+                );
             });
         }
 
