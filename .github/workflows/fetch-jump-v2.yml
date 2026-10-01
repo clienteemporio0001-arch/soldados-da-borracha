@@ -36,7 +36,6 @@ jobs:
           open('public/assets/audio/player/player_jump_v2.ogg','wb').write(data)
           print('Downloaded bytes:', len(data))
           PY
-          ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 public/assets/audio/player/player_jump_v2.ogg
 
       - name: Update jump manifest and license only
         run: |
