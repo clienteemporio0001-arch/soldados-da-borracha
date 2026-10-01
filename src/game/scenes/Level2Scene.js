@@ -2010,6 +2010,12 @@ export class Level2Scene extends Scene
         this.curupiraLandingImpactShown = false;
         this.curupiraLandingMarker = null;
         this.curupiraAttackTimers = [];
+        this.curupiraSpecialEffects = [];
+        this.curupiraAttackHistory = [];
+        this.curupiraAirJumpUsed = false;
+        this.curupiraWhistleIntroduced = false;
+        this.curupiraFalseTrailIntroduced = false;
+        this.curupiraWhistleDamageDone = false;
         this.curupiraBaseScale = 1.78;
 
         // Bottom-most point of the procedural feet at scale 1:
@@ -2237,11 +2243,12 @@ export class Level2Scene extends Scene
 
         this.curupiraState = 'PREPARE';
         this.curupira.body.setVelocity(0, 0);
-        this.curupiraAttackPattern = (this.curupiraAttackPattern + 1) % 3;
-        this.curupiraNextActionAt = startAt + 250;
+        this.curupiraAttackPattern = this.selectCurupiraAttackPattern();
+        const prepareDuration = this.curupiraHealth <= 25 ? 210 : 250;
+        this.curupiraNextActionAt = startAt + prepareDuration;
 
         if (!this.curupiraVisual) return;
-        this.curupiraVisual.setAlpha(1);
+        this.curupiraVisual.setAlpha(this.curupiraAttackPattern === 4 ? 0.62 : 1);
         this.curupiraVisual.setAngle(0);
         this.curupiraVisual.setScale(this.curupiraBaseScale);
 
@@ -2249,11 +2256,50 @@ export class Level2Scene extends Scene
         if (p) {
             if (p.eyeGlowL && p.eyeGlowL.active !== false) p.eyeGlowL.setAlpha(0.72);
             if (p.eyeGlowR && p.eyeGlowR.active !== false) p.eyeGlowR.setAlpha(0.72);
-            if (p.hairRig && p.hairRig.active !== false) p.hairRig.setScale(1.04, 1.08);
+            if (p.hairRig && p.hairRig.active !== false) {
+                if (this.curupiraAttackPattern === 0) p.hairRig.setAngle(-this.curupiraVisualFacing * 8);
+                else if (this.curupiraAttackPattern === 1) p.hairRig.setScale(1.02, 1.18);
+                else if (this.curupiraAttackPattern === 3) p.hairRig.setScale(1.16, 1.05);
+                else if (this.curupiraAttackPattern === 4) p.hairRig.setScale(0.94, 0.82);
+                else p.hairRig.setScale(1.04, 1.08);
+            }
             if (p.backLeaves && p.backLeaves.active !== false) {
                 p.backLeaves.setAngle(this.player.x < this.curupira.x ? 6 : -6);
             }
         }
+
+        if (this.curupiraAttackPattern === 4) {
+            this.createCurupiraFalseTrailFootprints();
+        }
+    }
+
+    selectCurupiraAttackPattern ()
+    {
+        let allowed = [0, 1, 2];
+        if (this.curupiraHealth <= 75) allowed.push(3);
+        if (this.curupiraHealth <= 50) allowed.push(4);
+
+        let selected = null;
+        if (this.curupiraHealth <= 50 && !this.curupiraFalseTrailIntroduced) {
+            selected = 4;
+            this.curupiraFalseTrailIntroduced = true;
+        } else if (this.curupiraHealth <= 75 && !this.curupiraWhistleIntroduced) {
+            selected = 3;
+            this.curupiraWhistleIntroduced = true;
+        } else {
+            const recent = this.curupiraAttackHistory.slice(-2);
+            const candidates = allowed.filter(pattern => !(
+                recent.length === 2 &&
+                recent[0] === pattern &&
+                recent[1] === pattern
+            ));
+            const pool = candidates.length > 0 ? candidates : allowed;
+            selected = pool[(this.curupiraAttackSerial + Math.floor(this.curupiraHealth / 25)) % pool.length];
+        }
+
+        this.curupiraAttackHistory.push(selected);
+        if (this.curupiraAttackHistory.length > 2) this.curupiraAttackHistory.shift();
+        return selected;
     }
 
     resetCurupiraRigParts ()
@@ -2446,7 +2492,7 @@ export class Level2Scene extends Scene
                 p.rightForearmRig.angle = 38;
                 p.torsoRig.angle = 0;
                 p.headRig.angle = breath + playerDelta * 2.2 + facing * 3;
-            } else {
+            } else if (this.curupiraAttackPattern === 2) {
                 const feint = Math.sin(time * 0.026);
                 p.leftLegRig.angle = feint * 24;
                 p.rightLegRig.angle = -feint * 24;
@@ -2458,6 +2504,23 @@ export class Level2Scene extends Scene
                 p.rightForearmRig.angle = 50;
                 p.torsoRig.angle = facing * 11;
                 p.headRig.angle = breath + playerDelta * 2.2 - facing * 5;
+            } else if (this.curupiraAttackPattern === 3) {
+                p.leftArmRig.angle = 42;
+                p.rightArmRig.angle = -42;
+                p.leftForearmRig.angle = -20;
+                p.rightForearmRig.angle = 20;
+                p.torsoRig.scaleX = 1.06;
+                p.headRig.angle = -8;
+                p.hairRig.scaleX = 1.16;
+                p.hairRig.scaleY = 1.06;
+            } else {
+                p.leftLegRig.angle = -10;
+                p.rightLegRig.angle = 10;
+                p.leftArmRig.angle = 30;
+                p.rightArmRig.angle = -30;
+                p.torsoRig.angle = facing * -4;
+                p.hairRig.scaleX = 0.96;
+                p.hairRig.scaleY = 0.86;
             }
             return;
         }
@@ -2501,6 +2564,19 @@ export class Level2Scene extends Scene
             p.torsoRig.angle += facing * 5;
             p.headRig.angle = breath + playerDelta * 2.2 - facing * 3;
             p.backLeaves.angle = -facing * 9;
+            if (this.curupiraAttackPattern === 0) {
+                p.hairRig.angle = -facing * 9;
+            } else if (this.curupiraAttackPattern === 1) {
+                p.hairRig.scaleY = 1.18;
+            } else if (this.curupiraAttackPattern === 3) {
+                p.hairRig.scaleX = 1.16;
+                p.hairRig.scaleY = 1.04;
+                p.headRig.angle = -7;
+                p.torsoRig.scaleX = 1.04;
+            } else if (this.curupiraAttackPattern === 4) {
+                p.hairRig.scaleX = 0.95;
+                p.hairRig.scaleY = 0.80;
+            }
         }
 
         if (state === 'VULNERABLE' || state === 'RECOVERY' || state === 'HIT') {
@@ -2541,7 +2617,9 @@ export class Level2Scene extends Scene
 
                 if (this.curupiraAttackPattern === 0) this.curupiraDash(time);
                 else if (this.curupiraAttackPattern === 1) this.curupiraJump(time);
-                else this.curupiraFeint(time);
+                else if (this.curupiraAttackPattern === 2) this.curupiraFeint(time);
+                else if (this.curupiraAttackPattern === 3) this.curupiraWhistle(time);
+                else this.curupiraFalseTrail(time);
             }
             return;
         }
@@ -2620,6 +2698,7 @@ export class Level2Scene extends Scene
     curupiraJump (time)
     {
         const direction = this.player.x < this.curupira.x ? -1 : 1;
+        this.curupiraAirJumpUsed = false;
         this.curupiraLandingImpactShown = false;
         this.createCurupiraLandingMarker();
         if (this.curupiraVisual?.parts) {
@@ -2628,6 +2707,56 @@ export class Level2Scene extends Scene
         }
         this.curupira.body.setVelocity(direction * 155, -520);
         this.curupiraLandingDangerUntil = time + 1220;
+
+        if (this.curupiraHealth <= 75) {
+            this.scheduleCurupiraAttackCall(330, () => {
+                if (this.curupiraState !== 'ATTACK' ||
+                    this.curupiraAttackPattern !== 1 ||
+                    this.curupiraAirJumpUsed ||
+                    this.curupira.body.blocked.down) return;
+
+                this.curupiraAirJumpUsed = true;
+                this.showCurupiraAirJumpTelegraph();
+
+                this.scheduleCurupiraAttackCall(180, () => {
+                    if (this.curupiraState !== 'ATTACK' ||
+                        this.curupiraAttackPattern !== 1 ||
+                        this.curupira.body.blocked.down) return;
+
+                    const towardPlayer = this.player.x < this.curupira.x ? -1 : 1;
+                    this.curupira.body.setVelocity(towardPlayer * 135, -420);
+                    this.curupiraLandingDangerUntil = this.time.now + 1150;
+                });
+            });
+        }
+    }
+
+    showCurupiraAirJumpTelegraph ()
+    {
+        if (!this.curupiraVisual?.parts) return;
+        const p = this.curupiraVisual.parts;
+        if (p.hairRig?.active !== false) p.hairRig.setScale(1.08, 1.28);
+        if (p.eyeGlowL?.active !== false) p.eyeGlowL.setAlpha(0.95);
+        if (p.eyeGlowR?.active !== false) p.eyeGlowR.setAlpha(0.95);
+        this.curupiraVisual.setScale(this.curupiraBaseScale * 1.04, this.curupiraBaseScale * 0.92);
+
+        for (let i = 0; i < 6; i += 1) {
+            const ember = i % 2 === 0;
+            const fx = ember
+                ? this.add.circle(this.curupira.x, this.curupira.y - 24, 2.5, 0xf58a2d, 0.78).setDepth(25)
+                : this.add.ellipse(this.curupira.x, this.curupira.y - 5, 8, 4, 0x78914f, 0.72).setDepth(24);
+            this.trackCurupiraSpecialEffect(fx);
+            const side = i % 2 === 0 ? -1 : 1;
+            this.tweens.add({
+                targets: fx,
+                x: fx.x + side * (18 + i * 4),
+                y: fx.y - 16 - (i % 3) * 7,
+                angle: side * (30 + i * 12),
+                alpha: 0,
+                duration: 220,
+                onComplete: () => this.destroyCurupiraSpecialEffect(fx)
+            });
+        }
     }
 
     curupiraFeint (time)
@@ -2653,6 +2782,190 @@ export class Level2Scene extends Scene
         });
     }
 
+    curupiraWhistle (time)
+    {
+        this.curupira.body.setVelocity(0, 0);
+        this.curupiraWhistleDamageDone = false;
+
+        if (this.curupiraVisual?.parts) {
+            const p = this.curupiraVisual.parts;
+            if (p.headRig?.active !== false) p.headRig.setAngle(-10);
+            if (p.torsoRig?.active !== false) p.torsoRig.setScale(1.07, 1.02);
+            if (p.hairRig?.active !== false) p.hairRig.setScale(1.18, 1.08);
+            if (p.eyeGlowL?.active !== false) p.eyeGlowL.setAlpha(0.94);
+            if (p.eyeGlowR?.active !== false) p.eyeGlowR.setAlpha(0.94);
+        }
+
+        for (let i = 0; i < 3; i += 1) {
+            const cue = this.add.ellipse(
+                this.curupira.x,
+                this.curupira.y - 25,
+                26 + i * 12,
+                14 + i * 6,
+                0xd6b56c,
+                0.10
+            ).setDepth(23);
+            cue.setStrokeStyle(2, 0xf1e1ae, 0.30);
+            this.trackCurupiraSpecialEffect(cue);
+            this.tweens.add({
+                targets: cue,
+                scaleX: 1.35,
+                scaleY: 1.28,
+                alpha: 0,
+                duration: 360 + i * 60,
+                onComplete: () => this.destroyCurupiraSpecialEffect(cue)
+            });
+        }
+
+        this.scheduleCurupiraAttackCall(500, () => {
+            if (this.curupiraState !== 'ATTACK' || this.curupiraAttackPattern !== 3) return;
+            this.releaseCurupiraWhistle();
+        });
+
+        this.scheduleCurupiraAttackCall(880, () => {
+            if (this.curupiraState === 'ATTACK' && this.curupiraAttackPattern === 3) {
+                this.enterCurupiraRecovery(this.time.now, 200);
+            }
+        });
+    }
+
+    releaseCurupiraWhistle ()
+    {
+        for (let i = 0; i < 4; i += 1) {
+            const wave = this.add.ellipse(
+                this.curupira.x,
+                this.curupira.y - 18,
+                50,
+                30,
+                0x9fc6a0,
+                0.05
+            ).setDepth(22);
+            wave.setStrokeStyle(3, i % 2 === 0 ? 0xd6b56c : 0xa8c99a, 0.55);
+            this.trackCurupiraSpecialEffect(wave);
+            this.tweens.add({
+                targets: wave,
+                scaleX: 4.2 + i * 0.35,
+                scaleY: 3.1 + i * 0.2,
+                alpha: 0,
+                duration: 430 + i * 80,
+                delay: i * 45,
+                ease: 'Quad.Out',
+                onComplete: () => this.destroyCurupiraSpecialEffect(wave)
+            });
+        }
+
+        if (!this.curupiraWhistleDamageDone) {
+            this.curupiraWhistleDamageDone = true;
+            const dx = this.player.x - this.curupira.x;
+            const dy = this.player.y - this.curupira.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance <= 220) {
+                const direction = dx < 0 ? -1 : 1;
+                this.damagePlayer(10, direction * 145, -70);
+            }
+        }
+    }
+
+    createCurupiraFalseTrailFootprints ()
+    {
+        const baseY = 636;
+        [-1, 1].forEach(side => {
+            for (let i = 0; i < 4; i += 1) {
+                const x = this.curupira.x + side * (34 + i * 30);
+                const heel = this.add.ellipse(x, baseY - (i % 2) * 3, 12, 7, 0x6e4a31, 0.42)
+                    .setDepth(17)
+                    .setAngle(side * (i % 2 === 0 ? -12 : 12));
+                const toe = this.add.ellipse(x - side * 8, baseY - 1 - (i % 2) * 3, 8, 4, 0x8a6240, 0.38)
+                    .setDepth(17);
+                this.trackCurupiraSpecialEffect(heel);
+                this.trackCurupiraSpecialEffect(toe);
+                this.tweens.add({
+                    targets: [heel, toe],
+                    alpha: 0,
+                    duration: 760,
+                    delay: i * 70,
+                    onComplete: () => {
+                        this.destroyCurupiraSpecialEffect(heel);
+                        this.destroyCurupiraSpecialEffect(toe);
+                    }
+                });
+            }
+        });
+    }
+
+    curupiraFalseTrail (time)
+    {
+        this.curupira.body.setVelocity(0, 0);
+        if (this.curupiraVisual) this.curupiraVisual.setAlpha(0.38);
+
+        this.scheduleCurupiraAttackCall(260, () => {
+            if (this.curupiraState !== 'ATTACK' || this.curupiraAttackPattern !== 4) return;
+
+            const playerX = this.player.x;
+            const leftCandidate = Math.max(this.arenaMinX + 55, playerX - 190);
+            const rightCandidate = Math.min(this.arenaMaxX - 55, playerX + 190);
+            const leftDistance = Math.abs(leftCandidate - playerX);
+            const rightDistance = Math.abs(rightCandidate - playerX);
+            let targetX = this.curupira.x < playerX ? rightCandidate : leftCandidate;
+
+            if (Math.abs(targetX - playerX) < 140) {
+                targetX = rightDistance >= leftDistance ? rightCandidate : leftCandidate;
+            }
+            if (Math.abs(targetX - playerX) < 140) {
+                targetX = playerX < (this.arenaMinX + this.arenaMaxX) / 2
+                    ? Math.min(this.arenaMaxX - 55, playerX + 140)
+                    : Math.max(this.arenaMinX + 55, playerX - 140);
+            }
+
+            this.curupira.setPosition(targetX, 590);
+            if (this.curupiraVisual) {
+                this.curupiraVisual.setAlpha(1);
+                this.curupiraVisual.setPosition(
+                    this.curupira.x,
+                    this.curupira.y + this.curupiraVisualOffsetY
+                );
+            }
+            if (this.curupiraVisual?.parts?.hairRig?.active !== false) {
+                this.curupiraVisual.parts.hairRig.setScale(1.10, 1.18);
+            }
+
+            const direction = this.player.x < this.curupira.x ? -1 : 1;
+            this.curupira.body.setVelocityX(direction * 285);
+            this.showCurupiraDashTrail(direction, 3);
+            this.showCurupiraDashLeaves(direction);
+        });
+
+        this.scheduleCurupiraAttackCall(700, () => {
+            if (this.curupiraState === 'ATTACK' && this.curupiraAttackPattern === 4) {
+                this.curupira.body.setVelocityX(0);
+                this.enterCurupiraRecovery(this.time.now, 190);
+            }
+        });
+    }
+
+    trackCurupiraSpecialEffect (effect)
+    {
+        if (effect) this.curupiraSpecialEffects.push(effect);
+        return effect;
+    }
+
+    destroyCurupiraSpecialEffect (effect)
+    {
+        const index = this.curupiraSpecialEffects.indexOf(effect);
+        if (index >= 0) this.curupiraSpecialEffects.splice(index, 1);
+        if (effect?.active) effect.destroy();
+    }
+
+    clearCurupiraSpecialEffects ()
+    {
+        this.curupiraSpecialEffects.forEach(effect => {
+            if (!effect?.active) return;
+            this.tweens.killTweensOf(effect);
+            effect.destroy();
+        });
+        this.curupiraSpecialEffects.length = 0;
+    }
+
     scheduleCurupiraAttackCall (delay, callback)
     {
         const timer = this.time.delayedCall(delay, () => {
@@ -2670,7 +2983,8 @@ export class Level2Scene extends Scene
         if (this.arenaCleared || this.curupiraState === 'DEFEATED' || !this.curupira?.body?.enable) return;
         this.curupira.body.setVelocity(0, 0);
         this.curupiraState = 'RECOVERY';
-        this.curupiraNextActionAt = time + duration;
+        const recoveryDuration = this.curupiraHealth <= 25 ? Math.min(duration, 180) : duration;
+        this.curupiraNextActionAt = time + recoveryDuration;
         this.curupiraWillChain = this.curupiraComboCount === 0 && this.curupiraAttackSerial > 0 && this.curupiraAttackSerial % 3 === 0;
 
         if (this.curupiraVisual) {
@@ -2687,7 +3001,7 @@ export class Level2Scene extends Scene
         this.curupiraState = 'VULNERABLE';
         this.curupiraComboCount = 0;
         this.curupiraWillChain = false;
-        this.curupiraNextActionAt = time + 920;
+        this.curupiraNextActionAt = time + (this.curupiraHealth <= 25 ? 820 : 920);
 
         if (this.curupiraVisual) {
             this.curupiraVisual.setAlpha(0.62);
@@ -3017,6 +3331,7 @@ export class Level2Scene extends Scene
 
         this.curupiraAttackTimers.forEach(timer => timer?.remove(false));
         this.curupiraAttackTimers.length = 0;
+        this.clearCurupiraSpecialEffects();
         this.clearCurupiraLandingMarker();
 
         if (this.curupira?.body) {
