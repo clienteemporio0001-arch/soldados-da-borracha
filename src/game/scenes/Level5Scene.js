@@ -1381,7 +1381,7 @@ export class Level5Scene extends Scene
         this.add.text(512,445,'TROPA DO SERINGAL',{fontFamily:'Arial Black',fontSize:'21px',color:'#9fba9f'}).setOrigin(.5).setScrollFactor(0).setDepth(501);
         const b=this.add.rectangle(512,560,310,64,0x8b5a2b).setStrokeStyle(3,0xd6b56c).setScrollFactor(0).setDepth(501).setInteractive({useHandCursor:true});
         this.add.text(512,560,'VOLTAR AO MENU',{fontFamily:'Arial Black',fontSize:'22px',color:'#fff'}).setOrigin(.5).setScrollFactor(0).setDepth(502);
-        b.on('pointerdown',()=>this.scene.start('MainMenu'));
+        b.on('pointerdown',()=>{this.cleanupSceneHazardsBeforeTransition();this.scene.start('MainMenu');});
     }
 
     createBossHud ()
@@ -2327,7 +2327,7 @@ export class Level5Scene extends Scene
         if(!this.rubberLatexDrops)return;
         this.rubberLatexDrops.slice().forEach(drop=>{
             if(drop&&drop.active){
-                this.tweens.killTweensOf(drop);
+                this.tweens?.killTweensOf(drop);
                 drop.destroy();
             }
         });
@@ -2337,7 +2337,7 @@ export class Level5Scene extends Scene
     cleanupRubberLatexSystem ()
     {
         if(this.rubberLatexTimer){
-            this.rubberLatexTimer.remove(false);
+            this.rubberLatexTimer.remove?.(false);
             this.rubberLatexTimer=null;
         }
         this.clearRubberLatexDrops();
@@ -2743,7 +2743,7 @@ export class Level5Scene extends Scene
             if(!list)return;
             list.slice().forEach(object=>{
                 if(object&&object.active){
-                    this.tweens.killTweensOf(object);
+                    this.tweens?.killTweensOf(object);
                     object.destroy();
                 }
             });
@@ -2754,13 +2754,13 @@ export class Level5Scene extends Scene
     cleanupLivingAtmosphere ()
     {
         if(!this.livingAtmosphereTimers)return;
-        this.livingAtmosphereTimers.forEach(timer=>timer.remove(false));
+        this.livingAtmosphereTimers.forEach(timer=>timer?.remove?.(false));
         this.livingAtmosphereTimers.length=0;
         this.clearLivingAtmosphereTransient();
 
         this.livingAtmospherePermanent.forEach(object=>{
             if(object&&object.active){
-                this.tweens.killTweensOf(object);
+                this.tweens?.killTweensOf(object);
                 object.destroy();
             }
         });
@@ -2793,6 +2793,13 @@ export class Level5Scene extends Scene
         this.createQuickMenuButton();
     }
 
+    cleanupSceneHazardsBeforeTransition ()
+    {
+        this.forestMonkeySystem?.cleanup?.();
+        this.oncaEncounter?.destroy?.();
+        this.horizontalExpansion?.cleanup?.();
+    }
+
     createQuickMenuButton ()
     {
         const button = this.add.rectangle(965, 27, 82, 34, 0x06100d, 0.68)
@@ -2815,7 +2822,10 @@ export class Level5Scene extends Scene
             button.setFillStyle(0x06100d, 0.68);
             label.setColor('#e5e8de');
         });
-        button.on('pointerdown', () => this.scene.start('MainMenu'));
+        button.on('pointerdown', () => {
+            this.cleanupSceneHazardsBeforeTransition();
+            this.scene.start('MainMenu');
+        });
     }
 
     createHealthHud ()

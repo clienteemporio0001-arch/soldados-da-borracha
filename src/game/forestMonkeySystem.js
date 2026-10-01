@@ -23,15 +23,20 @@ export function createForestMonkeySystem (scene, config = {})
     const randomBetween = (min, max) => min + Math.random() * (max - min);
 
     const destroyTimer = (timer) => {
-        if (timer) timer.remove(false);
+        if (timer && typeof timer.remove === 'function') timer.remove(false);
     };
 
     const destroyProjectile = (projectile, impact = false) => {
         if (!projectile || projectile.destroyed) return;
         projectile.destroyed = true;
         destroyTimer(projectile.lifeTimer);
-        if (projectile.groundCollider) scene.physics.world.removeCollider(projectile.groundCollider);
-        if (projectile.playerOverlap) scene.physics.world.removeCollider(projectile.playerOverlap);
+        projectile.lifeTimer = null;
+
+        const world = scene.physics?.world;
+        if (world && projectile.groundCollider) world.removeCollider(projectile.groundCollider);
+        if (world && projectile.playerOverlap) world.removeCollider(projectile.playerOverlap);
+        projectile.groundCollider = null;
+        projectile.playerOverlap = null;
 
         const x = projectile.rock?.x ?? 0;
         const y = projectile.rock?.y ?? 0;
@@ -129,17 +134,19 @@ export function createForestMonkeySystem (scene, config = {})
         monkey.state = 'EXIT';
         monkey.timers.forEach(destroyTimer);
         monkey.timers.length = 0;
-        scene.tweens.killTweensOf(monkey.visual);
+        if (scene.tweens) scene.tweens.killTweensOf(monkey.visual);
 
         const finish = () => {
             if (monkey.visual?.active) monkey.visual.destroy();
             const index = system.monkeys.indexOf(monkey);
             if (index >= 0) system.monkeys.splice(index, 1);
-            system.perchCooldowns.set(
-                monkey.perchIndex,
-                scene.time.now + randomBetween(8000, 15000)
-            );
-            system.nextSpawnAt = Math.max(system.nextSpawnAt, scene.time.now + randomBetween(2500, 4500));
+            if (!system.destroyed) {
+                system.perchCooldowns.set(
+                    monkey.perchIndex,
+                    scene.time.now + randomBetween(8000, 15000)
+                );
+                system.nextSpawnAt = Math.max(system.nextSpawnAt, scene.time.now + randomBetween(2500, 4500));
+            }
         };
 
         if (immediate || !monkey.visual?.active) {
@@ -408,8 +415,33 @@ export function createForestMonkeySystem (scene, config = {})
     system.cleanup = () => {
         if (system.destroyed) return;
         system.destroyed = true;
+
         destroyTimer(system.spawnTimer);
-        clearThreats();
+        system.spawnTimer = null;
+
+        system.monkeys.forEach(monkey => {
+            if (!monkey) return;
+            monkey.removed = true;
+            monkey.state = 'EXIT';
+            monkey.timers?.forEach(destroyTimer);
+            if (monkey.timers) monkey.timers.length = 0;
+            if (monkey.visual?.active) monkey.visual.destroy();
+        });
+        system.monkeys.length = 0;
+
+        const world = scene.physics?.world;
+        system.projectiles.forEach(projectile => {
+            if (!projectile) return;
+            projectile.destroyed = true;
+            destroyTimer(projectile.lifeTimer);
+            projectile.lifeTimer = null;
+            if (world && projectile.groundCollider) world.removeCollider(projectile.groundCollider);
+            if (world && projectile.playerOverlap) world.removeCollider(projectile.playerOverlap);
+            projectile.groundCollider = null;
+            projectile.playerOverlap = null;
+            if (projectile.rock?.active) projectile.rock.destroy();
+        });
+        system.projectiles.length = 0;
         system.perchCooldowns.clear();
     };
 

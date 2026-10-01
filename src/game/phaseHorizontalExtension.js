@@ -250,8 +250,10 @@ export function createHorizontalExpansion (scene, config = {})
     system.cleanup=()=>{
         if(system.destroyed)return;
         system.destroyed=true;
-        system.timers.forEach(timer=>timer?.remove(false));system.timers.length=0;
-        system.colliders.forEach(collider=>scene.physics.world.removeCollider(collider));system.colliders.length=0;
+        system.timers.forEach(timer=>timer?.remove?.(false));system.timers.length=0;
+        const world=scene.physics?.world;
+        if(world)system.colliders.forEach(collider=>{if(collider)world.removeCollider(collider);});
+        system.colliders.length=0;
     };
     scene.events.once('shutdown',()=>system.cleanup());
     return system;

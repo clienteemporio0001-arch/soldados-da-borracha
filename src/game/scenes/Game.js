@@ -819,6 +819,7 @@ export class Game extends Scene
         // Mesma configuração/chave usada pelo Mapa da Jornada para abrir a Fase 2.
         this.registry.set('doubleJumpUnlocked', false);
         this.registry.set('dashUnlocked', false);
+        this.cleanupSceneHazardsBeforeTransition();
         this.scene.start('Level2Scene');
     }
 
@@ -2892,7 +2893,7 @@ export class Game extends Scene
         if(!this.rubberLatexDrops)return;
         this.rubberLatexDrops.slice().forEach(drop=>{
             if(drop&&drop.active){
-                this.tweens.killTweensOf(drop);
+                this.tweens?.killTweensOf(drop);
                 drop.destroy();
             }
         });
@@ -2902,7 +2903,7 @@ export class Game extends Scene
     cleanupRubberLatexSystem ()
     {
         if(this.rubberLatexTimer){
-            this.rubberLatexTimer.remove(false);
+            this.rubberLatexTimer.remove?.(false);
             this.rubberLatexTimer=null;
         }
         this.clearRubberLatexDrops();
@@ -3308,7 +3309,7 @@ export class Game extends Scene
             if(!list)return;
             list.slice().forEach(object=>{
                 if(object&&object.active){
-                    this.tweens.killTweensOf(object);
+                    this.tweens?.killTweensOf(object);
                     object.destroy();
                 }
             });
@@ -3319,13 +3320,13 @@ export class Game extends Scene
     cleanupLivingAtmosphere ()
     {
         if(!this.livingAtmosphereTimers)return;
-        this.livingAtmosphereTimers.forEach(timer=>timer.remove(false));
+        this.livingAtmosphereTimers.forEach(timer=>timer?.remove?.(false));
         this.livingAtmosphereTimers.length=0;
         this.clearLivingAtmosphereTransient();
 
         this.livingAtmospherePermanent.forEach(object=>{
             if(object&&object.active){
-                this.tweens.killTweensOf(object);
+                this.tweens?.killTweensOf(object);
                 object.destroy();
             }
         });
@@ -3358,6 +3359,13 @@ export class Game extends Scene
         this.createQuickMenuButton();
     }
 
+    cleanupSceneHazardsBeforeTransition ()
+    {
+        this.forestMonkeySystem?.cleanup?.();
+        this.oncaEncounter?.destroy?.();
+        this.horizontalExpansion?.cleanup?.();
+    }
+
     createQuickMenuButton ()
     {
         const button = this.add.rectangle(965, 27, 82, 34, 0x06100d, 0.68)
@@ -3380,7 +3388,10 @@ export class Game extends Scene
             button.setFillStyle(0x06100d, 0.68);
             label.setColor('#e5e8de');
         });
-        button.on('pointerdown', () => this.scene.start('MainMenu'));
+        button.on('pointerdown', () => {
+            this.cleanupSceneHazardsBeforeTransition();
+            this.scene.start('MainMenu');
+        });
     }
 
     showPlayerNameIntro ()

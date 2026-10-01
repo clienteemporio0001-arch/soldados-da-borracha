@@ -311,7 +311,7 @@ export class OncaEncounter
     {
         this.effects.forEach(effect => {
             if (!effect?.active) return;
-            this.scene.tweens.killTweensOf(effect);
+            if (this.scene.tweens) this.scene.tweens.killTweensOf(effect);
             effect.destroy();
         });
         this.effects.length = 0;
@@ -323,10 +323,11 @@ export class OncaEncounter
         this.activeTimers.length = 0;
         this.clearEffects();
 
-        if (this.overlap) {
-            this.scene.physics.world.removeCollider(this.overlap);
-            this.overlap = null;
+        const world = this.scene.physics?.world;
+        if (world && this.overlap) {
+            world.removeCollider(this.overlap);
         }
+        this.overlap = null;
 
         if (this.body) {
             if (this.body.body) {
@@ -338,8 +339,8 @@ export class OncaEncounter
         }
 
         if (this.visual) {
-            this.scene.tweens.killTweensOf(this.visual);
-            this.visual.destroy();
+            if (this.scene.tweens) this.scene.tweens.killTweensOf(this.visual);
+            if (this.visual.active) this.visual.destroy();
             this.visual = null;
         }
 

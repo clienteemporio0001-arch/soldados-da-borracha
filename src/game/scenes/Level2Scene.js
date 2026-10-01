@@ -3882,7 +3882,10 @@ export class Level2Scene extends Scene
         this.add.text(512, 390, 'Os rastros seguem para onde antes\nele não poderia alcançar.', { fontFamily: 'Arial', fontSize: '22px', color: '#c8d8cc', align: 'center' }).setOrigin(0.5).setScrollFactor(0).setDepth(301);
         const button = this.add.rectangle(512, 530, 280, 64, 0x8b5a2b).setStrokeStyle(3, 0xd6b56c).setScrollFactor(0).setDepth(301).setInteractive({ useHandCursor: true });
         this.add.text(512, 530, 'CONTINUAR', { fontFamily: 'Arial Black', fontSize: '23px', color: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(302);
-        button.on('pointerdown', () => this.scene.start('Level3Scene'));
+        button.on('pointerdown', () => {
+            this.cleanupSceneHazardsBeforeTransition();
+            this.scene.start('Level3Scene');
+        });
     }
 
     createEnvironmentalChallenges ()
@@ -4254,7 +4257,7 @@ export class Level2Scene extends Scene
         if(!this.rubberLatexDrops)return;
         this.rubberLatexDrops.slice().forEach(drop=>{
             if(drop&&drop.active){
-                this.tweens.killTweensOf(drop);
+                this.tweens?.killTweensOf(drop);
                 drop.destroy();
             }
         });
@@ -4264,7 +4267,7 @@ export class Level2Scene extends Scene
     cleanupRubberLatexSystem ()
     {
         if(this.rubberLatexTimer){
-            this.rubberLatexTimer.remove(false);
+            this.rubberLatexTimer.remove?.(false);
             this.rubberLatexTimer=null;
         }
         this.clearRubberLatexDrops();
@@ -4670,7 +4673,7 @@ export class Level2Scene extends Scene
             if(!list)return;
             list.slice().forEach(object=>{
                 if(object&&object.active){
-                    this.tweens.killTweensOf(object);
+                    this.tweens?.killTweensOf(object);
                     object.destroy();
                 }
             });
@@ -4681,13 +4684,13 @@ export class Level2Scene extends Scene
     cleanupLivingAtmosphere ()
     {
         if(!this.livingAtmosphereTimers)return;
-        this.livingAtmosphereTimers.forEach(timer=>timer.remove(false));
+        this.livingAtmosphereTimers.forEach(timer=>timer?.remove?.(false));
         this.livingAtmosphereTimers.length=0;
         this.clearLivingAtmosphereTransient();
 
         this.livingAtmospherePermanent.forEach(object=>{
             if(object&&object.active){
-                this.tweens.killTweensOf(object);
+                this.tweens?.killTweensOf(object);
                 object.destroy();
             }
         });
@@ -4720,6 +4723,13 @@ export class Level2Scene extends Scene
         this.createQuickMenuButton();
     }
 
+    cleanupSceneHazardsBeforeTransition ()
+    {
+        this.forestMonkeySystem?.cleanup?.();
+        this.oncaEncounter?.destroy?.();
+        this.horizontalExpansion?.cleanup?.();
+    }
+
     createQuickMenuButton ()
     {
         const button = this.add.rectangle(965, 27, 82, 34, 0x06100d, 0.68)
@@ -4742,7 +4752,10 @@ export class Level2Scene extends Scene
             button.setFillStyle(0x06100d, 0.68);
             label.setColor('#e5e8de');
         });
-        button.on('pointerdown', () => this.scene.start('MainMenu'));
+        button.on('pointerdown', () => {
+            this.cleanupSceneHazardsBeforeTransition();
+            this.scene.start('MainMenu');
+        });
     }
 
     createStaminaHud ()
