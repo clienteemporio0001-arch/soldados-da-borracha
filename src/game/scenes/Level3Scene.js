@@ -63,9 +63,8 @@ export class Level3Scene extends Scene
             phase: 3,
             canSpawn: () => {
                 const bossActive = this.caboclinhoTestActive && !this.caboclinhoTestComplete;
-                const introBlocked = bossActive && this.caboclinhoStage === 0 && !this.caboclinhoReachZone?.body?.enable;
                 return {
-                    allowed: !this.phaseCompleted && !this.isPlayerDead && !introBlocked,
+                    allowed: !this.phaseCompleted && !this.isPlayerDead && !bossActive,
                     bossActive
                 };
             }
@@ -1586,6 +1585,7 @@ export class Level3Scene extends Scene
     {
         if (this.phaseCompleted || this.isPlayerDead) return;
         this.isPlayerDead = true;
+        if (this.caboclinhoTestActive && !this.caboclinhoTestComplete) this.prepareCaboclinhoBossForPlayerDeath();
         this.resetCombatPolishState();
         this.clearRubberLatexDrops();
         this.player.body.setVelocity(0, 0);
@@ -1603,6 +1603,7 @@ export class Level3Scene extends Scene
             this.nextStarvationDamageAt = this.time.now + 2000;
             this.invulnerableUntil = this.time.now + 1000;
             this.isPlayerDead = false;
+            if (this.caboclinhoTestActive && !this.caboclinhoTestComplete) this.resetCaboclinhoBoss(true);
             this.updateHealthHud();
             this.updateHungerHud();
             this.updateStaminaHud();
@@ -1734,24 +1735,56 @@ export class Level3Scene extends Scene
         this.caboclinhoTestComplete = false;
         this.caboclinhoStage = 0;
         this.caboclinhoMoving = false;
+        this.caboclinhoState = 'DORMANT';
         this.caboclinhoVisualState = 'IDLE';
-        this.caboclinhoFacing = 1;
+        this.caboclinhoMaxHealth = 100;
+        this.caboclinhoHealth = 100;
+        this.caboclinhoArenaMinX = 7000;
+        this.caboclinhoArenaMaxX = 8500;
+        this.caboclinhoNextActionAt = 0;
+        this.caboclinhoActionSerial = 0;
+        this.caboclinhoStrongActions = 0;
+        this.caboclinhoComboCount = 0;
+        this.caboclinhoDashHitRegistered = false;
+        this.caboclinhoJumpsUsed = 0;
+        this.caboclinhoAirDashUsed = false;
+        this.caboclinhoAttackTimers = [];
+        this.caboclinhoArrows = [];
         this.caboclinhoVisualDestroyed = false;
-        this.caboclinhoPositions = [
-            { x: 7350, y: 405 },
-            { x: 7780, y: 335 },
-            { x: 8300, y: 375 }
-        ];
 
         this.caboclinhoVisual = this.createCaboclinhoVisual();
         this.caboclinhoVisual.setVisible(false);
 
-        this.caboclinhoReachZone = this.add.rectangle(-100, -100, 92, 92, 0x000000, 0);
-        this.physics.add.existing(this.caboclinhoReachZone);
-        this.caboclinhoReachZone.body.setAllowGravity(false);
-        this.caboclinhoReachZone.body.setImmovable(true);
-        this.caboclinhoReachZone.body.enable = false;
-        this.physics.add.overlap(this.player, this.caboclinhoReachZone, () => this.reachCaboclinho());
+        this.caboclinho = this.add.rectangle(7480, 390, 44, 70, 0x000000, 0);
+        this.physics.add.existing(this.caboclinho);
+        this.caboclinho.body.setSize(44, 70);
+        this.caboclinho.body.setCollideWorldBounds(true);
+        this.caboclinho.body.setMaxVelocity(540, 900);
+        this.caboclinho.body.enable = false;
+        this.caboclinhoPlatformCollider = this.physics.add.collider(this.caboclinho, this.platforms);
+        this.caboclinhoPlayerOverlap = this.physics.add.overlap(
+            this.player,
+            this.caboclinho,
+            () => this.handleCaboclinhoContact()
+        );
+        this.caboclinhoAttackOverlap = this.physics.add.overlap(
+            this.attackHitbox,
+            this.caboclinho,
+            () => this.tryHitCaboclinho()
+        );
+
+        this.caboclinhoArenaBarrierL = this.add.rectangle(6920, 520, 28, 280, 0x153321, 0.82).setDepth(14).setVisible(false);
+        this.caboclinhoArenaBarrierR = this.add.rectangle(8580, 520, 28, 280, 0x153321, 0.82).setDepth(14).setVisible(false);
+        [this.caboclinhoArenaBarrierL, this.caboclinhoArenaBarrierR].forEach(barrier => {
+            this.physics.add.existing(barrier, true);
+            barrier.body.enable = false;
+        });
+        this.caboclinhoBarrierPlayerL = this.physics.add.collider(this.player, this.caboclinhoArenaBarrierL);
+        this.caboclinhoBarrierPlayerR = this.physics.add.collider(this.player, this.caboclinhoArenaBarrierR);
+        this.caboclinhoBarrierBossL = this.physics.add.collider(this.caboclinho, this.caboclinhoArenaBarrierL);
+        this.caboclinhoBarrierBossR = this.physics.add.collider(this.caboclinho, this.caboclinhoArenaBarrierR);
+
+        this.createCaboclinhoBossHud();
 
         this.caboclinhoTrigger = this.add.rectangle(7000, 535, 170, 190, 0x000000, 0);
         this.physics.add.existing(this.caboclinhoTrigger);
@@ -1864,11 +1897,32 @@ export class Level3Scene extends Scene
             nose, mouth, tooth, cheekPaintL, cheekPaintR
         ]);
 
+        const bowRig = this.add.container(23, -9).setVisible(false);
+        const bowWood = this.add.graphics();
+        bowWood.lineStyle(3, 0x704827, 1);
+        bowWood.beginPath();
+        bowWood.arc(0, 0, 21, -1.18, 1.18, false);
+        bowWood.strokePath();
+        const bowString = this.add.graphics();
+        bowString.lineStyle(1, 0xd8c7a1, 0.92);
+        bowString.beginPath();
+        bowString.moveTo(8, -19);
+        bowString.lineTo(-5, 0);
+        bowString.lineTo(8, 19);
+        bowString.strokePath();
+        const aimArrow = this.add.container(-2, 0);
+        aimArrow.add([
+            this.add.rectangle(0, 0, 32, 2, 0x8a6237).setOrigin(0.2, 0.5),
+            this.add.triangle(25, 0, 0, -4, 8, 0, 0, 4, 0xb8b2a0),
+            this.add.triangle(-5, 0, 0, 0, 8, -4, 8, 4, 0x6f824c)
+        ]);
+        bowRig.add([bowWood, bowString, aimArrow]);
+
         rig.add([
             shadow,
             leftLegRig, rightLegRig,
             torsoRig, leftArmRig, rightArmRig,
-            headRig
+            bowRig, headRig
         ]);
         c.add([aura, rig]);
 
@@ -1877,7 +1931,7 @@ export class Level3Scene extends Scene
             leftLegRig, rightLegRig,
             leftForearmRig, rightForearmRig,
             torsoRig, leftArmRig, rightArmRig,
-            headRig, hairTufts, adornment,
+            headRig, hairTufts, adornment, bowRig, aimArrow,
             eyeL, eyeR, pupilL, pupilR,
             browL, browR, mouth,
             shoulderLeafL, shoulderLeafR,
@@ -1910,6 +1964,8 @@ export class Level3Scene extends Scene
         p.browL.setAngle(14);
         p.browR.setAngle(-14);
         p.mouth.setScale(1);
+        if (p.bowRig) p.bowRig.setVisible(false).setPosition(23, -9).setAngle(0).setScale(1);
+        if (p.aimArrow) p.aimArrow.setPosition(-2, 0).setAngle(0);
     }
 
     animateCaboclinhoVisual (time)
@@ -1969,6 +2025,19 @@ export class Level3Scene extends Scene
             p.rightArmRig.angle = -34;
             p.leftLegRig.angle = -13;
             p.rightLegRig.angle = 13;
+        } else if (state === 'BOW_AIM' || state === 'BOW_SHOT') {
+            p.bowRig.setVisible(true);
+            p.torsoRig.angle = -(this.caboclinhoFacing || 1) * 7;
+            p.headRig.angle = (this.caboclinhoFacing || 1) * 3;
+            p.leftArmRig.angle = 74;
+            p.rightArmRig.angle = -66;
+            p.leftForearmRig.angle = -54;
+            p.rightForearmRig.angle = 56;
+            p.bowRig.setPosition(25, -10).setAngle(0);
+            p.aimArrow.setPosition(state === 'BOW_SHOT' ? 6 : -4, 0);
+            p.eyeL.setFillStyle(0xffd267);
+            p.eyeR.setFillStyle(0xffd267);
+            p.aura.setAlpha(0.10);
         } else if (state === 'RECOIL') {
             p.torsoRig.angle = -(this.caboclinhoFacing || 1) * 13;
             p.headRig.angle = (this.caboclinhoFacing || 1) * 11;
@@ -1991,207 +2060,680 @@ export class Level3Scene extends Scene
         }
     }
 
+    createCaboclinhoBossHud ()
+    {
+        this.caboclinhoBossHud = this.add.container(512, 112)
+            .setScrollFactor(0)
+            .setDepth(176)
+            .setVisible(false);
+
+        const panel = this.add.rectangle(0, 0, 430, 54, 0x06100d, 0.86);
+        panel.setStrokeStyle(1, 0x8a7650, 0.62);
+        const name = this.add.text(0, -16, 'CABOQUIM DA MATA', {
+            fontFamily: 'Arial Black',
+            fontSize: '14px',
+            color: '#f1e1ae'
+        }).setOrigin(0.5);
+        const back = this.add.rectangle(-150, 10, 300, 14, 0x2b1815, 0.96).setOrigin(0, 0.5);
+        back.setStrokeStyle(1, 0x86664f, 0.58);
+        this.caboclinhoBossBar = this.add.rectangle(-150, 10, 300, 14, 0x8fb35b, 1).setOrigin(0, 0.5);
+        this.caboclinhoBossText = this.add.text(0, 10, '100/100', {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+        this.caboclinhoBossHud.add([panel, name, back, this.caboclinhoBossBar, this.caboclinhoBossText]);
+    }
+
+    updateCaboclinhoBossHud ()
+    {
+        if (!this.caboclinhoBossBar || !this.caboclinhoBossText) return;
+        const ratio = Math.max(0, Math.min(1, this.caboclinhoHealth / this.caboclinhoMaxHealth));
+        this.caboclinhoBossBar.width = 300 * ratio;
+        this.caboclinhoBossText.setText(`${this.caboclinhoHealth}/${this.caboclinhoMaxHealth}`);
+    }
+
     startCaboclinhoTrial ()
     {
         if (this.caboclinhoTestActive || this.caboclinhoTestComplete) return;
+
         this.caboclinhoTestActive = true;
         this.caboclinhoTrigger.body.enable = false;
-        this.resetCaboclinhoTest();
+        this.spawnPoint = { x: 7080, y: 540 };
 
-        const panel = this.add.rectangle(512, 355, 610, 108, 0x06100d, 0.9).setScrollFactor(0).setDepth(180);        const text = this.add.text(512, 355, '“Quem sobe a mata precisa saber voltar.”', {
-            fontFamily: 'Arial', fontSize: '24px', color: '#f1e1ae'
+        this.forestMonkeySystem?.cleanup?.();
+        this.oncaEncounter?.cleanupActive?.(true);
+
+        this.resetCaboclinhoBoss(false);
+        this.caboclinhoBossHud.setVisible(true);
+        this.caboclinhoArenaBarrierL.setVisible(true);
+        this.caboclinhoArenaBarrierR.setVisible(true);
+        this.caboclinhoArenaBarrierL.body.enable = true;
+        this.caboclinhoArenaBarrierR.body.enable = true;
+
+        const panel = this.add.rectangle(512, 355, 650, 112, 0x06100d, 0.92).setScrollFactor(0).setDepth(180);
+        const text = this.add.text(512, 355, '“A mata corre mais rápido que seus passos.”', {
+            fontFamily: 'Arial',
+            fontSize: '23px',
+            color: '#f1e1ae'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(181);
 
-        this.time.delayedCall(1500, () => {
-            panel.destroy();
-            text.destroy();
-            this.enableCaboclinhoReachZone();
+        this.scheduleCaboclinhoCall(1050, () => {
+            if (panel.active) panel.destroy();
+            if (text.active) text.destroy();
+            if (!this.caboclinhoTestActive || this.caboclinhoTestComplete) return;
+            this.caboclinhoState = 'HUNT';
+            this.caboclinhoVisualState = 'IDLE';
+            this.caboclinhoNextActionAt = this.time.now + 360;
         });
     }
 
-    resetCaboclinhoTest ()
+    resetCaboclinhoBoss (restartFight = true)
+    {
+        this.clearCaboclinhoAttackTimers();
+        this.clearCaboclinhoArrows();
+        this.caboclinhoHealth = this.caboclinhoMaxHealth;
+        this.updateCaboclinhoBossHud();
+        this.caboclinhoActionSerial = 0;
+        this.caboclinhoStrongActions = 0;
+        this.caboclinhoComboCount = 0;
+        this.caboclinhoDashHitRegistered = false;
+        this.caboclinhoJumpsUsed = 0;
+        this.caboclinhoAirDashUsed = false;
+        this.caboclinhoVisualDestroyed = false;
+
+        if (this.caboclinho) {
+            this.caboclinho.setPosition(7480, 390);
+            this.caboclinho.body.enable = true;
+            this.caboclinho.body.setVelocity(0, 0);
+        }
+
+        if (this.caboclinhoVisual) {
+            this.tweens.killTweensOf(this.caboclinhoVisual);
+            this.caboclinhoVisual
+                .setPosition(7480, 390)
+                .setVisible(true)
+                .setAlpha(1)
+                .setAngle(0)
+                .setScale(1);
+            this.caboclinhoVisualState = 'IDLE';
+            this.caboclinhoFacing = 1;
+            this.resetCaboclinhoVisualPose();
+        }
+
+        this.caboclinhoState = 'INTRO';
+        this.caboclinhoNextActionAt = this.time.now + (restartFight ? 850 : 1050);
+        if (restartFight) {
+            this.scheduleCaboclinhoCall(850, () => {
+                if (!this.caboclinhoTestActive || this.caboclinhoTestComplete || this.isPlayerDead) return;
+                this.caboclinhoState = 'HUNT';
+                this.caboclinhoNextActionAt = this.time.now + 300;
+            });
+        }
+    }
+
+    prepareCaboclinhoBossForPlayerDeath ()
     {
         if (!this.caboclinhoTestActive || this.caboclinhoTestComplete) return;
-        this.caboclinhoStage = 0;
-        this.caboclinhoMoving = false;
-        this.caboclinhoVisualState = 'IDLE';
-        this.caboclinhoVisualDestroyed = false;
-        if (this.caboclinhoMoveShadow) { this.caboclinhoMoveShadow.destroy(); this.caboclinhoMoveShadow = null; }
-        const p = this.caboclinhoPositions[0];
-        this.tweens.killTweensOf(this.caboclinhoVisual);
-        this.caboclinhoFacing = 1;
-        this.caboclinhoVisual.setPosition(p.x, p.y).setAlpha(1).setAngle(0).setScale(1).setVisible(true);
-        this.resetCaboclinhoVisualPose();
-        this.caboclinhoReachZone.setPosition(p.x, p.y);
-        this.caboclinhoReachZone.body.enable = false;
+        this.clearCaboclinhoAttackTimers();
+        this.clearCaboclinhoArrows();
+        this.caboclinhoState = 'INTRO';
+        this.caboclinhoVisualState = 'RECOVER';
+        if (this.caboclinho?.body) this.caboclinho.body.setVelocity(0, 0);
     }
 
-    enableCaboclinhoReachZone ()
+    scheduleCaboclinhoCall (delay, callback)
     {
-        if (this.caboclinhoTestComplete) return;
-        const p = this.caboclinhoPositions[this.caboclinhoStage];
-        this.caboclinhoReachZone.setPosition(p.x, p.y);
-        this.caboclinhoReachZone.body.enable = true;
+        const timer = this.time.delayedCall(delay, () => {
+            const index = this.caboclinhoAttackTimers.indexOf(timer);
+            if (index >= 0) this.caboclinhoAttackTimers.splice(index, 1);
+            if (this.caboclinhoState === 'DEFEATED' || this.caboclinhoTestComplete) return;
+            callback();
+        });
+        this.caboclinhoAttackTimers.push(timer);
+        return timer;
     }
 
-    reachCaboclinho ()
+    clearCaboclinhoAttackTimers ()
     {
-        if (!this.caboclinhoTestActive || this.caboclinhoTestComplete || this.caboclinhoMoving) return;
-        this.caboclinhoReachZone.body.enable = false;
+        this.caboclinhoAttackTimers?.forEach(timer => timer?.remove?.(false));
+        if (this.caboclinhoAttackTimers) this.caboclinhoAttackTimers.length = 0;
+    }
 
-        if (this.caboclinhoStage >= 2) {
-            this.reactCaboclinhoRecognition();
+    caboclinhoPhase ()
+    {
+        if (this.caboclinhoHealth <= 25) return 4;
+        if (this.caboclinhoHealth <= 50) return 3;
+        if (this.caboclinhoHealth <= 75) return 2;
+        return 1;
+    }
+
+    chooseCaboclinhoAction ()
+    {
+        const distance = Math.abs(this.player.x - this.caboclinho.x);
+        const phase = this.caboclinhoPhase();
+        const serial = this.caboclinhoActionSerial++;
+
+        if (distance < 150) {
+            return serial % 3 === 2 ? 'JUMP' : 'DASH';
+        }
+        if (distance <= 350) {
+            if (phase >= 3 && serial % 4 === 2) return 'BOW';
+            return serial % 2 === 0 ? 'DASH' : 'BOW';
+        }
+        if (phase >= 4 && serial % 3 !== 0) return 'DASH';
+        return serial % 2 === 0 ? 'BOW' : 'DASH';
+    }
+
+    beginCaboclinhoPrepare (action)
+    {
+        if (this.caboclinhoState === 'DEFEATED' || this.isPlayerDead) return;
+        this.caboclinhoPendingAction = action;
+        this.caboclinhoState = 'PREPARE';
+        this.caboclinhoVisualState = 'PREPARE';
+        this.caboclinho.body.setVelocityX(0);
+        const duration = action === 'DASH' ? 155 : 180;
+        this.caboclinhoNextActionAt = this.time.now + duration;
+        this.showCaboclinhoPrepareFx(action);
+    }
+
+    showCaboclinhoPrepareFx (action)
+    {
+        const direction = this.player.x < this.caboclinho.x ? -1 : 1;
+        for (let i = 0; i < 4; i += 1) {
+            const leaf = this.add.ellipse(
+                this.caboclinho.x - direction * (5 + i * 5),
+                this.caboclinho.y + 24,
+                8,
+                4,
+                i % 2 ? 0x6d7842 : 0x315f39,
+                0.65
+            ).setDepth(23);
+            this.tweens.add({
+                targets: leaf,
+                x: leaf.x - direction * (18 + i * 7),
+                y: leaf.y - 8 - i * 4,
+                angle: direction * (35 + i * 18),
+                alpha: 0,
+                duration: 190 + i * 22,
+                onComplete: () => leaf.destroy()
+            });
+        }
+        if (action === 'DASH') {
+            const dust = this.add.ellipse(this.caboclinho.x, this.caboclinho.y + 34, 34, 8, 0x8b7256, 0.22).setDepth(20);
+            this.tweens.add({ targets: dust, scaleX: 1.5, alpha: 0, duration: 190, onComplete: () => dust.destroy() });
+        }
+    }
+
+    executeCaboclinhoDash ()
+    {
+        if (!this.caboclinho?.body?.enable) return;
+        const direction = this.player.x < this.caboclinho.x ? -1 : 1;
+        const speed = this.caboclinhoPhase() >= 4 ? 520 : 490;
+        this.caboclinhoFacing = direction;
+        this.caboclinhoState = 'DASH';
+        this.caboclinhoVisualState = 'MOVING';
+        this.caboclinhoDashHitRegistered = false;
+        this.caboclinhoStrongActions += 1;
+        this.caboclinho.body.setVelocity(direction * speed, 0);
+        this.caboclinhoDashEndsAt = this.time.now + 210;
+    }
+
+    executeCaboclinhoJump ()
+    {
+        if (!this.caboclinho?.body?.enable) return;
+        const direction = this.player.x < this.caboclinho.x ? -1 : 1;
+        this.caboclinhoFacing = direction;
+        this.caboclinhoState = 'JUMP';
+        this.caboclinhoVisualState = 'MOVING';
+        this.caboclinhoJumpsUsed = 1;
+        this.caboclinhoAirDashUsed = false;
+        this.caboclinhoJumpStartedAt = this.time.now;
+        this.caboclinhoStrongActions += 1;
+        this.caboclinho.body.setVelocity(direction * 145, -500);
+
+        if (this.caboclinhoPhase() >= 2) {
+            this.scheduleCaboclinhoCall(300, () => {
+                if (!this.caboclinho.body.enable || this.caboclinho.body.blocked.down || this.caboclinhoJumpsUsed >= 2) return;
+                this.caboclinhoJumpsUsed = 2;
+                this.caboclinhoState = 'DOUBLE_JUMP';
+                this.caboclinho.body.setVelocityY(this.caboclinhoPhase() >= 4 ? -470 : -450);
+                this.showCaboclinhoAirBurst();
+
+                this.scheduleCaboclinhoCall(170, () => {
+                    if (this.caboclinho.body.blocked.down || !this.caboclinho.body.enable) return;
+                    if (this.caboclinhoActionSerial % 2 === 0 && !this.caboclinhoAirDashUsed) {
+                        this.executeCaboclinhoAirDash();
+                    } else if (this.caboclinhoActionSerial % 3 === 0) {
+                        this.beginCaboclinhoBowAim(true);
+                    }
+                });
+            });
+        }
+    }
+
+    executeCaboclinhoAirDash ()
+    {
+        if (this.caboclinhoAirDashUsed || this.caboclinho.body.blocked.down) return;
+        this.caboclinhoAirDashUsed = true;
+        const direction = this.player.x < this.caboclinho.x ? -1 : 1;
+        this.caboclinhoFacing = direction;
+        this.caboclinhoState = 'AIR_DASH';
+        this.caboclinhoVisualState = 'MOVING';
+        this.caboclinhoDashHitRegistered = false;
+        this.caboclinho.body.setVelocity(direction * 480, this.caboclinho.body.velocity.y * 0.15);
+        this.caboclinhoDashEndsAt = this.time.now + 190;
+    }
+
+    showCaboclinhoAirBurst ()
+    {
+        for (let i = 0; i < 5; i += 1) {
+            const leaf = this.add.ellipse(this.caboclinho.x, this.caboclinho.y, 8, 4, 0x547344, 0.72).setDepth(23);
+            const side = i % 2 ? 1 : -1;
+            this.tweens.add({
+                targets: leaf,
+                x: leaf.x + side * (18 + i * 6),
+                y: leaf.y + 12 + i * 3,
+                angle: side * 55,
+                alpha: 0,
+                duration: 240,
+                onComplete: () => leaf.destroy()
+            });
+        }
+    }
+
+    beginCaboclinhoBowAim (airborne = false)
+    {
+        if (!this.caboclinho?.body?.enable || this.caboclinhoState === 'DEFEATED') return;
+        this.caboclinhoState = 'BOW_AIM';
+        this.caboclinhoVisualState = 'BOW_AIM';
+        this.caboclinhoBowAirborne = airborne;
+        this.caboclinho.body.setVelocityX(0);
+        if (airborne) this.caboclinho.body.setVelocityY(this.caboclinho.body.velocity.y * 0.22);
+        this.caboclinhoBowAimEndsAt = this.time.now + (this.caboclinhoPhase() >= 4 ? 350 : 410);
+    }
+
+    fireCaboclinhoArrow ()
+    {
+        if (!this.caboclinho?.body?.enable || this.caboclinhoState === 'DEFEATED') return;
+
+        const startX = this.caboclinho.x + this.caboclinhoFacing * 28;
+        const startY = this.caboclinho.y - 13;
+        const lead = this.caboclinhoPhase() >= 3 ? 0.20 : 0.17;
+        const targetX = this.player.x + (this.player.body?.velocity?.x || 0) * lead;
+        const targetY = this.player.y - 4;
+        const dx = targetX - startX;
+        const dy = targetY - startY;
+        const length = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+        const speed = this.caboclinhoPhase() >= 4 ? 520 : 475;
+        const vx = dx / length * speed;
+        const vy = dy / length * speed;
+        const angle = Math.atan2(vy, vx);
+
+        const body = this.add.rectangle(startX, startY, 28, 7, 0x000000, 0);
+        this.physics.add.existing(body);
+        body.body.setAllowGravity(false);
+        body.body.setVelocity(vx, vy);
+        body.body.setSize(28, 7);
+
+        const visual = this.add.container(startX, startY).setDepth(24).setRotation(angle);
+        visual.add([
+            this.add.rectangle(0, 0, 30, 2, 0x89613a),
+            this.add.triangle(17, 0, 0, -4, 8, 0, 0, 4, 0xbeb7a4),
+            this.add.triangle(-16, 0, 0, 0, 8, -4, 8, 4, 0x667e47)
+        ]);
+
+        const arrow = { body, visual, hit: false, collider: null, overlap: null, timer: null };
+        arrow.collider = this.physics.add.collider(body, this.platforms, () => this.destroyCaboclinhoArrow(arrow, true));
+        arrow.overlap = this.physics.add.overlap(body, this.player, () => {
+            if (arrow.hit || this.isPlayerDead) return;
+            arrow.hit = true;
+            this.damagePlayer(20, vx < 0 ? -130 : 130, -85);
+            this.destroyCaboclinhoArrow(arrow, false);
+        });
+        arrow.timer = this.time.delayedCall(3000, () => this.destroyCaboclinhoArrow(arrow, false));
+        this.caboclinhoArrows.push(arrow);
+
+        this.caboclinhoState = 'BOW_SHOT';
+        this.caboclinhoVisualState = 'BOW_SHOT';
+        this.caboclinhoStrongActions += 1;
+
+        const doubleShot = this.caboclinhoPhase() >= 3 && this.caboclinhoActionSerial % 2 === 0;
+        if (doubleShot && !this.caboclinhoSecondArrowQueued) {
+            this.caboclinhoSecondArrowQueued = true;
+            this.scheduleCaboclinhoCall(220, () => {
+                this.caboclinhoSecondArrowQueued = false;
+                if (this.caboclinhoState === 'DEFEATED' || this.isPlayerDead) return;
+                this.caboclinhoState = 'BOW_AIM';
+                this.caboclinhoVisualState = 'BOW_AIM';
+                this.fireCaboclinhoArrow();
+            });
+            return;
+        }
+        this.caboclinhoSecondArrowQueued = false;
+
+        if (
+            this.caboclinhoPhase() >= 3 &&
+            this.caboclinhoComboCount < 1 &&
+            this.caboclinhoStrongActions < 2 &&
+            this.caboclinhoActionSerial % 3 === 0
+        ) {
+            this.caboclinhoComboCount = 1;
+            this.scheduleCaboclinhoCall(190, () => this.beginCaboclinhoPrepare('DASH'));
+        } else {
+            this.enterCaboclinhoRecovery();
+        }
+    }
+
+    destroyCaboclinhoArrow (arrow, impact = false)
+    {
+        if (!arrow || arrow.destroyed) return;
+        arrow.destroyed = true;
+        arrow.timer?.remove?.(false);
+        const world = this.physics?.world;
+        if (world && arrow.collider) world.removeCollider(arrow.collider);
+        if (world && arrow.overlap) world.removeCollider(arrow.overlap);
+        if (impact && arrow.body?.active) {
+            const puff = this.add.circle(arrow.body.x, arrow.body.y, 5, 0xa48d6e, 0.25).setDepth(23);
+            this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 150, onComplete: () => puff.destroy() });
+        }
+        if (arrow.body?.active) arrow.body.destroy();
+        if (arrow.visual?.active) arrow.visual.destroy();
+        const index = this.caboclinhoArrows.indexOf(arrow);
+        if (index >= 0) this.caboclinhoArrows.splice(index, 1);
+    }
+
+    clearCaboclinhoArrows ()
+    {
+        [...(this.caboclinhoArrows || [])].forEach(arrow => this.destroyCaboclinhoArrow(arrow, false));
+        if (this.caboclinhoArrows) this.caboclinhoArrows.length = 0;
+    }
+
+    enterCaboclinhoRecovery ()
+    {
+        if (this.caboclinhoState === 'DEFEATED') return;
+        this.caboclinhoState = 'RECOVERY';
+        this.caboclinhoVisualState = 'RECOVER';
+        this.caboclinho.body.setVelocityX(0);
+        const duration = this.caboclinhoPhase() >= 4 ? 150 : 190;
+        this.caboclinhoNextActionAt = this.time.now + duration;
+    }
+
+    enterCaboclinhoVulnerable ()
+    {
+        if (this.caboclinhoState === 'DEFEATED') return;
+        this.caboclinhoState = 'VULNERABLE';
+        this.caboclinhoVisualState = 'RECOVER';
+        this.caboclinho.body.setVelocityX(0);
+        const duration = this.caboclinhoHealth <= 25 ? 650 : this.caboclinhoHealth <= 50 ? 720 : 800;
+        this.caboclinhoNextActionAt = this.time.now + duration;
+        this.caboclinhoStrongActions = 0;
+        this.caboclinhoComboCount = 0;
+    }
+
+    handleCaboclinhoContact ()
+    {
+        if (
+            !this.caboclinhoTestActive ||
+            this.caboclinhoTestComplete ||
+            this.isPlayerDead ||
+            this.caboclinhoDashHitRegistered ||
+            (this.caboclinhoState !== 'DASH' && this.caboclinhoState !== 'AIR_DASH')
+        ) return;
+
+        this.caboclinhoDashHitRegistered = true;
+        const direction = this.player.x < this.caboclinho.x ? -1 : 1;
+        this.damagePlayer(20, direction * 190, -110);
+    }
+
+    tryHitCaboclinho ()
+    {
+        if (
+            !this.caboclinhoTestActive ||
+            this.caboclinhoTestComplete ||
+            !this.isAttacking ||
+            !this.attackHitbox.body.enable ||
+            this.attackHitBossRegistered ||
+            !this.caboclinho?.body?.enable
+        ) return;
+
+        const vulnerable =
+            this.caboclinhoState === 'VULNERABLE' ||
+            this.caboclinhoState === 'RECOVERY' ||
+            this.caboclinhoState === 'BOW_AIM';
+
+        this.attackHitBossRegistered = true;
+        if (!vulnerable) {
+            this.showBlockDeflect(this.caboclinho.x, this.caboclinho.y - 12, true);
             return;
         }
 
-        this.reactCaboclinhoBeforeMove(this.caboclinhoStage + 1);
+        this.damageCaboclinho(25);
     }
 
-    reactCaboclinhoBeforeMove (nextStage)
+    damageCaboclinho (amount)
     {
-        if (this.caboclinhoMoving) return;
-        this.caboclinhoMoving = true;
-        const direction = this.caboclinhoPositions[nextStage].x >= this.caboclinhoVisual.x ? 1 : -1;
-        this.caboclinhoFacing = direction;
-        this.caboclinhoVisualState = 'PREPARE';
+        if (this.caboclinhoState === 'DEFEATED' || this.caboclinhoTestComplete) return;
 
-        this.tweens.add({
-            targets: this.caboclinhoVisual,
-            scaleX: 1.08,
-            scaleY: 0.9,
-            angle: -direction * 7,
-            y: this.caboclinhoVisual.y + 5,
-            duration: 130,
-            yoyo: true,
-            ease: 'Quad.Out',
-            onComplete: () => this.moveCaboclinhoTo(nextStage)
-        });
-    }
+        this.clearCaboclinhoAttackTimers();
+        this.caboclinhoHealth = Math.max(0, this.caboclinhoHealth - amount);
+        this.updateCaboclinhoBossHud();
+        this.caboclinhoState = 'HIT';
+        this.caboclinhoVisualState = 'RECOIL';
+        this.caboclinho.body.setVelocity(this.attackDirection * 125, -90);
+        this.showCombatImpact(this.caboclinho.x, this.caboclinho.y - 8, null, { boss: true });
 
-    moveCaboclinhoTo (nextStage)
-    {
-        this.caboclinhoVisualState = 'MOVING';
-        const from = this.caboclinhoPositions[this.caboclinhoStage];
-        const to = this.caboclinhoPositions[nextStage];
-        const direction = to.x >= from.x ? 1 : -1;
-        if (this.caboclinhoMoveShadow) this.caboclinhoMoveShadow.destroy();
-        const shadow = this.add.ellipse(from.x, from.y + 42, 42, 10, 0x07100c, 0.28).setDepth(20);
-        this.caboclinhoMoveShadow = shadow;
-
-        for (let i = 0; i < 4; i += 1) {
-            const leaf = this.add.ellipse(from.x + i * 4, from.y + 4, 10, 5, i % 2 ? 0x668d4d : 0x4d7b49, 0.72).setDepth(23);
+        for (let i = 0; i < 5; i += 1) {
+            const leaf = this.add.ellipse(this.caboclinho.x, this.caboclinho.y - 8, 9, 4, i % 2 ? 0x6d7842 : 0x315f39, 0.72).setDepth(25);
             this.tweens.add({
                 targets: leaf,
-                x: from.x - direction * (32 + i * 9),
-                y: from.y - 18 - i * 7,
-                angle: direction * (55 + i * 18),
+                x: leaf.x + (i - 2) * 18,
+                y: leaf.y - 12 - i * 5,
+                angle: (i - 2) * 50,
                 alpha: 0,
-                duration: 300 + i * 25,
+                duration: 260,
                 onComplete: () => leaf.destroy()
             });
         }
 
-        const midpointX = (from.x + to.x) * 0.5;
-        const apexY = Math.min(from.y, to.y) - (nextStage === 2 ? 88 : 70);
-        const firstDuration = nextStage === 2 ? 185 : 205;
-        const secondDuration = nextStage === 2 ? 190 : 215;
+        if (this.caboclinhoHealth <= 0) {
+            this.defeatCaboclinho();
+            return;
+        }
 
-        this.tweens.add({
-            targets: this.caboclinhoVisual,
-            x: midpointX,
-            y: apexY,
-            angle: direction * 10,
-            duration: firstDuration,
-            ease: 'Quad.Out',
-            onComplete: () => {
-                this.tweens.add({
-                    targets: this.caboclinhoVisual,
-                    x: to.x,
-                    y: to.y,
-                    angle: -direction * 4,
-                    duration: secondDuration,
-                    ease: 'Quad.In',
-                    onComplete: () => {
-                        this.caboclinhoVisual.setAngle(0).setScale(1);
-                        shadow.setPosition(to.x, to.y + 42);
-                        this.tweens.add({ targets: shadow, scaleX: 1.25, alpha: 0, duration: 180, onComplete: () => { shadow.destroy(); if (this.caboclinhoMoveShadow === shadow) this.caboclinhoMoveShadow = null; } });
-
-                        for (let i = 0; i < 3; i += 1) {
-                            const leaf = this.add.ellipse(to.x, to.y + 22, 9, 4, 0x5e8548, 0.62).setDepth(23);
-                            this.tweens.add({
-                                targets: leaf,
-                                x: to.x + direction * (20 + i * 8),
-                                y: to.y + 8 - i * 8,
-                                angle: direction * (45 + i * 25),
-                                alpha: 0,
-                                duration: 240 + i * 35,
-                                onComplete: () => leaf.destroy()
-                            });
-                        }
-
-                        this.caboclinhoStage = nextStage;
-                        this.caboclinhoVisualState = 'RECOVER';
-                        this.time.delayedCall(180, () => {
-                            if (this.caboclinhoTestComplete || !this.caboclinhoVisual?.active) return;
-                            this.caboclinhoVisualState = 'IDLE';
-                        });
-                        this.caboclinhoMoving = false;
-                        this.enableCaboclinhoReachZone();
-                    }
-                });
-            }
-        });
+        this.scheduleCaboclinhoCall(170, () => this.enterCaboclinhoVulnerable());
     }
 
-    reactCaboclinhoRecognition ()
+    defeatCaboclinho ()
     {
-        if (this.caboclinhoMoving || this.caboclinhoTestComplete) return;
-        this.caboclinhoMoving = true;
-        this.caboclinhoVisualState = 'RECOIL';
-        this.tweens.add({
-            targets: this.caboclinhoVisual,
-            y: this.caboclinhoVisual.y - 5,
-            angle: -4,
-            duration: 150,
-            yoyo: true,
-            ease: 'Sine.InOut',
-            onComplete: () => {
-                this.caboclinhoVisual.setAngle(0);
-                this.caboclinhoVisualState = 'RECOVER';
-                this.time.delayedCall(260, () => this.completeCaboclinhoTrial());
-            }
-        });
+        if (this.caboclinhoState === 'DEFEATED') return;
+
+        this.caboclinhoState = 'DEFEATED';
+        this.caboclinhoVisualState = 'DEFEATED';
+        this.caboclinhoTestComplete = true;
+        this.clearCaboclinhoAttackTimers();
+        this.clearCaboclinhoArrows();
+
+        if (this.caboclinho?.body) {
+            this.caboclinho.body.setVelocity(0, 0);
+            this.caboclinho.body.enable = false;
+        }
+
+        this.caboclinhoArenaBarrierL.body.enable = false;
+        this.caboclinhoArenaBarrierR.body.enable = false;
+        this.caboclinhoArenaBarrierL.setVisible(false);
+        this.caboclinhoArenaBarrierR.setVisible(false);
+        this.caboclinhoBossHud.setVisible(false);
+
+        this.defeatCaboclinhoVisual();
+
+        this.time.delayedCall(620, () => this.completeCaboclinhoTrial());
     }
 
     completeCaboclinhoTrial ()
     {
-        if (this.caboclinhoTestComplete) return;
-        this.caboclinhoTestComplete = true;
-        this.caboclinhoMoving = false;
-        this.caboclinhoReachZone.body.enable = false;
-        this.defeatCaboclinhoVisual();
-
         const panel = this.add.rectangle(512, 350, 650, 190, 0x06100d, 0.92).setScrollFactor(0).setDepth(190);
-        const line = this.add.text(512, 318, 'Agora seus passos alcançam onde a mata se abre.', {
-            fontFamily: 'Arial', fontSize: '22px', color: '#c8d8cc'
+        const line = this.add.text(512, 318, '“O Caboquim reconhece seus passos.”', {
+            fontFamily: 'Arial',
+            fontSize: '22px',
+            color: '#c8d8cc'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(191);
 
-        this.time.delayedCall(950, () => {
+        this.time.delayedCall(850, () => {
             const skill = this.add.text(512, 385, 'HABILIDADE DESBLOQUEADA\nDASH', {
-                fontFamily: 'Arial Black', fontSize: '30px', color: '#f1e1ae', align: 'center'
+                fontFamily: 'Arial Black',
+                fontSize: '30px',
+                color: '#f1e1ae',
+                align: 'center'
             }).setOrigin(0.5).setScrollFactor(0).setDepth(191);
 
             this.showDashUnlockEffect();
 
-            this.time.delayedCall(1250, () => {
+            this.time.delayedCall(1150, () => {
                 this.dashUnlocked = true;
                 this.registry.set('dashUnlocked', true);
                 this.updateControlsText();
-                panel.destroy();
-                line.destroy();
-                skill.destroy();
+                if (panel.active) panel.destroy();
+                if (line.active) line.destroy();
+                if (skill.active) skill.destroy();
                 this.showDashTutorial();
             });
+        });
+    }
+
+    updateCaboclinhoBoss (time)
+    {
+        if (!this.caboclinhoTestActive || this.caboclinhoState === 'DORMANT') return;
+        if (this.caboclinhoState === 'DEFEATED') {
+            this.updateCaboclinhoArrows();
+            return;
+        }
+        if (!this.caboclinho?.body?.enable || this.isPlayerDead) {
+            if (this.caboclinho?.body) this.caboclinho.body.setVelocity(0, 0);
+            return;
+        }
+
+        this.caboclinho.x = Math.max(this.caboclinhoArenaMinX + 35, Math.min(this.caboclinhoArenaMaxX - 35, this.caboclinho.x));
+        if (this.caboclinhoVisual?.active) {
+            this.caboclinhoVisual.setPosition(this.caboclinho.x, this.caboclinho.y);
+        }
+        this.updateCaboclinhoArrows();
+
+        const dx = this.player.x - this.caboclinho.x;
+        const distance = Math.abs(dx);
+        if (Math.abs(dx) > 8) this.caboclinhoFacing = dx < 0 ? -1 : 1;
+
+        if (this.caboclinhoState === 'INTRO' || this.caboclinhoState === 'HIT') return;
+
+        if (this.caboclinhoState === 'PREPARE') {
+            if (time < this.caboclinhoNextActionAt) return;
+            if (this.caboclinhoPendingAction === 'DASH') this.executeCaboclinhoDash();
+            else this.executeCaboclinhoJump();
+            return;
+        }
+
+        if (this.caboclinhoState === 'DASH' || this.caboclinhoState === 'AIR_DASH') {
+            if (time >= this.caboclinhoDashEndsAt) {
+                this.caboclinho.body.setVelocityX(0);
+                this.enterCaboclinhoRecovery();
+            }
+            return;
+        }
+
+        if (this.caboclinhoState === 'BOW_AIM') {
+            this.caboclinho.body.setVelocityX(0);
+            if (time >= this.caboclinhoBowAimEndsAt) this.fireCaboclinhoArrow();
+            return;
+        }
+
+        if (this.caboclinhoState === 'BOW_SHOT') return;
+
+        if (this.caboclinhoState === 'JUMP' || this.caboclinhoState === 'DOUBLE_JUMP') {
+            if (
+                this.caboclinho.body.blocked.down &&
+                time - this.caboclinhoJumpStartedAt > 180
+            ) {
+                this.caboclinhoAirDashUsed = false;
+                this.enterCaboclinhoRecovery();
+            }
+            return;
+        }
+
+        if (this.caboclinhoState === 'RECOVERY') {
+            if (time >= this.caboclinhoNextActionAt) {
+                if (this.caboclinhoStrongActions >= 2) this.enterCaboclinhoVulnerable();
+                else {
+                    this.caboclinhoState = 'HUNT';
+                    this.caboclinhoVisualState = 'IDLE';
+                    this.caboclinhoNextActionAt = time + (this.caboclinhoPhase() >= 4 ? 170 : 260);
+                }
+            }
+            return;
+        }
+
+        if (this.caboclinhoState === 'VULNERABLE') {
+            if (time >= this.caboclinhoNextActionAt) {
+                this.caboclinhoState = 'HUNT';
+                this.caboclinhoVisualState = 'IDLE';
+                this.caboclinhoNextActionAt = time + 180;
+            }
+            return;
+        }
+
+        if (this.caboclinhoState !== 'HUNT') return;
+
+        const phase = this.caboclinhoPhase();
+        const huntSpeed = phase >= 4 ? 230 : phase >= 3 ? 220 : 205;
+        if (distance > 250) this.caboclinho.body.setVelocityX((dx < 0 ? -1 : 1) * huntSpeed);
+        else if (distance < 105) this.caboclinho.body.setVelocityX((dx < 0 ? 1 : -1) * 175);
+        else this.caboclinho.body.setVelocityX(0);
+
+        this.caboclinhoVisualState = Math.abs(this.caboclinho.body.velocity.x) > 20 ? 'MOVING' : 'IDLE';
+
+        if (time >= this.caboclinhoNextActionAt) {
+            const action = this.chooseCaboclinhoAction();
+            if (action === 'BOW') this.beginCaboclinhoBowAim(false);
+            else this.beginCaboclinhoPrepare(action);
+        }
+    }
+
+    updateCaboclinhoArrows ()
+    {
+        const minX = this.caboclinhoArenaMinX - 120;
+        const maxX = this.caboclinhoArenaMaxX + 120;
+        [...(this.caboclinhoArrows || [])].forEach(arrow => {
+            if (!arrow.body?.active) {
+                this.destroyCaboclinhoArrow(arrow, false);
+                return;
+            }
+            arrow.visual?.setPosition(arrow.body.x, arrow.body.y);
+            if (
+                arrow.body.x < minX ||
+                arrow.body.x > maxX ||
+                arrow.body.y < -80 ||
+                arrow.body.y > 820
+            ) {
+                this.destroyCaboclinhoArrow(arrow, false);
+            }
+        });
+    }
+
+    cleanupCaboclinhoBoss ()
+    {
+        this.clearCaboclinhoAttackTimers();
+        this.clearCaboclinhoArrows();
+        const world = this.physics?.world;
+        [
+            'caboclinhoAttackOverlap',
+            'caboclinhoPlayerOverlap',
+            'caboclinhoPlatformCollider',
+            'caboclinhoBarrierPlayerL',
+            'caboclinhoBarrierPlayerR',
+            'caboclinhoBarrierBossL',
+            'caboclinhoBarrierBossR'
+        ].forEach(key => {
+            if (world && this[key]) world.removeCollider(this[key]);
+            this[key] = null;
         });
     }
 
@@ -3497,6 +4039,7 @@ export class Level3Scene extends Scene
         this.forestMonkeySystem?.cleanup?.();
         this.oncaEncounter?.destroy?.();
         this.horizontalExpansion?.cleanup?.();
+        this.cleanupCaboclinhoBoss?.();
     }
 
     createQuickMenuButton ()
@@ -3600,10 +4143,9 @@ export class Level3Scene extends Scene
         }
 
         if(this.player.y>720&&!this.isPlayerDead){
-            if(this.caboclinhoTestActive&&!this.caboclinhoTestComplete)this.resetCaboclinhoTest();
             this.handlePlayerDeath();
         }
-        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.animateCaboclinhoVisual(time);this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
+        this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.updateCaboclinhoBoss(time);this.animateCaboclinhoVisual(time);this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
 
         this.horizontalExpansion?.update(this.time.now);
 }
