@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { getAudioManager } from '../audio/AudioManager.js';
+import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
 
 export class MainMenu extends Scene
 {
@@ -66,6 +67,12 @@ export class MainMenu extends Scene
                 color: '#799487'
             }
         ).setOrigin(0.5);
+
+        this.audioSettingsUi = createAudioSettingsControl(this, {
+            x: 970,
+            y: 38,
+            buttonSize: 48
+        });
 
         this.nameKeyHandler = (event) => this.handleNameKey(event);
         this.input.keyboard.on('keydown', this.nameKeyHandler);
