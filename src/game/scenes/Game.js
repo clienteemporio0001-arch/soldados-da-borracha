@@ -3,6 +3,7 @@ import { createBasicMobileControls } from '../mobileControls';
 import { createHorizontalExpansion } from '../phaseHorizontalExtension.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 import { getAudioManager } from '../audio/AudioManager.js';
+import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
 
 export class Game extends Scene
@@ -3364,6 +3365,11 @@ export class Game extends Scene
         }).setScrollFactor(0).setDepth(101).setVisible(showDesktopControls);
 
         this.createQuickMenuButton();
+        this.audioSettingsUi = createAudioSettingsControl(this, {
+            x: 900,
+            y: 27,
+            buttonSize: 40
+        });
     }
 
     cleanupSceneHazardsBeforeTransition ()
