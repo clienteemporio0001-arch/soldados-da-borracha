@@ -1,0 +1,212 @@
+name: Build audible jump v4
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-jump-v4.yml
+
+permissions:
+  contents: write
+
+jobs:
+  build-jump-v4:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify ffmpeg
+        run: |
+          ffmpeg -version | head -1
+          ffprobe -version | head -1
+
+      - name: Download official Air Woosh Move
+        run: |
+          curl -fL --retry 3 --retry-delay 2 \
+            "https://opengameart.org/sites/default/files/air_move.wav" \
+            -o /tmp/air_move.wav
+          test -s /tmp/air_move.wav
+          ls -lh /tmp/air_move.wav
+
+      - name: Build normalized V4 from strongest attack
+        run: |
+          ffmpeg -y -hide_banner -loglevel error \
+            -i /tmp/air_move.wav -ac 1 -ar 44100 -c:a pcm_s16le /tmp/air_move_mono.wav
+
+          python - <<'PY'
+          import math, struct, wave
+          from pathlib import Path
+
+          source = "/tmp/air_move_mono.wav"
+          output = "/tmp/player_jump_v4_norm.wav"
+          duration_s = 0.32
+          pre_peak_s = 0.055
+          fade_out_s = 0.055
+          target_peak_db = -3.0
+
+          with wave.open(source, "rb") as w:
+              rate = w.getframerate()
+              channels = w.getnchannels()
+              width = w.getsampwidth()
+              frames = w.readframes(w.getnframes())
+
+          if rate != 44100 or channels != 1 or width != 2:
+              raise SystemExit(f"Unexpected normalized source format: {rate} Hz, {channels} ch, {width * 8} bit")
+
+          samples = list(struct.unpack("<" + "h" * (len(frames) // 2), frames))
+          if not samples:
+              raise SystemExit("Source has no samples")
+
+          peak_index = max(range(len(samples)), key=lambda i: abs(samples[i]))
+          segment_len = int(duration_s * rate)
+          start = max(0, peak_index - int(pre_peak_s * rate))
+          if start + segment_len > len(samples):
+              start = max(0, len(samples) - segment_len)
+          segment = samples[start:start + segment_len]
+          if len(segment) < segment_len:
+              segment += [0] * (segment_len - len(segment))
+
+          fade_len = int(fade_out_s * rate)
+          if fade_len > 0:
+              for i in range(fade_len):
+                  idx = len(segment) - fade_len + i
+                  if idx >= 0:
+                      segment[idx] = int(segment[idx] * (1.0 - i / fade_len))
+
+          current_peak = max(abs(x) for x in segment)
+          if current_peak <= 0:
+              raise SystemExit("Selected segment is silent")
+
+          target_peak = int(32767 * (10 ** (target_peak_db / 20.0)))
+          gain = target_peak / current_peak
+          normalized = [
+              max(-32768, min(32767, int(round(x * gain))))
+              for x in segment
+          ]
+
+          rms = math.sqrt(sum(x * x for x in normalized) / len(normalized))
+          rms_db = 20 * math.log10(rms / 32767) if rms > 0 else -120.0
+          peak = max(abs(x) for x in normalized)
+          peak_db = 20 * math.log10(peak / 32767) if peak > 0 else -120.0
+
+          with wave.open(output, "wb") as w:
+              w.setnchannels(1)
+              w.setsampwidth(2)
+              w.setframerate(rate)
+              w.writeframes(struct.pack("<" + "h" * len(normalized), *normalized))
+
+          print(f"source_peak_time={peak_index / rate:.4f}s")
+          print(f"segment_start={start / rate:.4f}s")
+          print(f"duration={len(normalized) / rate:.4f}s")
+          print(f"peak_db={peak_db:.2f}")
+          print(f"rms_db={rms_db:.2f}")
+          if not (-3.15 <= peak_db <= -2.85):
+              raise SystemExit(f"Peak normalization outside target: {peak_db:.2f} dB")
+          if rms_db < -28:
+              raise SystemExit(f"Jump remains too quiet by RMS check: {rms_db:.2f} dB")
+          PY
+
+          ffmpeg -y -hide_banner -loglevel error \
+            -i /tmp/player_jump_v4_norm.wav \
+            -ac 1 -ar 44100 -c:a libvorbis -q:a 6 \
+            public/assets/audio/player/player_jump_v4.ogg
+
+      - name: Verify V4 codec format duration and audibility
+        run: |
+          ffprobe -v error \
+            -show_entries stream=codec_name,sample_rate,channels \
+            -show_entries format=duration \
+            -of default=noprint_wrappers=1 \
+            public/assets/audio/player/player_jump_v4.ogg | tee /tmp/jump_v4_probe.txt
+
+          grep -q "codec_name=vorbis" /tmp/jump_v4_probe.txt
+          grep -q "sample_rate=44100" /tmp/jump_v4_probe.txt
+          grep -q "channels=1" /tmp/jump_v4_probe.txt
+
+          ffmpeg -hide_banner -i public/assets/audio/player/player_jump_v4.ogg \
+            -af volumedetect -f null - 2>&1 | tee /tmp/jump_v4_volume.txt
+          grep "max_volume" /tmp/jump_v4_volume.txt
+          grep "mean_volume" /tmp/jump_v4_volume.txt
+
+      - name: Update manifest preloader and license
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          manifest_path = Path("src/game/audio/audioManifest.js")
+          manifest = manifest_path.read_text()
+
+          protected = {}
+          for key in ["player_dash", "player_step_01", "player_step_02", "player_step_03", "player_step_04", "player_land", "fruit_bite"]:
+              protected[key] = next(line for line in manifest.splitlines() if f"{key}:" in line)
+
+          manifest, n1 = re.subn(
+              r"^\s*player_jump:\s*\{[^\n]+\},$",
+              "    player_jump: { category: 'sfx', path: 'audio/player/player_jump_v4.ogg', license: 'CC0-1.0', gain: 0.95, rate: 1.0 },",
+              manifest, flags=re.M
+          )
+          manifest, n2 = re.subn(
+              r"^\s*player_double_jump:\s*\{[^\n]+\},$",
+              "    player_double_jump: { category: 'sfx', path: 'audio/player/player_jump_v4.ogg', license: 'CC0-1.0', gain: 0.95, rate: 1.0 },",
+              manifest, flags=re.M
+          )
+          if n1 != 1 or n2 != 1:
+              raise SystemExit(f"Unexpected jump manifest matches: {n1}, {n2}")
+
+          for key, before in protected.items():
+              after = next(line for line in manifest.splitlines() if f"{key}:" in line)
+              if after != before:
+                  raise SystemExit(f"Protected audio changed: {key}")
+
+          manifest_path.write_text(manifest)
+
+          preloader_path = Path("src/game/scenes/Preloader.js")
+          preloader = preloader_path.read_text()
+          old = "?v=jump-approved-2"
+          new = "?v=jump-v4-20261001"
+          if old not in preloader and new not in preloader:
+              raise SystemExit("Expected jump cache token not found")
+          preloader = preloader.replace(old, new)
+          preloader_path.write_text(preloader)
+
+          licenses_path = Path("public/assets/audio/LICENSES.md")
+          licenses = licenses_path.read_text()
+          row = "| `player/player_jump_v4.ogg` | `air_move.wav` | Almitory | https://opengameart.org/content/air-woosh-move | CC0 1.0 | OpenGameArt; trecho de maior ataque, 0.32 s, Vorbis 44.1 kHz mono, pico normalizado a -3 dB, fade-out curto |"
+          if row not in licenses:
+              anchor = "| `player/player_jump_v3.ogg` | `air_move.wav` | Almitory | https://opengameart.org/content/air-woosh-move | CC0 1.0 | Corte curto derivado do Air Woosh Move: 0,32 s, mono, low-pass e fade-out |"
+              if anchor in licenses:
+                  licenses = licenses.replace(anchor, anchor + "\n" + row)
+              else:
+                  licenses += "\n" + row + "\n"
+              licenses_path.write_text(licenses)
+          PY
+
+      - name: Validate code and build
+        run: |
+          node --check src/game/audio/audioManifest.js
+          node --check src/game/audio/AudioManager.js
+          node --check src/game/scenes/Preloader.js
+          npm ci
+          npm run build
+          git diff --check
+
+          grep "player_jump:" src/game/audio/audioManifest.js
+          grep "player_double_jump:" src/game/audio/audioManifest.js
+          grep "player_dash:" src/game/audio/audioManifest.js
+          grep "jump-v4-20261001" src/game/scenes/Preloader.js
+
+      - name: Commit V4 and remove temporary workflow
+        run: |
+          rm .github/workflows/build-jump-v4.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/assets/audio/player/player_jump_v4.ogg \
+            src/game/audio/audioManifest.js \
+            src/game/scenes/Preloader.js \
+            public/assets/audio/LICENSES.md \
+            .github/workflows/build-jump-v4.yml
+          git commit -m "Corrige reproducao do som de jump"
+          git push origin HEAD:main
