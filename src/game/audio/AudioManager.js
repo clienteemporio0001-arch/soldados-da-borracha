@@ -294,14 +294,28 @@ class AudioManager
             });
         }
 
-        const walking = grounded && !dashing && time >= (scene.knockbackUntil || 0) && Math.abs(velocityX) > 70;
-        if (walking && time >= state.nextStepAt) {
+        const walking =
+            grounded &&
+            !dashing &&
+            !scene.isPlayerDead &&
+            time >= (scene.knockbackUntil || 0) &&
+            Math.abs(velocityX) > 70;
+
+        if (!walking) {
+            state.nextStepAt = Math.max(state.nextStepAt, time);
+        } else if (time >= state.nextStepAt) {
             state.stepIndex = (state.stepIndex + 1) % 2;
+            const raining = Boolean(scene.weatherSystem?.isRaining);
+            const stepRate = state.stepIndex
+                ? (raining ? 0.97 : 0.98)
+                : (raining ? 1.01 : 1.02);
+
             this.playSfx(state.stepIndex ? 'player_step_01' : 'player_step_02', {
-                cooldown: 180,
-                volume: scene.weatherSystem?.isRaining ? 0.46 : 0.56
+                cooldown: 150,
+                volume: raining ? 0.74 : 0.82,
+                rate: stepRate
             });
-            state.nextStepAt = time + 240 + (state.stepIndex ? 25 : 0);
+            state.nextStepAt = time + (state.stepIndex ? 215 : 205);
         }
 
         if (scene.snake?.active && scene.snakeVisual?.visible) {
