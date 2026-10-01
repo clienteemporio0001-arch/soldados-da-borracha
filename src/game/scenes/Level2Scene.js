@@ -2246,7 +2246,7 @@ export class Level2Scene extends Scene
         this.curupiraState = 'PREPARE';
         this.curupira.body.setVelocity(0, 0);
         this.curupiraAttackPattern = this.selectCurupiraAttackPattern();
-        const prepareDuration = this.curupiraHealth <= 25 ? 210 : 250;
+        const prepareDuration = this.curupiraHealth <= 25 ? 140 : 180;
         this.curupiraNextActionAt = startAt + prepareDuration;
 
         if (!this.curupiraVisual) return;
@@ -2298,12 +2298,15 @@ export class Level2Scene extends Scene
             this.curupiraWhistleIntroduced = true;
         } else {
             const recent = this.curupiraAttackHistory.slice(-2);
-            const candidates = allowed.filter(pattern => !(
+            const weightedAllowed = this.curupiraHealth <= 25
+                ? [0, 0, 1, 1, 3, 3, 2, 4]
+                : allowed;
+            const candidates = weightedAllowed.filter(pattern => !(
                 recent.length === 2 &&
                 recent[0] === pattern &&
                 recent[1] === pattern
             ));
-            const pool = candidates.length > 0 ? candidates : allowed;
+            const pool = candidates.length > 0 ? candidates : weightedAllowed;
             selected = pool[(this.curupiraAttackSerial + Math.floor(this.curupiraHealth / 25)) % pool.length];
         }
 
@@ -2404,6 +2407,7 @@ export class Level2Scene extends Scene
             p.shadow.alpha = airborne ? 0.12 : 0.34;
         }
 
+        const rageBoost = this.curupiraHealth <= 25 ? 0.16 : 0;
         const prepareBoost = state === 'PREPARE' ? 0.32 : 0;
         const attackBoost = state === 'ATTACK' ? 0.5 : 0;
         const vulnerableDrop = (state === 'VULNERABLE' || state === 'HIT') ? -0.18 : 0;
@@ -2411,13 +2415,14 @@ export class Level2Scene extends Scene
             0.12,
             Math.min(
                 0.95,
-                0.28 + (menace + 1) * 0.08 + prepareBoost + attackBoost + vulnerableDrop
+                0.28 + (menace + 1) * 0.08 + prepareBoost + attackBoost + vulnerableDrop + rageBoost
             )
         );
         if (p.eyeGlowL && p.eyeGlowL.active !== false) p.eyeGlowL.alpha = glowAlpha;
         if (p.eyeGlowR && p.eyeGlowR.active !== false) p.eyeGlowR.alpha = glowAlpha;
 
-        const fireStateBoost = state === 'PREPARE' ? 1.08 : state === 'ATTACK' ? 1.14 : state === 'VULNERABLE' ? 0.9 : 1;
+        const fireStateBoost = (state === 'PREPARE' ? 1.08 : state === 'ATTACK' ? 1.14 : state === 'VULNERABLE' ? 0.9 : 1) +
+            (this.curupiraHealth <= 25 ? 0.08 : 0);
         p.hairRig.y = -18 + Math.sin(time * 0.012) * 1.0;
         p.hairRig.angle = Math.sin(time * 0.009) * 2 - facing * (moving ? Math.min(4, speedX / 85) : 0);
         p.hairRig.scaleX = 1;
@@ -2677,13 +2682,13 @@ export class Level2Scene extends Scene
             }
 
             if (time <= this.curupiraLandingDangerUntil) {
-                if (Math.abs(this.player.x - this.curupira.x) < 90 && Math.abs(this.player.y - this.curupira.y) < 80) {
-                    this.damagePlayer(20, this.player.x < this.curupira.x ? -150 : 150, -120);
+                if (Math.abs(this.player.x - this.curupira.x) < 150 && Math.abs(this.player.y - this.curupira.y) < 115) {
+                    this.damagePlayer(35, this.player.x < this.curupira.x ? -180 : 180, -135);
                 }
             } else {
                 this.clearCurupiraLandingMarker();
                 this.curupiraLandingDangerUntil = 0;
-                this.enterCurupiraRecovery(time, 200);
+                this.enterCurupiraRecovery(time, 135);
             }
         }
     }
@@ -2693,14 +2698,14 @@ export class Level2Scene extends Scene
         const fromLeft = this.curupira.x < (this.arenaMinX + this.arenaMaxX) / 2;
         const direction = fromLeft ? 1 : -1;
         this.curupira.setPosition(fromLeft ? this.arenaMinX + 40 : this.arenaMaxX - 40, 590);
-        this.curupira.body.setVelocityX(direction * 340);
+        this.curupira.body.setVelocityX(direction * 420);
         this.showCurupiraDashLeaves(direction);
         this.showCurupiraDashTrail(direction);
 
-        this.scheduleCurupiraAttackCall(720, () => {
+        this.scheduleCurupiraAttackCall(620, () => {
             if (this.curupiraState === 'ATTACK') {
                 this.curupira.body.setVelocityX(0);
-                this.enterCurupiraRecovery(this.time.now, 200);
+                this.enterCurupiraRecovery(this.time.now, 135);
             }
         });
     }
@@ -2715,7 +2720,7 @@ export class Level2Scene extends Scene
             this.curupiraVisual.parts.torsoRig.y += 3;
             this.curupiraVisual.parts.hairRig.setScale(1.03, 1.16);
         }
-        this.curupira.body.setVelocity(direction * 155, -520);
+        this.curupira.body.setVelocity(direction * 190, -560);
         this.curupiraLandingDangerUntil = time + 1220;
 
         if (this.curupiraHealth <= 75) {
@@ -2734,7 +2739,7 @@ export class Level2Scene extends Scene
                         this.curupira.body.blocked.down) return;
 
                     const towardPlayer = this.player.x < this.curupira.x ? -1 : 1;
-                    this.curupira.body.setVelocity(towardPlayer * 135, -420);
+                    this.curupira.body.setVelocity(towardPlayer * 165, -460);
                     this.curupiraLandingDangerUntil = this.time.now + 1150;
                 });
             });
@@ -2772,13 +2777,13 @@ export class Level2Scene extends Scene
     curupiraFeint (time)
     {
         const direction = this.player.x < this.curupira.x ? -1 : 1;
-        this.curupira.body.setVelocityX(-direction * 220);
+        this.curupira.body.setVelocityX(-direction * 250);
         if (this.curupiraVisual) this.curupiraVisual.setAngle(-direction * 7);
 
         this.scheduleCurupiraAttackCall(220, () => {
             if (this.curupiraState === 'ATTACK') {
                 if (this.curupiraVisual) this.curupiraVisual.setAngle(direction * 9);
-                this.curupira.body.setVelocityX(direction * 300);
+                this.curupira.body.setVelocityX(direction * 360);
                 this.showCurupiraDashTrail(direction, 3);
             }
         });
@@ -2787,7 +2792,7 @@ export class Level2Scene extends Scene
             if (this.curupiraState === 'ATTACK') {
                 this.curupira.body.setVelocityX(0);
                 if (this.curupiraVisual) this.curupiraVisual.setAngle(0);
-                this.enterCurupiraRecovery(this.time.now, 190);
+                this.enterCurupiraRecovery(this.time.now, 130);
             }
         });
     }
@@ -2827,14 +2832,14 @@ export class Level2Scene extends Scene
             });
         }
 
-        this.scheduleCurupiraAttackCall(500, () => {
+        this.scheduleCurupiraAttackCall(420, () => {
             if (this.curupiraState !== 'ATTACK' || this.curupiraAttackPattern !== 3) return;
             this.releaseCurupiraWhistle();
         });
 
-        this.scheduleCurupiraAttackCall(880, () => {
+        this.scheduleCurupiraAttackCall(760, () => {
             if (this.curupiraState === 'ATTACK' && this.curupiraAttackPattern === 3) {
-                this.enterCurupiraRecovery(this.time.now, 200);
+                this.enterCurupiraRecovery(this.time.now, 135);
             }
         });
     }
@@ -2854,8 +2859,8 @@ export class Level2Scene extends Scene
             this.trackCurupiraSpecialEffect(wave);
             this.tweens.add({
                 targets: wave,
-                scaleX: 4.2 + i * 0.35,
-                scaleY: 3.1 + i * 0.2,
+                scaleX: 5.6 + i * 0.42,
+                scaleY: 4.0 + i * 0.26,
                 alpha: 0,
                 duration: 430 + i * 80,
                 delay: i * 45,
@@ -2869,9 +2874,9 @@ export class Level2Scene extends Scene
             const dx = this.player.x - this.curupira.x;
             const dy = this.player.y - this.curupira.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            if (distance <= 220) {
+            if (distance <= 300) {
                 const direction = dx < 0 ? -1 : 1;
-                this.damagePlayer(10, direction * 145, -70);
+                this.damagePlayer(20, direction * 170, -85);
             }
         }
     }
@@ -2941,7 +2946,7 @@ export class Level2Scene extends Scene
             }
 
             const direction = this.player.x < this.curupira.x ? -1 : 1;
-            this.curupira.body.setVelocityX(direction * 285);
+            this.curupira.body.setVelocityX(direction * 340);
             this.showCurupiraDashTrail(direction, 3);
             this.showCurupiraDashLeaves(direction);
         });
@@ -2949,7 +2954,7 @@ export class Level2Scene extends Scene
         this.scheduleCurupiraAttackCall(700, () => {
             if (this.curupiraState === 'ATTACK' && this.curupiraAttackPattern === 4) {
                 this.curupira.body.setVelocityX(0);
-                this.enterCurupiraRecovery(this.time.now, 190);
+                this.enterCurupiraRecovery(this.time.now, 130);
             }
         });
     }
@@ -2989,16 +2994,16 @@ export class Level2Scene extends Scene
         return timer;
     }
 
-    enterCurupiraRecovery (time, duration = 200)
+    enterCurupiraRecovery (time, duration = 135)
     {
         if (this.arenaCleared || this.curupiraState === 'DEFEATED' || !this.curupira?.body?.enable) return;
         this.curupira.body.setVelocity(0, 0);
         this.curupiraState = 'RECOVERY';
-        const recoveryDuration = this.curupiraHealth <= 25 ? Math.min(duration, 180) : duration;
+        const recoveryDuration = this.curupiraHealth <= 25 ? Math.min(duration, 120) : Math.min(duration, 135);
         this.curupiraNextActionAt = time + recoveryDuration;
         this.curupiraWillChain = this.curupiraComboCount === 0 && (
             this.curupiraForcedNextPattern !== null ||
-            (this.curupiraAttackSerial > 0 && this.curupiraAttackSerial % 3 === 0)
+            (this.curupiraAttackSerial > 0 && this.curupiraAttackSerial % 2 === 0)
         );
 
         if (this.curupiraVisual) {
@@ -3015,7 +3020,7 @@ export class Level2Scene extends Scene
         this.curupiraState = 'VULNERABLE';
         this.curupiraComboCount = 0;
         this.curupiraWillChain = false;
-        this.curupiraNextActionAt = time + (this.curupiraHealth <= 25 ? 820 : 920);
+        this.curupiraNextActionAt = time + (this.curupiraHealth <= 25 ? 620 : 700);
 
         if (this.curupiraVisual) {
             this.curupiraVisual.setAlpha(0.62);
@@ -3056,7 +3061,7 @@ export class Level2Scene extends Scene
     handleCurupiraContact ()
     {
         if (!this.arenaStarted || this.arenaCleared || this.curupiraState === 'DEFEATED' || !this.curupira?.body?.enable || this.curupiraState !== 'ATTACK') return;
-        this.damagePlayer(15, this.player.x < this.curupira.x ? -180 : 180, -80);
+        this.damagePlayer(25, this.player.x < this.curupira.x ? -180 : 180, -80);
     }
 
     tryHitCurupira ()
@@ -3261,8 +3266,8 @@ export class Level2Scene extends Scene
         this.curupiraLandingMarker = this.add.ellipse(
             this.curupira.x,
             640,
-            170,
-            30,
+            280,
+            48,
             0xb15f3a,
             0.18
         ).setDepth(15);
@@ -3284,17 +3289,17 @@ export class Level2Scene extends Scene
             this.curupiraLandingMarker.setPosition(this.curupira.x, 640);
         }
 
-        const ring = this.add.ellipse(this.curupira.x, 640, 88, 20, 0xd6b56c, 0.28).setDepth(18);
+        const ring = this.add.ellipse(this.curupira.x, 640, 120, 28, 0xd6b56c, 0.30).setDepth(18);
         this.tweens.add({
             targets: ring,
-            scaleX: 2.25,
-            scaleY: 1.55,
+            scaleX: 2.55,
+            scaleY: 1.75,
             alpha: 0,
             duration: 320,
             onComplete: () => ring.destroy()
         });
 
-        for (let i = 0; i < 9; i += 1) {
+        for (let i = 0; i < 11; i += 1) {
             const direction = i < 4 ? -1 : 1;
             const isDust = i >= 6;
             const particle = isDust
@@ -3312,7 +3317,7 @@ export class Level2Scene extends Scene
             });
         }
 
-        this.cameras.main.shake(95, 0.0026);
+        this.cameras.main.shake(110, 0.0030);
         if (this.curupiraVisual) {
             this.tweens.add({
                 targets: this.curupiraVisual,
