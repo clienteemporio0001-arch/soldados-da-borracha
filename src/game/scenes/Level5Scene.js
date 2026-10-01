@@ -507,7 +507,9 @@ export class Level5Scene extends Scene
     collectFruit (fruit)
     {
         if(fruit.collected)return;
-        fruit.collected=true;fruit.sensor.body.enable=false;
+        fruit.collected=true;
+        this.audioManager?.playSfx?.('fruit_bite', { cooldown: 100, volume: 0.8 });
+        fruit.sensor.body.enable=false;
         this.hunger=Math.min(this.maxHunger,this.hunger+25);this.health=Math.min(this.maxHealth,this.health+10);this.updateHungerHud();this.updateHealthHud();
         this.tweens.add({targets:fruit.visual,scale:1.4,alpha:0,y:fruit.visual.y-24,duration:260,onComplete:()=>fruit.visual.setVisible(false)});
     }
