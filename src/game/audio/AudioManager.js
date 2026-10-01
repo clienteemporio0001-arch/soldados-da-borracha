@@ -2,10 +2,12 @@ import { AUDIO_ASSETS } from './audioManifest.js';
 
 const DEFAULT_VOLUMES = Object.freeze({
     master: 1.0,
-    music: 0.22,
+    music: 0.16,
     ambient: 0.20,
-    sfx: 0.60
+    sfx: 0.72
 });
+
+const AUDIO_SETTINGS_KEY = 'soldadoDaBorrachaAudioSettings';
 
 class AudioManager
 {
@@ -13,8 +15,11 @@ class AudioManager
     {
         this.scene = scene;
         this.volumes = { ...DEFAULT_VOLUMES };
+        this.userMix = { music: 1, sounds: 1 };
+        this.loadUserMix();
         this.music = null;
         this.musicKey = null;
+        this.musicBaseGain = 1;
         this.loops = new Map();
         this.cooldowns = new Map();
         this.sceneStates = new WeakMap();
@@ -49,11 +54,38 @@ class AudioManager
         }
     }
 
+    loadUserMix ()
+    {
+        try {
+            const raw = globalThis?.localStorage?.getItem?.(AUDIO_SETTINGS_KEY);
+            if (!raw) return;
+            const saved = JSON.parse(raw);
+            if (Number.isFinite(saved?.music)) this.userMix.music = Math.max(0, Math.min(1, saved.music));
+            if (Number.isFinite(saved?.sounds)) this.userMix.sounds = Math.max(0, Math.min(1, saved.sounds));
+        } catch (_) {
+            this.userMix = { music: 1, sounds: 1 };
+        }
+    }
+
+    saveUserMix ()
+    {
+        try {
+            globalThis?.localStorage?.setItem?.(AUDIO_SETTINGS_KEY, JSON.stringify(this.userMix));
+        } catch (_) {
+            // localStorage may be unavailable in some browser modes.
+        }
+    }
+
     categoryVolume (category, gain = 1)
     {
+        const userLevel = category === 'music'
+            ? this.userMix.music
+            : (category === 'sfx' || category === 'ambient' ? this.userMix.sounds : 1);
+
         return Math.max(0, Math.min(1,
             this.volumes.master *
             (this.volumes[category] ?? this.volumes.sfx) *
+            userLevel *
             gain
         ));
     }
@@ -63,6 +95,45 @@ class AudioManager
         if (!(category in this.volumes)) return;
         this.volumes[category] = Math.max(0, Math.min(1, value));
         if (category === 'master' && this.scene?.sound) this.scene.sound.volume = this.volumes.master;
+        this.refreshActiveVolumes();
+    }
+
+    setMusicLevel (value)
+    {
+        this.userMix.music = Math.max(0, Math.min(1, Number(value) || 0));
+        this.saveUserMix();
+        this.refreshActiveVolumes();
+    }
+
+    setSoundsLevel (value)
+    {
+        this.userMix.sounds = Math.max(0, Math.min(1, Number(value) || 0));
+        this.saveUserMix();
+        this.refreshActiveVolumes();
+    }
+
+    getMusicLevel ()
+    {
+        return this.userMix.music;
+    }
+
+    getSoundsLevel ()
+    {
+        return this.userMix.sounds;
+    }
+
+    refreshActiveVolumes ()
+    {
+        if (this.music) {
+            const asset = AUDIO_ASSETS[this.musicKey] ?? {};
+            const target = this.categoryVolume('music', this.musicBaseGain * (asset.gain ?? 1));
+            this.music.setVolume?.(target);
+        }
+
+        for (const [id, entry] of this.loops.entries()) {
+            if (!entry?.sound) continue;
+            this.setLoopVolume(id, entry.baseGain ?? 1);
+        }
     }
 
     canPlay (key, cooldown = 0, cooldownKey = key)
@@ -189,7 +260,11 @@ class AudioManager
 
     playMusic (key, options = {})
     {
-        if (this.musicKey === key && this.music?.isPlaying) return this.music;
+        if (this.musicKey === key && this.music?.isPlaying) {
+            this.musicBaseGain = options.volume ?? this.musicBaseGain ?? 1;
+            this.refreshActiveVolumes();
+            return this.music;
+        }
         if (!this.has(key)) return null;
 
         const previous = this.music;
@@ -203,7 +278,8 @@ class AudioManager
             next.play();
             this.music = next;
             this.musicKey = key;
-            const target = this.categoryVolume('music', (options.volume ?? 1) * (asset.gain ?? 1));
+            this.musicBaseGain = options.volume ?? 1;
+            const target = this.categoryVolume('music', this.musicBaseGain * (asset.gain ?? 1));
             this.fadeSoundVolume(next, target, options.fadeIn ?? 700);
 
             if (previous && previous !== next) {
