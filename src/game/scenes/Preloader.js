@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { AUDIO_ASSETS } from '../audio/audioManifest.js';
 
 export class Preloader extends Scene
 {
@@ -41,6 +42,11 @@ export class Preloader extends Scene
         this.load.spritesheet('seringueiroLanding', 'landing.png?v=landing2-20260930', { frameWidth: 512, frameHeight: 512, endFrame: 1 });
         // Asset de onca fornecido pelo usuario; origem/licenca externa ainda nao documentadas.
         this.load.spritesheet('onca', 'onca.png', { frameWidth: 512, frameHeight: 512, endFrame: 7 });
+
+        Object.entries(AUDIO_ASSETS).forEach(([key, asset]) => {
+            if (!asset?.path) return;
+            this.load.audio(key, asset.path);
+        });
     }
 
     create ()

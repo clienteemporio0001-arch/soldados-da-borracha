@@ -2,8 +2,8 @@ import { AUDIO_ASSETS } from './audioManifest.js';
 
 const DEFAULT_VOLUMES = Object.freeze({
     master: 1.0,
-    music: 0.25,
-    ambient: 0.22,
+    music: 0.22,
+    ambient: 0.20,
     sfx: 0.60
 });
 
@@ -78,13 +78,14 @@ class AudioManager
     playSfx (key, options = {})
     {
         if (!this.canPlay(key, options.cooldown ?? 0)) return null;
-        const category = AUDIO_ASSETS[key]?.category ?? 'sfx';
-        const volume = this.categoryVolume(category, options.volume ?? 1);
+        const asset = AUDIO_ASSETS[key] ?? {};
+        const category = asset.category ?? 'sfx';
+        const volume = this.categoryVolume(category, (options.volume ?? 1) * (asset.gain ?? 1));
         try {
             return this.scene.sound.play(key, {
                 volume,
-                rate: options.rate ?? 1,
-                detune: options.detune ?? 0,
+                rate: options.rate ?? asset.rate ?? 1,
+                detune: options.detune ?? asset.detune ?? 0,
                 loop: false
             });
         } catch (_) {
@@ -109,6 +110,25 @@ class AudioManager
         });
     }
 
+    fadeSoundVolume (sound, target, duration = 0, onComplete = null)
+    {
+        if (!sound) return;
+        const safeTarget = Math.max(0, Math.min(1, target));
+        if (!this.scene?.tweens || duration <= 0) {
+            sound.setVolume?.(safeTarget);
+            onComplete?.();
+            return;
+        }
+        this.scene.tweens.killTweensOf(sound);
+        this.scene.tweens.add({
+            targets: sound,
+            volume: safeTarget,
+            duration,
+            ease: 'Sine.InOut',
+            onComplete
+        });
+    }
+
     ensureLoop (id, key, options = {})
     {
         const existing = this.loops.get(id);
@@ -119,17 +139,21 @@ class AudioManager
         this.stopLoop(id, options.fadeOut ?? 0);
         if (!this.has(key)) return null;
 
-        const category = AUDIO_ASSETS[key]?.category ?? 'ambient';
+        const asset = AUDIO_ASSETS[key] ?? {};
+        const category = asset.category ?? 'ambient';
         try {
             const sound = this.scene.sound.add(key, {
                 loop: true,
-                volume: 0
+                volume: 0,
+                rate: options.rate ?? asset.rate ?? 1,
+                detune: options.detune ?? asset.detune ?? 0
             });
             sound.play();
-            const target = this.categoryVolume(category, options.volume ?? 1);
-            sound.setVolume(target);
-            this.loops.set(id, { key, sound, category, baseGain: options.volume ?? 1, owner: options.owner ?? null });
+            const baseGain = options.volume ?? 1;
+            const target = this.categoryVolume(category, baseGain * (asset.gain ?? 1));
+            this.loops.set(id, { key, sound, category, baseGain, owner: options.owner ?? null });
             if (options.owner) this.sceneLoopOwners.set(id, options.owner);
+            this.fadeSoundVolume(sound, target, options.fadeIn ?? 350);
             return sound;
         } catch (_) {
             return null;
@@ -141,19 +165,26 @@ class AudioManager
         const entry = this.loops.get(id);
         if (!entry?.sound) return;
         entry.baseGain = gain;
-        entry.sound.setVolume(this.categoryVolume(entry.category, gain));
+        const asset = AUDIO_ASSETS[entry.key] ?? {};
+        const target = this.categoryVolume(entry.category, gain * (asset.gain ?? 1));
+        if (Math.abs((entry.sound.volume ?? 0) - target) < 0.015) return;
+        entry.sound.setVolume(target);
     }
 
-    stopLoop (id)
+    stopLoop (id, fadeMs = 0)
     {
         const entry = this.loops.get(id);
         if (!entry) return;
-        try {
-            entry.sound?.stop?.();
-            entry.sound?.destroy?.();
-        } catch (_) {}
         this.loops.delete(id);
         this.sceneLoopOwners.delete(id);
+        const dispose = () => {
+            try {
+                entry.sound?.stop?.();
+                entry.sound?.destroy?.();
+            } catch (_) {}
+        };
+        if (fadeMs > 0 && entry.sound?.isPlaying) this.fadeSoundVolume(entry.sound, 0, fadeMs, dispose);
+        else dispose();
     }
 
     playMusic (key, options = {})
@@ -161,26 +192,30 @@ class AudioManager
         if (this.musicKey === key && this.music?.isPlaying) return this.music;
         if (!this.has(key)) return null;
 
-        if (this.music) {
-            try {
-                this.music.stop();
-                this.music.destroy();
-            } catch (_) {}
-            this.music = null;
-            this.musicKey = null;
-        }
-
+        const previous = this.music;
+        const asset = AUDIO_ASSETS[key] ?? {};
         try {
-            this.music = this.scene.sound.add(key, {
+            const next = this.scene.sound.add(key, {
                 loop: options.loop !== false,
-                volume: this.categoryVolume('music', options.volume ?? 1)
+                volume: 0,
+                rate: asset.rate ?? 1
             });
+            next.play();
+            this.music = next;
             this.musicKey = key;
-            this.music.play();
-            return this.music;
+            const target = this.categoryVolume('music', (options.volume ?? 1) * (asset.gain ?? 1));
+            this.fadeSoundVolume(next, target, options.fadeIn ?? 700);
+
+            if (previous && previous !== next) {
+                this.fadeSoundVolume(previous, 0, options.fadeOut ?? 650, () => {
+                    try {
+                        previous.stop?.();
+                        previous.destroy?.();
+                    } catch (_) {}
+                });
+            }
+            return next;
         } catch (_) {
-            this.music = null;
-            this.musicKey = null;
             return null;
         }
     }
@@ -193,6 +228,7 @@ class AudioManager
         if (options.ambient) {
             this.ensureLoop('forest_ambient', options.ambient, {
                 volume: options.ambientVolume ?? 1,
+                fadeIn: 700,
                 owner: scene.sys?.settings?.key ?? 'scene'
             });
         }

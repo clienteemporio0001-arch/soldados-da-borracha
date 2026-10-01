@@ -292,6 +292,7 @@ export function createTropicalStormSystem (scene, config = {})
         setRainVisualAlpha(1);
         scene.audioManager?.ensureLoop?.('rain_loop', 'rain_loop', {
             volume: phase === 5 ? 0.72 : 0.86,
+            fadeIn: 1000,
             owner: scene.sys?.settings?.key
         });
         scene.audioManager?.setLoopVolume?.('forest_ambient', 0.45);
@@ -307,7 +308,7 @@ export function createTropicalStormSystem (scene, config = {})
         system.state = 'STORM_EXIT';
         system.isRaining = false;
         stopLightning();
-        scene.audioManager?.stopLoop?.('rain_loop');
+        scene.audioManager?.stopLoop?.('rain_loop', 1500);
         scene.audioManager?.setLoopVolume?.('forest_ambient', 1);
         safeRemove(system.splashTimer);
         system.splashTimer = null;
@@ -383,7 +384,7 @@ export function createTropicalStormSystem (scene, config = {})
         system.lightningTimer = null;
         system.splashTimer = null;
         system.thunderTimer = null;
-        scene.audioManager?.stopLoop?.('rain_loop');
+        scene.audioManager?.stopLoop?.('rain_loop', 1500);
 
         const allTargets = [
             system.cloudsFar,
