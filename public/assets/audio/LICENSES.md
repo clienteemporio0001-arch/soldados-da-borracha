@@ -22,6 +22,7 @@ Todos os arquivos abaixo foram selecionados somente de fontes identificadas como
 | `player/player_jump_v2.ogg` | `Game-ish jump sound.wav` | SomeOrdinaryDude | https://freesound.org/people/SomeOrdinaryDude/sounds/584350/ | CC0 / Public Domain | Freesound (preview HQ OGG do CDN oficial) |
 | `player/player_hurt.ogg` | `human_01.ogg` | rubberduck | https://opengameart.org/content/80-cc0-creture-sfx-2 | CC0 1.0 | 1993velezpadilla-source/config-old-3 |
 | `player/player_death.ogg` | `human_02.ogg` | rubberduck | https://opengameart.org/content/80-cc0-creture-sfx-2 | CC0 1.0 | 1993velezpadilla-source/config-old-3 |
+| `items/fruit_bite.ogg` | `apple_bite.ogg` | AntumDeluge | https://opengameart.org/content/apple-bite | CC0 1.0 | OpenGameArt (espelho verificado: abcdmku/Corealm, bytes originais sem transcodificação) |
 | `enemies/snake_hiss.ogg` | `breath.ogg` | rubberduck | https://opengameart.org/content/80-cc0-creature-sfx | CC0 1.0 | 1993velezpadilla-source/config-old-3 |
 | `enemies/carapana_buzz.ogg` | `bug_01.ogg` | rubberduck | https://opengameart.org/content/80-cc0-creature-sfx | CC0 1.0 | 1993velezpadilla-source/config-old-3 |
 | `enemies/monkey_call.ogg` | `grunt_01.ogg` | rubberduck | https://opengameart.org/content/80-cc0-creature-sfx | CC0 1.0 | 1993velezpadilla-source/config-old-3 |
