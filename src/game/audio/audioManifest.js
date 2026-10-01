@@ -19,6 +19,8 @@ export const AUDIO_ASSETS = {
     player_hurt: { category: 'sfx', path: 'audio/player/player_hurt.ogg', license: 'CC0-1.0', gain: 0.82 },
     player_death: { category: 'sfx', path: 'audio/player/player_death.ogg', license: 'CC0-1.0', gain: 0.9 },
 
+    fruit_bite: { category: 'sfx', path: 'audio/items/fruit_bite.ogg', license: 'CC0-1.0', gain: 0.76, rate: 1.0 },
+
     snake_hiss: { category: 'sfx', path: 'audio/enemies/snake_hiss.ogg', license: 'CC0-1.0', gain: 0.82, rate: 1.22 },
     carapana_buzz: { category: 'sfx', path: 'audio/enemies/carapana_buzz.ogg', license: 'CC0-1.0', gain: 0.70, rate: 1.22 },
     monkey_call: { category: 'sfx', path: 'audio/enemies/monkey_call.ogg', license: 'CC0-1.0', gain: 0.90, rate: 1.08 },
