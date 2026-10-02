@@ -151,12 +151,17 @@ jobs:
                   "() => !!window.__soldadosAudioTestGame && window.__soldadosAudioTestGame.scene.isActive('MainMenu')",
                   timeout=30000
               )
-              await page.evaluate("() => window.__soldadosAudioTestGame.scene.start('Game')")
+              await page.evaluate("""() => {
+                  const game=window.__soldadosAudioTestGame;
+                  const menu=game.scene.getScene('MainMenu');
+                  menu.scene.start('Game');
+              }""")
               await page.wait_for_function(
                   """() => {
-                      const s=window.__soldadosAudioTestGame.scene.getScene('Game');
-                      return !!s && s.scene.isActive() && !!s.audioManager &&
-                          s.cache.audio.exists('player_machete_swing');
+                      const game=window.__soldadosAudioTestGame;
+                      const s=game.scene.getScene('Game');
+                      return !!s && s.scene.isActive() && !game.scene.isActive('MainMenu') &&
+                          !!s.audioManager && s.cache.audio.exists('player_machete_swing');
                   }""",
                   timeout=30000
               )
