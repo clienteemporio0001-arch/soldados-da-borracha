@@ -20,8 +20,8 @@ jobs:
 
       - name: Analyze current asset
         run: |
-          ffprobe -hide_banner -v error -show_entries format=duration,size -show_entries stream=codec_name,sample_rate,channels,bit_rate -of json public/assets/audio/player/machete_swing_heavy.ogg
-          ffmpeg -hide_banner -i public/assets/audio/player/machete_swing_heavy.ogg -af astats=metadata=1:reset=1 -f null - 2>&1 | grep -E 'Peak level dB|RMS level dB|Number of samples' | tail -6
+          ffprobe -hide_banner -v error -show_entries format=duration,size -show_entries stream=codec_name,sample_rate,channels,bit_rate -of json public/assets/audio/player/machete_swing_heavy.ogg || true
+          ffmpeg -hide_banner -i public/assets/audio/player/machete_swing_heavy.ogg -af astats=metadata=1:reset=1 -f null - 2>&1 | grep -E 'CRC mismatch|End of file|Peak level dB|RMS level dB|Number of samples' | tail -12 || true
 
       - name: Download and analyze CC0 sword candidates
         run: |
