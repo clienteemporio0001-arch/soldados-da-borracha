@@ -754,14 +754,20 @@ export class Level4Scene extends Scene
         this.attackVisualVariant=(this.attackVisualVariant+1)%2;
         this.attackSoundVariant=(this.attackSoundVariant+1)%3;
         const macheteSwingSequence=[
-            { key:'player_machete_swing', rate:0.90, volume:0.92 },
-            { key:'player_machete_swing', rate:1.06, volume:0.96 },
-            { key:'player_machete_hit', rate:0.92, volume:1.00 }
+            { key:'player_machete_swing', rate:0.92, detune:-35, volume:0.94 },
+            { key:'player_machete_swing', rate:1.00, detune:0, volume:0.96 },
+            { key:'player_machete_swing', rate:1.08, detune:35, volume:0.94 }
         ];
         const swingSound=macheteSwingSequence[this.attackSoundVariant];
+
+        // startAttack is shared by keyboard and mobile input. Unlock/bind here so
+        // the first attack gesture can resume WebAudio and always uses this scene.
+        this.audioManager?.bindScene?.(this);
+        this.audioManager?.unlock?.();
         this.audioManager?.playSfx?.(swingSound.key, {
             cooldown:0,
             rate:swingSound.rate,
+            detune:swingSound.detune,
             volume:swingSound.volume
         });
 
