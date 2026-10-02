@@ -189,7 +189,8 @@ export function createHorizontalExpansion (scene, config = {})
         const enemy={
             type,body,visual,startX:x,startY:y,minX:x-105,maxX:x+105,
             speed:flying?58:70,hp:flying?25:50,maxHp:flying?25:50,alive:true,
-            facing:1,lastAttackStamp:-1,index
+            facing:1,lastAttackStamp:-1,index,
+            nextVisualUpdateAt:0
         };
         body.body.setVelocityX(enemy.speed);
         system.enemies.push(enemy);
@@ -232,6 +233,7 @@ export function createHorizontalExpansion (scene, config = {})
             enemy.body.setPosition(enemy.startX,enemy.startY);enemy.body.body.enable=true;
             enemy.body.body.setVelocity(enemy.speed,0);
             enemy.visual.setPosition(enemy.startX,enemy.startY).setAlpha(1).setVisible(true);
+            enemy.nextVisualUpdateAt=0;
         });
     };
 
@@ -244,10 +246,16 @@ export function createHorizontalExpansion (scene, config = {})
         system.enemies.forEach(enemy=>{
             if(!enemy.alive||!enemy.body.body?.enable)return;
             const near=Math.abs(scene.player.x-enemy.body.x)<1150;
-            if(!near){enemy.body.body.setVelocity(0,0);enemy.visual.setPosition(enemy.body.x,enemy.body.y);return;}
+            if(!near){
+                enemy.body.body.setVelocity(0,0);
+                if(enemy.visual.x!==enemy.body.x||enemy.visual.y!==enemy.body.y)enemy.visual.setPosition(enemy.body.x,enemy.body.y);
+                return;
+            }
             if(enemy.body.x>=enemy.maxX){enemy.body.body.setVelocityX(-enemy.speed);enemy.facing=-1;}
             else if(enemy.body.x<=enemy.minX){enemy.body.body.setVelocityX(enemy.speed);enemy.facing=1;}
             else if(Math.abs(enemy.body.body.velocity.x)<1){enemy.body.body.setVelocityX(enemy.facing*enemy.speed);}
+            if(scene.isTouchDevice===true&&time<enemy.nextVisualUpdateAt)return;
+            if(scene.isTouchDevice===true)enemy.nextVisualUpdateAt=time+33;
             if(enemy.type==='carapana'){
                 const hover=Math.sin(time*.006+enemy.index)*4;
                 enemy.body.body.setVelocityY(Math.sin(time*.003+enemy.index)*18);
