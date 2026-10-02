@@ -5,8 +5,8 @@ export function createBossHintSign(scene, options = {})
         y = 650,
         title = 'DICA DE COMBATE',
         text = '',
-        triggerDistance = 150,
-        duration = 8000
+        touchDistance = 72,
+        leaveDistance = 120
     } = options;
 
     const sign = scene.add.container(x, y).setDepth(14);
@@ -32,13 +32,8 @@ export function createBossHintSign(scene, options = {})
 
     let triggered = false;
     let panel = null;
-    let hideTimer = null;
 
     const hideHint = (immediate = false) => {
-        if (hideTimer) {
-            hideTimer.remove(false);
-            hideTimer = null;
-        }
         if (!panel || !panel.active) {
             panel = null;
             return;
@@ -98,17 +93,25 @@ export function createBossHintSign(scene, options = {})
             ease: 'Sine.Out'
         });
 
-        hideTimer = scene.time.delayedCall(duration, () => hideHint(false));
     };
 
     const update = (player) => {
-        if (triggered || !player || !player.active) return;
+        if (!player || !player.active) return;
 
         const dx = Math.abs(player.x - x);
         const dy = Math.abs(player.y - y);
-        if (dx <= triggerDistance && dy <= 190) {
+        const touching = dx <= touchDistance && dy <= 150;
+        const movedAway = dx >= leaveDistance || dy > 190;
+
+        if (!triggered && touching) {
             triggered = true;
             showHint();
+            return;
+        }
+
+        if (triggered && movedAway) {
+            triggered = false;
+            hideHint(false);
         }
     };
 
