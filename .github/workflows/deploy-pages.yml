@@ -94,3 +94,165 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+
+  smoke-test-audio:
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup browser test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium chromium-driver
+          python -m pip install --disable-pip-version-check selenium
+
+      - name: Test published machete audio on desktop and mobile
+        run: |
+          python - <<'PY'
+          import json
+          import time
+          from selenium import webdriver
+          from selenium.webdriver.chrome.options import Options
+          from selenium.webdriver.common.action_chains import ActionChains
+          from selenium.webdriver.common.by import By
+          from selenium.webdriver.support.ui import WebDriverWait
+
+          BASE = 'https://clienteemporio0001-arch.github.io/soldados-da-borracha/'
+
+          def make_driver(touch=False):
+              options = Options()
+              options.binary_location = '/usr/bin/chromium'
+              options.add_argument('--headless=new')
+              options.add_argument('--no-sandbox')
+              options.add_argument('--disable-dev-shm-usage')
+              options.add_argument('--window-size=1024,768')
+              options.add_argument('--autoplay-policy=user-gesture-required')
+              driver = webdriver.Chrome(options=options)
+              if touch:
+                  driver.execute_cdp_cmd('Emulation.setTouchEmulationEnabled', {
+                      'enabled': True,
+                      'maxTouchPoints': 5
+                  })
+                  driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
+                      'source': "Object.defineProperty(navigator,'maxTouchPoints',{get:()=>5}); window.ontouchstart=null;"
+                  })
+              return driver
+
+          def open_game(driver):
+              driver.get(BASE + '?audio-test=1&cache=' + str(time.time_ns()))
+              wait = WebDriverWait(driver, 30)
+              wait.until(lambda d: d.execute_script(
+                  "return !!window.__soldadosAudioTestGame && window.__soldadosAudioTestGame.scene.isActive('MainMenu')"
+              ))
+              driver.execute_script("window.__soldadosAudioTestGame.scene.start('Game')")
+              wait.until(lambda d: d.execute_script(
+                  "const s=window.__soldadosAudioTestGame.scene.getScene('Game');"
+                  "return !!s && s.scene.isActive() && !!s.audioManager && s.cache.audio.exists('player_machete_swing');"
+              ))
+              canvas = driver.find_element(By.CSS_SELECTOR, 'canvas')
+              ActionChains(driver).move_to_element(canvas).click().perform()
+              time.sleep(0.25)
+              return canvas
+
+          desktop = make_driver(False)
+          try:
+              open_game(desktop)
+              direct = desktop.execute_async_script("""
+                  const done = arguments[0];
+                  (async () => {
+                      const game = window.__soldadosAudioTestGame;
+                      const scene = game.scene.getScene('Game');
+                      const response = await fetch('assets/audio/player/blade_01.ogg?smoke=1', {cache:'no-store'});
+                      const bytes = (await response.arrayBuffer()).byteLength;
+                      const before = {
+                          cached: scene.cache.audio.exists('player_machete_swing'),
+                          soundLocked: scene.sound.locked,
+                          contextState: scene.sound.context?.state ?? null,
+                          soundsLevel: scene.audioManager?.getSoundsLevel?.() ?? null,
+                          httpStatus: response.status,
+                          bytes
+                      };
+                      const directResult = scene.sound.play('player_machete_swing', {volume:1});
+                      await new Promise(r => setTimeout(r, 80));
+                      scene.audioManager.bindScene(scene);
+                      const managerResult = scene.audioManager.playSfx('player_machete_swing', {
+                          volume:1,
+                          cooldown:0
+                      });
+                      done({
+                          ...before,
+                          directOk: directResult !== false && directResult != null,
+                          managerOk: managerResult !== false && managerResult != null,
+                          directType: typeof directResult,
+                          managerType: typeof managerResult
+                      });
+                  })().catch(error => done({error:String(error), stack:error?.stack}));
+              """)
+              print('[MACHETE TEST]', json.dumps(direct, sort_keys=True))
+              assert 'error' not in direct, direct
+              assert direct['httpStatus'] == 200, direct
+              assert direct['bytes'] > 0, direct
+              assert direct['cached'] is True, direct
+              assert direct['contextState'] == 'running', direct
+              assert direct['soundsLevel'] > 0, direct
+              assert direct['directOk'] is True, direct
+              assert direct['managerOk'] is True, direct
+
+              desktop.execute_script("""
+                  const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
+                  scene.__macheteTestCalls=0;
+                  scene.__macheteOriginalPlaySfx=scene.audioManager.playSfx.bind(scene.audioManager);
+                  scene.audioManager.playSfx=(key,options={})=>{
+                      if(key==='player_machete_swing') scene.__macheteTestCalls++;
+                      return scene.__macheteOriginalPlaySfx(key,options);
+                  };
+              """)
+              ActionChains(desktop).send_keys('j').perform()
+              time.sleep(0.15)
+              keyboard = desktop.execute_script("""
+                  const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
+                  return {calls:scene.__macheteTestCalls, attacking:scene.isAttacking};
+              """)
+              print('[MACHETE KEYBOARD]', json.dumps(keyboard, sort_keys=True))
+              assert keyboard['calls'] == 1, keyboard
+          finally:
+              desktop.quit()
+
+          mobile = make_driver(True)
+          try:
+              canvas = open_game(mobile)
+              mobile_state = mobile.execute_script("""
+                  const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
+                  scene.__macheteTestCalls=0;
+                  scene.__macheteOriginalPlaySfx=scene.audioManager.playSfx.bind(scene.audioManager);
+                  scene.audioManager.playSfx=(key,options={})=>{
+                      if(key==='player_machete_swing') scene.__macheteTestCalls++;
+                      return scene.__macheteOriginalPlaySfx(key,options);
+                  };
+                  const rect=document.querySelector('canvas').getBoundingClientRect();
+                  return {
+                      isTouchDevice:scene.isTouchDevice,
+                      x:rect.left + (846/1024)*rect.width,
+                      y:rect.top + (592/768)*rect.height
+                  };
+              """)
+              assert mobile_state['isTouchDevice'] is True, mobile_state
+              mobile.execute_cdp_cmd('Input.dispatchTouchEvent', {
+                  'type':'touchStart',
+                  'touchPoints':[{'x':mobile_state['x'],'y':mobile_state['y'],'radiusX':2,'radiusY':2,'force':1}]
+              })
+              mobile.execute_cdp_cmd('Input.dispatchTouchEvent', {
+                  'type':'touchEnd',
+                  'touchPoints':[]
+              })
+              time.sleep(0.15)
+              touch = mobile.execute_script("""
+                  const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
+                  return {calls:scene.__macheteTestCalls, attacking:scene.isAttacking, mobileAttack:scene.mobileInput?.attack};
+              """)
+              print('[MACHETE MOBILE]', json.dumps(touch, sort_keys=True))
+              assert touch['calls'] == 1, touch
+          finally:
+              mobile.quit()
+          PY
