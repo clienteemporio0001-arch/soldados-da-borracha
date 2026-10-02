@@ -112,6 +112,9 @@ jobs:
           command -v google-chrome || true
           command -v google-chrome-stable || true
           command -v chromedriver || true
+          google-chrome-stable --version || true
+          google-chrome --version || true
+          chromedriver --version || true
           python -m pip install --disable-pip-version-check selenium
 
       - name: Test published machete audio on desktop and mobile
@@ -132,7 +135,7 @@ jobs:
               options = Options()
               browser = next((
                   shutil.which(name)
-                  for name in ('chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable')
+                  for name in ('google-chrome-stable', 'google-chrome', 'chromium-browser', 'chromium')
                   if shutil.which(name)
               ), None)
               if not browser:
