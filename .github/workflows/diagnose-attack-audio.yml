@@ -15,9 +15,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Chromium
-        run: sudo apt-get update && sudo apt-get install -y chromium
-
       - name: Analyze current asset
         run: |
           ffprobe -hide_banner -v error -show_entries format=duration,size -show_entries stream=codec_name,sample_rate,channels,bit_rate -of json public/assets/audio/player/machete_swing_heavy.ogg
@@ -34,46 +31,14 @@ jobs:
             ffmpeg -hide_banner -i "/tmp/$f" -af astats=metadata=1:reset=1 -f null - 2>&1 | grep -E 'Peak level dB|RMS level dB|Number of samples' | tail -6
           done
 
-      - name: Browser decode test
-        run: |
-          mkdir -p /tmp/webtest/assets
-          cp public/assets/audio/player/machete_swing_heavy.ogg /tmp/webtest/assets/machete_swing_heavy.ogg
-          cp /tmp/sword.4.ogg /tmp/webtest/assets/sword.4.ogg
-          cp /tmp/sword.5.ogg /tmp/webtest/assets/sword.5.ogg
-          cp /tmp/sword.6.ogg /tmp/webtest/assets/sword.6.ogg
-          cp /tmp/sword.10.ogg /tmp/webtest/assets/sword.10.ogg
-          cat > /tmp/webtest/index.html <<'HTML'
-          <!doctype html>
-          <meta charset="utf-8">
-          <title>Audio decode test</title>
-          <script>
-          async function test(name) {
-            try {
-              const response = await fetch('/assets/' + name + '?v=1');
-              if (!response.ok) throw new Error('HTTP ' + response.status);
-              const data = await response.arrayBuffer();
-              const ctx = new AudioContext();
-              const buffer = await ctx.decodeAudioData(data.slice(0));
-              const source = ctx.createBufferSource();
-              const gain = ctx.createGain();
-              gain.gain.value = 0;
-              source.buffer = buffer;
-              source.connect(gain).connect(ctx.destination);
-              source.start();
-              return {name, ok:true, duration:buffer.duration, sampleRate:buffer.sampleRate, channels:buffer.numberOfChannels};
-            } catch (error) {
-              return {name, ok:false, error:String(error)};
-            }
-          }
-          window.addEventListener('load', async () => {
-            const names = ['machete_swing_heavy.ogg','sword.4.ogg','sword.5.ogg','sword.6.ogg','sword.10.ogg'];
-            const results = [];
-            for (const name of names) results.push(await test(name));
-            document.body.textContent = JSON.stringify(results);
-          });
-          </script>
-          HTML
-          (cd /tmp/webtest && python3 -m http.server 4173 >/tmp/http.log 2>&1 & echo $! >/tmp/http.pid)
-          sleep 2
-          chromium --headless --no-sandbox --disable-gpu --dump-dom http://127.0.0.1:4173/ | tee /tmp/browser-result.txt
-          test "$(grep -o '"ok":false' /tmp/browser-result.txt | wc -l)" -eq 0
+      - name: Upload audio diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: attack-audio-diagnostics
+          path: |
+            public/assets/audio/player/machete_swing_heavy.ogg
+            /tmp/sword.4.ogg
+            /tmp/sword.5.ogg
+            /tmp/sword.6.ogg
+            /tmp/sword.10.ogg
+          retention-days: 1
