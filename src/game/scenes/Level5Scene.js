@@ -1395,8 +1395,7 @@ export class Level5Scene extends Scene
         this.add.rectangle(512,384,1024,768,0x020705,.97).setScrollFactor(0).setDepth(500);
         this.add.text(512,165,'SOLDADO DA BORRACHA',{fontFamily:'Arial Black',fontSize:'42px',color:'#f1e1ae'}).setOrigin(.5).setScrollFactor(0).setDepth(501);
         this.add.text(512,265,'A FLORESTA GUARDA\nQUEM APRENDE A ESCUTÁ-LA.',{fontFamily:'Arial Black',fontSize:'26px',color:'#c8d8cc',align:'center'}).setOrigin(.5).setScrollFactor(0).setDepth(501);
-        const playerName=String(this.registry.get('playerName')||'SERINGUEIRO').slice(0,16);
-        this.add.text(512,340,`SERINGUEIRO ${playerName}`,{fontFamily:'Arial',fontSize:'17px',color:'#9fba9f'}).setOrigin(.5).setScrollFactor(0).setDepth(501);
+        this.add.text(512,340,'SERINGUEIRO',{fontFamily:'Arial',fontSize:'17px',color:'#9fba9f'}).setOrigin(.5).setScrollFactor(0).setDepth(501);
         this.add.text(512,380,'JORNADA CONCLUÍDA',{fontFamily:'Arial Black',fontSize:'32px',color:'#d6b56c'}).setOrigin(.5).setScrollFactor(0).setDepth(501);
         this.add.text(512,445,'TROPA DO SERINGAL',{fontFamily:'Arial Black',fontSize:'21px',color:'#9fba9f'}).setOrigin(.5).setScrollFactor(0).setDepth(501);
         const b=this.add.rectangle(512,560,310,64,0x8b5a2b).setStrokeStyle(3,0xd6b56c).setScrollFactor(0).setDepth(501).setInteractive({useHandCursor:true});
@@ -2932,7 +2931,6 @@ createHud ()
 
     showLevelTitle ()
     {
-        const playerName = String(this.registry.get('playerName') || 'SERINGUEIRO').slice(0, 16);
         const intro = this.add.container(512, 286).setScrollFactor(0).setDepth(170);
         const panel = this.add.rectangle(0, 0, 430, 132, 0x040907, 0.76)
             .setStrokeStyle(1, 0x78917c, 0.32);
@@ -2947,13 +2945,13 @@ createHud ()
             color: '#f1e1ae',
             align: 'center'
         }).setOrigin(0.5);
-        const nameText = this.add.text(0, 35, `SERINGUEIRO: ${playerName}`, {
+        const playerLabel = this.add.text(0, 35, 'SERINGUEIRO', {
             fontFamily: 'Arial',
             fontSize: '14px',
             color: '#9fba9f'
         }).setOrigin(0.5);
 
-        intro.add([panel, phaseText, titleText, nameText]);
+        intro.add([panel, phaseText, titleText, playerLabel]);
 
         this.tweens.add({
             targets: intro,

@@ -150,7 +150,7 @@ export class Game extends Scene
         this.createHealthHud();
         this.createHungerHud();
         this.createStaminaHud();
-        this.showPlayerNameIntro();
+        this.showPlayerIntro();
         this.createLivingAtmosphere();
         this.createPorongaLightSystem();
 
@@ -3496,9 +3496,8 @@ createHud ()
         });
     }
 
-    showPlayerNameIntro ()
+    showPlayerIntro ()
     {
-        const playerName = String(this.registry.get('playerName') || 'SERINGUEIRO').slice(0, 16);
         const intro = this.add.container(512, 286).setScrollFactor(0).setDepth(170);
         const panel = this.add.rectangle(0, 0, 430, 132, 0x06100d, 0.76)
             .setStrokeStyle(1, 0x78917c, 0.32);
@@ -3513,13 +3512,13 @@ createHud ()
             color: '#f1e1ae',
             align: 'center'
         }).setOrigin(0.5);
-        const nameText = this.add.text(0, 35, `SERINGUEIRO: ${playerName}`, {
+        const playerLabel = this.add.text(0, 35, 'SERINGUEIRO', {
             fontFamily: 'Arial',
             fontSize: '14px',
             color: '#9fba9f'
         }).setOrigin(0.5);
 
-        intro.add([panel, phaseText, titleText, nameText]);
+        intro.add([panel, phaseText, titleText, playerLabel]);
 
         this.tweens.add({
             targets: intro,

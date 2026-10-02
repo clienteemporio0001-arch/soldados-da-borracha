@@ -9,10 +9,7 @@ export class LevelSelectScene extends Scene
 
     create ()
     {
-        if (!this.registry.get('playerName'))
-        {
-            this.registry.set('playerName', 'SERINGUEIRO');
-        }
+        this.registry.set('playerName', 'SERINGUEIRO');
 
         this.add.rectangle(512, 384, 1024, 768, 0x04100c);
 
@@ -110,7 +107,7 @@ export class LevelSelectScene extends Scene
         this.add.text(
             512,
             652,
-            `SERINGUEIRO: ${this.registry.get('playerName') || 'SERINGUEIRO'}`,
+            'SERINGUEIRO',
             {
                 fontFamily: 'Arial',
                 fontSize: '14px',
@@ -222,10 +219,7 @@ export class LevelSelectScene extends Scene
 
     startSelectedLevel (phase)
     {
-        if (!this.registry.get('playerName'))
-        {
-            this.registry.set('playerName', 'SERINGUEIRO');
-        }
+        this.registry.set('playerName', 'SERINGUEIRO');
 
         this.registry.set('doubleJumpUnlocked', phase.doubleJump);
         this.registry.set('dashUnlocked', phase.dash);
