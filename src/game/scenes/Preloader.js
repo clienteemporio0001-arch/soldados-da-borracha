@@ -47,7 +47,9 @@ export class Preloader extends Scene
             if (!asset?.path) return;
             const path = (key === 'player_jump' || key === 'player_double_jump')
                 ? `${asset.path}?v=jump-v4-20261001`
-                : asset.path;
+                : key === 'player_machete_swing'
+                    ? `${asset.path}?v=machete-swing-v3-20261002`
+                    : asset.path;
             this.load.audio(key, path);
         });
     }

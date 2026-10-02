@@ -41,7 +41,7 @@ Todos os arquivos abaixo foram selecionados somente de fontes identificadas como
 
 ## Observações de substituição temática
 
-- Para o **ataque do facão**, foi selecionado o `Swish_9` do pacote *Swishes Sound Pack*, um dos nove efeitos mais pesados do conjunto. O áudio foi convertido para Vorbis 44,1 kHz mono, sem processamento adicional de equalização/compressão.
+- Para o **ataque do facão**, foi selecionado o `Swish_9` do pacote *Swishes Sound Pack*, um dos nove efeitos mais pesados do conjunto. O arquivo final usa a fonte OGG válida do efeito, preservando o áudio original; a publicação anterior foi descartada por CRC inválido.
 
 - Para **onça**, não foi encontrado a tempo um rugido de jaguar CC0 com procedência tão clara quanto os pacotes acima; foi usado `roar_01.ogg` CC0 como felino/criatura grande genérica, com pitch mais grave.
 - Para **cobra**, `breath.ogg` é usado como hiss curto, com pitch elevado.
