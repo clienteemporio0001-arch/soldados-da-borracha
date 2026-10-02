@@ -7,6 +7,7 @@ import { addMuddySwampWaterFromGroundSegments } from '../muddySwampWater.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 import { getAudioManager } from '../audio/AudioManager.js';
 import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
+import { createBossHintSign } from '../bossHintSign.js';
 
 export class Level2Scene extends Scene
 {
@@ -197,6 +198,13 @@ export class Level2Scene extends Scene
             this.add.ellipse(x,y-12,w*.82,8,0x315a37,.62).setDepth(11);
         });
         this.createFinalBridgeVisual(finalSteps[3]);
+
+        this.bossHintSign=createBossHintSign(this,{
+            x:5400,
+            y:650,
+            title:'DICA: CURUPIRA',
+            text:'Mantenha distância e evite os ataques em área. Quando surgir uma abertura, ataque rapidamente, recue e espere o próximo momento seguro.'
+        });
 }
 
     createDeepForest ()
@@ -1933,6 +1941,7 @@ export class Level2Scene extends Scene
         this.time.delayedCall(650, () => {
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
             this.player.body.setVelocity(0, 0);
+            this.bossHintSign?.reset?.();
             this.health = 100;
             this.hunger = 100;
             this.stamina = this.maxStamina;
@@ -5043,6 +5052,7 @@ createHud ()
             this.handlePlayerDeath();
         }
 
+        this.bossHintSign?.update?.(this.player);
         this.syncPlayerVisual();
         this.animatePlayerVisual(time);
         this.updatePorongaLight();
