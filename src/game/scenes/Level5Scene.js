@@ -7,6 +7,7 @@ import { addMuddySwampWaterFromGroundSegments } from '../muddySwampWater.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 import { getAudioManager } from '../audio/AudioManager.js';
 import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
+import { createBossHintSign } from '../bossHintSign.js';
 
 export class Level5Scene extends Scene
 {
@@ -206,6 +207,13 @@ export class Level5Scene extends Scene
                 { x: 4300, y: 270 }, { x: 5150, y: 250 }, { x: 6020, y: 290 },
                 { x: 6920, y: 260 }, { x: 7780, y: 285 }, { x: 8500, y: 255 }
             ]
+        });
+
+        this.bossHintSign=createBossHintSign(this,{
+            x:6000,
+            y:650,
+            title:'DICA: MAPINGUARI',
+            text:'Mantenha distância e evite os ataques em área. Espere uma abertura, ataque a barriga e recue. Só se aproxime novamente quando ele estiver vulnerável.'
         });
 }
 
@@ -1532,7 +1540,7 @@ export class Level5Scene extends Scene
         this.isPlayerDead=true;this.resetCombatPolishState();this.clearRubberLatexDrops();this.player.body.setVelocity(0,0);this.isDashing=false;
         this.time.delayedCall(650,()=>{
             if(this.bossStarted&&!this.bossDefeated)this.resetBossFight();
-            this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);this.player.body.setVelocity(0,0);
+            this.player.setPosition(this.spawnPoint.x,this.spawnPoint.y);this.player.body.setVelocity(0,0);this.bossHintSign?.reset?.();
             this.health=100;this.hunger=100;this.stamina=100;this.resetMovementPolishState(); this.resetCombatPolishState();
             this.staminaRegenBlockedUntil=0;this.nextHungerDrainAt=this.time.now+2000;this.nextStarvationDamageAt=this.time.now+2000;
             this.invulnerableUntil=this.time.now+900;this.isPlayerDead=false;
@@ -3214,6 +3222,7 @@ createHud ()
             this.handlePlayerDeath();
         }
 
+        this.bossHintSign?.update?.(this.player);
         this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateBoss(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.weatherSystem?.update(time);this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
 
         this.audioManager?.updateScene(this, { grounded, time });
