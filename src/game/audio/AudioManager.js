@@ -15,7 +15,7 @@ class AudioManager
     {
         this.scene = scene;
         this.volumes = { ...DEFAULT_VOLUMES };
-        this.userMix = { music: 1, sounds: 1 };
+        this.userMix = { music: 0.45, sounds: 1 };
         this.loadUserMix();
         this.music = null;
         this.musicKey = null;
@@ -63,7 +63,7 @@ class AudioManager
             if (Number.isFinite(saved?.music)) this.userMix.music = Math.max(0, Math.min(1, saved.music));
             if (Number.isFinite(saved?.sounds)) this.userMix.sounds = Math.max(0, Math.min(1, saved.sounds));
         } catch (_) {
-            this.userMix = { music: 1, sounds: 1 };
+            this.userMix = { music: 0.45, sounds: 1 };
         }
     }
 
