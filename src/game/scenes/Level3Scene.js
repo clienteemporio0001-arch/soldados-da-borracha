@@ -110,7 +110,7 @@ export class Level3Scene extends Scene
         });
 
         this.bossHintSign=createBossHintSign(this,{
-            x:5650,
+            x:5550,
             y:650,
             title:'DICA: CABOCLINHO DA MATA',
             text:'Fique fora do alcance dos ataques. Saia da área de perigo e se aproxime apenas quando houver uma abertura; ataque e volte a se afastar.'
