@@ -166,22 +166,12 @@ jobs:
                   timeout=30000
               )
 
-              # Input hit tests in Phaser 4 depend on the camera renderList and
-              # camera matrices from a completed render. Wait for the level to
-              # have rendered at least once before simulating player input.
-              await page.wait_for_function(
-                  """() => {
-                      const s=window.__soldadosAudioTestGame.scene.getScene('Game');
-                      const camera=s?.cameras?.main;
-                      return !!camera && camera.scrollX >= 0 && camera.scrollY >= 0 &&
-                          (camera.renderList?.length ?? 0) > 0;
-                  }""",
-                  timeout=10000
-              )
-
+              # Do not gate the audio smoke test on camera.renderList.
+              # Chrome headless can keep Phaser's renderList empty even when the
+              # scene, cache and WebAudio system are fully initialized.
               canvas = page.locator('canvas')
               await canvas.click(position={'x': 512, 'y': 384})
-              await page.wait_for_timeout(100)
+              await page.wait_for_timeout(250)
               return context, page, canvas
 
           async def main():
@@ -220,31 +210,51 @@ jobs:
                                   }
                               }
                               const rms = sampleCount ? Math.sqrt(sumSquares / sampleCount) : 0;
+                              const asset = scene.audioManager ? scene.audioManager.constructor?.name : null;
                               const before = {
                                   cached: scene.cache.audio.exists('player_machete_swing'),
                                   soundLocked: scene.sound.locked,
                                   contextState: scene.sound.context?.state ?? null,
+                                  masterVolume: scene.audioManager?.volumes?.master ?? null,
+                                  sfxVolume: scene.audioManager?.volumes?.sfx ?? null,
                                   soundsLevel: scene.audioManager?.getSoundsLevel?.() ?? null,
+                                  calculatedVolume: scene.audioManager?.categoryVolume?.('sfx', 0.82) ?? null,
                                   httpStatus: response.status,
                                   bytes: data.byteLength,
                                   duration: decoded.duration,
                                   channels: decoded.numberOfChannels,
                                   peak,
-                                  rms
+                                  rms,
+                                  managerClass: asset
                               };
+
+                              const directBeforeCount = scene.sound.sounds?.length ?? null;
                               const directResult = scene.sound.play('player_machete_swing', {volume:1});
                               await new Promise(r => setTimeout(r, 80));
+                              const directSounds = scene.sound.sounds?.filter?.(s => s.key === 'player_machete_swing') ?? [];
+                              const directSound = directSounds.at?.(-1) ?? directSounds[directSounds.length - 1] ?? null;
+
                               scene.audioManager.bindScene(scene);
                               const managerResult = scene.audioManager.playSfx('player_machete_swing', {
                                   volume:1,
                                   cooldown:0
                               });
+                              await new Promise(r => setTimeout(r, 80));
+                              const managerSounds = scene.sound.sounds?.filter?.(s => s.key === 'player_machete_swing') ?? [];
+                              const managerSound = managerSounds.at?.(-1) ?? managerSounds[managerSounds.length - 1] ?? null;
+
                               return {
                                   ...before,
                                   directOk: directResult !== false && directResult != null,
                                   managerOk: managerResult !== false && managerResult != null,
                                   directType: typeof directResult,
-                                  managerType: typeof managerResult
+                                  managerType: typeof managerResult,
+                                  directBeforeCount,
+                                  directSoundCreated: !!directSound,
+                                  directIsPlaying: directSound?.isPlaying ?? null,
+                                  managerSoundCreated: !!managerSound,
+                                  managerIsPlaying: managerSound?.isPlaying ?? null,
+                                  soundCountAfter: scene.sound.sounds?.length ?? null
                               };
                           }""")
                           print('[MACHETE TEST]', json.dumps(direct, sort_keys=True))
@@ -252,11 +262,16 @@ jobs:
                           assert direct['bytes'] > 0, direct
                           assert direct['cached'] is True, direct
                           assert direct['contextState'] == 'running', direct
+                          assert direct['masterVolume'] > 0, direct
+                          assert direct['sfxVolume'] > 0, direct
                           assert direct['soundsLevel'] > 0, direct
+                          assert direct['calculatedVolume'] > 0, direct
                           assert direct['peak'] > 0.001, direct
                           assert direct['rms'] > 0.0001, direct
                           assert direct['directOk'] is True, direct
                           assert direct['managerOk'] is True, direct
+                          assert direct['directSoundCreated'] is True, direct
+                          assert direct['managerSoundCreated'] is True, direct
 
                           await page.evaluate("""() => {
                               const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
