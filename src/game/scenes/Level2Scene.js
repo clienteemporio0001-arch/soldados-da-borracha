@@ -1417,6 +1417,9 @@ export class Level2Scene extends Scene
 
         this.snakeVisual = this.add.container(this.snake.x, this.snake.y).setDepth(19);
         this.snakeVisual.facing = 1;
+        this.snakeVisualLastFacing = 1;
+        this.snakeVisualUpdateInterval = 33;
+        this.nextSnakeVisualUpdateAt = 0;
         this.snakeMaxHealth = 50;
         this.snakeHealth = 50;
         this.snakeAlive = true;
@@ -1469,13 +1472,28 @@ export class Level2Scene extends Scene
             this.snakeVisual.facing = 1;
         }
 
+        // Física e colisão continuam a cada frame. No touch, apenas a animação visual
+        // procedural da cobra é atualizada a ~30 Hz para reduzir custo de renderização.
+        if (this.isTouchDevice === true && time < this.nextSnakeVisualUpdateAt)
+        {
+            return;
+        }
+        if (this.isTouchDevice === true)
+        {
+            this.nextSnakeVisualUpdateAt = time + this.snakeVisualUpdateInterval;
+        }
+
         const seconds = time * 0.001;
         const wave = Math.sin(seconds * 8);
         const waveBack = Math.sin(seconds * 8 - 0.8);
         const waveTail = Math.sin(seconds * 8 - 1.5);
 
         this.snakeVisual.setPosition(this.snake.x, this.snake.y - 2 + wave * 1.2);
-        this.snakeVisual.setScale(this.snakeVisual.facing, 1);
+        if (this.snakeVisualLastFacing !== this.snakeVisual.facing)
+        {
+            this.snakeVisualLastFacing = this.snakeVisual.facing;
+            this.snakeVisual.setScale(this.snakeVisualLastFacing, 1);
+        }
 
         this.snakeVisual.parts.bodyFront.y = wave * 1.4;
         this.snakeVisual.parts.bodyBack.y = waveBack * 1.8;
