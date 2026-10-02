@@ -41,16 +41,32 @@ class AudioManager
     unlock ()
     {
         const sound = this.scene?.sound;
-        if (!sound) return;
+        if (!sound) return false;
+
         try {
             if (sound.locked && typeof sound.unlock === 'function') sound.unlock();
+
             const context = sound.context;
             if (context?.state === 'suspended' && typeof context.resume === 'function') {
-                context.resume().catch(() => {});
+                const resumeResult = context.resume();
+                if (resumeResult?.then) {
+                    resumeResult
+                        .then(() => {
+                            this.unlocked = context.state === 'running';
+                        })
+                        .catch((error) => {
+                            this.unlocked = false;
+                            console.warn('[AudioManager] AudioContext resume failed:', error);
+                        });
+                }
             }
-            this.unlocked = true;
-        } catch (_) {
-            // Browser autoplay policy may still require another gesture.
+
+            this.unlocked = !context || context.state === 'running';
+            return this.unlocked;
+        } catch (error) {
+            this.unlocked = false;
+            console.warn('[AudioManager] Audio unlock failed:', error);
+            return false;
         }
     }
 
@@ -149,6 +165,11 @@ class AudioManager
     playSfx (key, options = {})
     {
         if (!this.canPlay(key, options.cooldown ?? 0, options.cooldownKey ?? key)) return null;
+
+        if (this.scene?.sound?.locked || this.scene?.sound?.context?.state === 'suspended') {
+            this.unlock();
+        }
+
         const asset = AUDIO_ASSETS[key] ?? {};
         const category = asset.category ?? 'sfx';
         const volume = this.categoryVolume(category, (options.volume ?? 1) * (asset.gain ?? 1));
@@ -159,7 +180,8 @@ class AudioManager
                 detune: options.detune ?? asset.detune ?? 0,
                 loop: false
             });
-        } catch (_) {
+        } catch (error) {
+            console.warn(`[AudioManager] Failed to play SFX "${key}":`, error);
             return null;
         }
     }
@@ -303,6 +325,14 @@ class AudioManager
     {
         this.bindScene(scene);
         this.unlock();
+
+        const unlockFromGesture = () => {
+            this.bindScene(scene);
+            this.unlock();
+        };
+        scene.input?.once?.('pointerdown', unlockFromGesture);
+        scene.input?.keyboard?.once?.('keydown', unlockFromGesture);
+
         if (options.music) this.playMusic(options.music, { volume: options.musicVolume ?? 1 });
         if (options.ambient) {
             this.ensureLoop('forest_ambient', options.ambient, {
@@ -363,7 +393,6 @@ class AudioManager
         if (dashing && !state.dashing) this.playSfx('player_dash', { cooldown: 180 });
 
         const attacking = Boolean(scene.isAttacking);
-        if (attacking && !state.attacking) this.playSfx('player_machete_swing', { cooldown: 160 });
 
         const health = scene.health ?? state.health;
         if (health < state.health) {
