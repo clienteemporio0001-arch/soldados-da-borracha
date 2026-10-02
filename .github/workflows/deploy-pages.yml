@@ -274,16 +274,43 @@ jobs:
                           assert mobile_state['isTouchDevice'] is True, mobile_state
                           box = await canvas.bounding_box()
                           assert box, 'Canvas bounding box missing'
-                          x = box['x'] + (846 / 1024) * box['width']
-                          y = box['y'] + (592 / 768) * box['height']
-                          await page.touchscreen.tap(x, y)
+                          tap_position = {
+                              'x': (846 / 1024) * box['width'],
+                              'y': (592 / 768) * box['height']
+                          }
+                          await page.evaluate("""() => {
+                              window.__macheteTouchDiag=[];
+                              const canvas=document.querySelector('canvas');
+                              ['pointerdown','pointerup','touchstart','touchend'].forEach(type=>{
+                                  canvas.addEventListener(type,(event)=>{
+                                      const point=event.touches?.[0] ?? event.changedTouches?.[0] ?? event;
+                                      window.__macheteTouchDiag.push({
+                                          type,
+                                          x:point?.clientX ?? null,
+                                          y:point?.clientY ?? null,
+                                          pointerType:event.pointerType ?? null
+                                      });
+                                  }, {passive:true});
+                              });
+                              const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
+                              scene.input.on('pointerdown',(pointer)=>{
+                                  window.__macheteTouchDiag.push({
+                                      type:'phaser-pointerdown',
+                                      x:pointer.x,
+                                      y:pointer.y,
+                                      wasTouch:pointer.wasTouch
+                                  });
+                              });
+                          }""")
+                          await canvas.tap(position=tap_position)
                           await page.wait_for_timeout(150)
                           touch = await page.evaluate("""() => {
                               const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
                               return {
                                   calls:scene.__macheteTestCalls,
                                   attacking:scene.isAttacking,
-                                  mobileAttack:scene.mobileInput?.attack
+                                  mobileAttack:scene.mobileInput?.attack,
+                                  diag:window.__macheteTouchDiag
                               };
                           }""")
                           print('[MACHETE MOBILE]', json.dumps(touch, sort_keys=True))
