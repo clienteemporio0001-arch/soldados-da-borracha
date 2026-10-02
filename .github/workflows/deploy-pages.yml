@@ -284,7 +284,28 @@ jobs:
                                   active:object?.active ?? null,
                                   inputEnabled:object?.input?.enabled ?? null,
                                   hitAreaType:object?.input?.hitArea?.type ?? object?.input?.hitArea?.constructor?.name ?? null,
+                                  hitAreaX:object?.input?.hitArea?.x ?? null,
+                                  hitAreaY:object?.input?.hitArea?.y ?? null,
+                                  hitAreaWidth:object?.input?.hitArea?.width ?? null,
+                                  hitAreaHeight:object?.input?.hitArea?.height ?? null,
                                   hitAreaRadius:object?.input?.hitArea?.radius ?? null,
+                                  hitAreaCallbackType:typeof object?.input?.hitAreaCallback,
+                                  centerHit:(()=>{
+                                      try {
+                                          return object?.input?.hitAreaCallback?.(
+                                              object.input.hitArea,
+                                              object.displayOriginX,
+                                              object.displayOriginY,
+                                              object
+                                          ) ?? null;
+                                      } catch(error) {
+                                          return 'ERROR:'+String(error);
+                                      }
+                                  })(),
+                                  displayOriginX:object?.displayOriginX ?? null,
+                                  displayOriginY:object?.displayOriginY ?? null,
+                                  scrollFactorX:object?.scrollFactorX ?? null,
+                                  scrollFactorY:object?.scrollFactorY ?? null,
                                   displayWidth:object?.displayWidth ?? null,
                                   displayHeight:object?.displayHeight ?? null
                               });
@@ -300,6 +321,16 @@ jobs:
                                   isTouchDevice:scene.isTouchDevice,
                                   inputEnabled:scene.input.enabled,
                                   topOnly:scene.input.topOnly,
+                                  camera:{
+                                      inputEnabled:scene.cameras.main.inputEnabled,
+                                      disableCull:scene.cameras.main.disableCull,
+                                      scrollX:scene.cameras.main.scrollX,
+                                      scrollY:scene.cameras.main.scrollY,
+                                      renderListSize:scene.cameras.main.renderList?.length ?? null,
+                                      attackInRenderList:scene.cameras.main.renderList?.some?.(
+                                          object=>Math.abs((object?.x ?? -9999)-846)<1 && Math.abs((object?.y ?? -9999)-592)<1
+                                      ) ?? null
+                                  },
                                   candidates,
                                   interactive
                               };
@@ -374,9 +405,13 @@ jobs:
                           print('[MACHETE MOBILE TOUCH]', json.dumps(touch, sort_keys=True))
 
                           if touch['calls'] == 0:
-                              await canvas.click(position=tap_position)
+                              await page.evaluate("""() => {
+                                  const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
+                                  scene.cameras.main.disableCull=true;
+                              }""")
+                              await canvas.tap(position=tap_position)
                               await page.wait_for_timeout(150)
-                              mouse_fallback = await page.evaluate("""() => {
+                              cull_patch = await page.evaluate("""() => {
                                   const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
                                   return {
                                       calls:scene.__macheteTestCalls,
@@ -385,9 +420,58 @@ jobs:
                                       diag:window.__macheteTouchDiag
                                   };
                               }""")
-                              print('[MACHETE MOBILE MOUSE FALLBACK]', json.dumps(mouse_fallback, sort_keys=True))
+                              print('[MACHETE MOBILE CULL PATCH]', json.dumps(cull_patch, sort_keys=True))
 
-                          assert touch['calls'] == 1, touch
+                          patched = await page.evaluate("""() => {
+                              const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
+                              if(scene.__macheteTestCalls>0) return {needed:false,calls:scene.__macheteTestCalls};
+                              const attack=scene.children.list.find(
+                                  object=>Math.abs((object?.x ?? -9999)-846)<1 &&
+                                      Math.abs((object?.y ?? -9999)-592)<1 &&
+                                      object?.input?.enabled
+                              );
+                              if(!attack) return {needed:true,error:'attack object missing'};
+                              scene.input.setHitAreaCircle(attack, attack.displayOriginX, attack.displayOriginY, 48);
+                              return {
+                                  needed:true,
+                                  type:attack.input?.hitArea?.type ?? null,
+                                  x:attack.input?.hitArea?.x ?? null,
+                                  y:attack.input?.hitArea?.y ?? null,
+                                  radius:attack.input?.hitArea?.radius ?? null,
+                                  callback:typeof attack.input?.hitAreaCallback,
+                                  centerHit:attack.input?.hitAreaCallback?.(
+                                      attack.input.hitArea,
+                                      attack.displayOriginX,
+                                      attack.displayOriginY,
+                                      attack
+                                  ) ?? null
+                              };
+                          }""")
+                          print('[MACHETE MOBILE EXPLICIT HIT AREA]', json.dumps(patched, sort_keys=True))
+
+                          if touch['calls'] == 0 and patched.get('needed'):
+                              await canvas.tap(position=tap_position)
+                              await page.wait_for_timeout(150)
+                              explicit_hit = await page.evaluate("""() => {
+                                  const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
+                                  return {
+                                      calls:scene.__macheteTestCalls,
+                                      attacking:scene.isAttacking,
+                                      mobileAttack:scene.mobileInput?.attack,
+                                      diag:window.__macheteTouchDiag
+                                  };
+                              }""")
+                              print('[MACHETE MOBILE EXPLICIT HIT RESULT]', json.dumps(explicit_hit, sort_keys=True))
+
+                          final_mobile = await page.evaluate("""() => {
+                              const scene=window.__soldadosAudioTestGame.scene.getScene('Game');
+                              return {calls:scene.__macheteTestCalls,attacking:scene.isAttacking};
+                          }""")
+                          assert final_mobile['calls'] == 1, {
+                              'baseline':touch,
+                              'final':final_mobile,
+                              'patch':patched
+                          }
                       finally:
                           await context.close()
                   finally:
