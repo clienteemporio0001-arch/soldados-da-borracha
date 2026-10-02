@@ -100,6 +100,17 @@ export class Game extends Scene
         this.directionFx = { lean: 0 };
         this.lastMoveDirection = 0;
 
+        // FÔLEGO é um sistema-base do personagem e existe desde a Fase 1.
+        // As habilidades que consomem stamina continuam desbloqueadas progressivamente.
+        this.maxStamina = 100;
+        this.stamina = 100;
+        this.staminaRegenDelay = 350;
+        this.staminaGroundRegen = 40;
+        this.staminaAirRegen = 12;
+        this.staminaRegenBlockedUntil = 0;
+        this.lastStaminaUpdateAt = this.time.now;
+        this.nextStaminaFeedbackAt = 0;
+
         this.isAttacking = false;
         this.attackStartedAt = 0;
         this.nextAttackAt = 0;
@@ -138,6 +149,7 @@ export class Game extends Scene
         this.createHud();
         this.createHealthHud();
         this.createHungerHud();
+        this.createStaminaHud();
         this.showPlayerNameIntro();
         this.createLivingAtmosphere();
         this.createPorongaLightSystem();
@@ -2341,6 +2353,9 @@ export class Game extends Scene
 
             this.health = this.maxHealth;
             this.hunger = this.maxHunger;
+            this.stamina = this.maxStamina;
+            this.staminaRegenBlockedUntil = 0;
+            this.lastStaminaUpdateAt = this.time.now;
             this.nextHungerDrainAt = this.time.now + 2000;
             this.nextStarvationDamageAt = this.time.now + 2000;
             this.invulnerableUntil = this.time.now + 1000;
@@ -2349,6 +2364,7 @@ export class Game extends Scene
             this.playerVisual.setAlpha(1);
             this.updateHealthHud();
             this.updateHungerHud();
+            this.updateStaminaHud();
         });
     }
 
@@ -2381,6 +2397,66 @@ export class Game extends Scene
 
         this.hungerHud.add([background, this.hungerLabel, barBack, this.hungerBar, this.hungerText]);
         this.updateHungerHud();
+    }
+
+    createStaminaHud ()
+    {
+        this.staminaHud = this.add.container(320, 90)
+            .setScrollFactor(0)
+            .setDepth(102);
+
+        const background = this.add.rectangle(0, 0, 220, 30, 0x06100d, 0.64).setOrigin(0);
+        background.setStrokeStyle(1, 0x78917c, 0.28);
+
+        const label = this.add.text(10, 7, 'FÔLEGO', {
+            fontFamily: 'Arial Black',
+            fontSize: '11px',
+            color: '#cfe5d2'
+        });
+
+        const barBack = this.add.rectangle(62, 9, 90, 12, 0x1d3025, 0.95).setOrigin(0);
+        barBack.setStrokeStyle(1, 0x668574, 0.55);
+
+        this.staminaBar = this.add.rectangle(62, 9, 90, 12, 0x72b58a, 1).setOrigin(0);
+
+        this.staminaText = this.add.text(162, 7, '100/100', {
+            fontFamily: 'Arial',
+            fontSize: '11px',
+            color: '#ffffff'
+        });
+
+        this.staminaHud.add([background, label, barBack, this.staminaBar, this.staminaText]);
+        this.updateStaminaHud();
+    }
+
+    updateStaminaHud ()
+    {
+        if (!this.staminaBar || !this.staminaText) return;
+        const ratio = Math.max(0, Math.min(1, this.stamina / this.maxStamina));
+        this.staminaBar.width = 90 * ratio;
+        this.staminaText.setText(Math.round(this.stamina) + '/' + this.maxStamina);
+    }
+
+    spendStamina (amount)
+    {
+        this.stamina = Math.max(0, Math.min(this.maxStamina, this.stamina - Math.max(0, amount)));
+        this.staminaRegenBlockedUntil = this.time.now + this.staminaRegenDelay;
+        this.updateStaminaHud();
+    }
+
+    updateStamina (time, grounded)
+    {
+        const delta = Math.min(0.05, Math.max(0, (time - this.lastStaminaUpdateAt) / 1000));
+        this.lastStaminaUpdateAt = time;
+
+        if (this.phaseCompleted || this.isPlayerDead || time < this.staminaRegenBlockedUntil || this.stamina >= this.maxStamina)
+        {
+            return;
+        }
+
+        const rate = grounded ? this.staminaGroundRegen : this.staminaAirRegen;
+        this.stamina = Math.min(this.maxStamina, this.stamina + rate * delta);
+        this.updateStaminaHud();
     }
 
     updateHungerHud ()
@@ -3698,6 +3774,7 @@ export class Game extends Scene
         this.updateCarapana(time);
         this.updateFruits(time);
         this.updateHunger(time);
+        this.updateStamina(time, grounded);
         this.updateLivingAtmosphere();
         this.weatherSystem?.update(time);
         this.forestMonkeySystem?.update(time);
