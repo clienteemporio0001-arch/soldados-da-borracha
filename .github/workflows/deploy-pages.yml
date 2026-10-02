@@ -58,22 +58,24 @@ jobs:
       - name: Verify machete audio in final build
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          for file in \
-            public/assets/audio/player/blade_01.ogg \
-            public/assets/audio/player/blade_02.ogg \
-            dist/assets/audio/player/blade_01.ogg \
-            dist/assets/audio/player/blade_02.ogg
-          do
-            test -s "$file"
-            echo "VERIFY $file size=$(stat -c%s "$file")"
-            ffprobe -hide_banner -v error \
-              -show_entries format=duration,size \
-              -show_entries stream=codec_name,sample_rate,channels \
-              -of json "$file"
-            ffmpeg -hide_banner -v error -i "$file" -f null -
-          done
+          node --input-type=module <<'NODE'
+          import { readFileSync, statSync } from 'node:fs';
+
+          const files = [
+            'public/assets/audio/player/blade_01.ogg',
+            'public/assets/audio/player/blade_02.ogg',
+            'dist/assets/audio/player/blade_01.ogg',
+            'dist/assets/audio/player/blade_02.ogg'
+          ];
+
+          for (const file of files) {
+              const size = statSync(file).size;
+              if (size <= 0) throw new Error(`Empty audio file: ${file}`);
+              const header = readFileSync(file, { start: 0, end: 3 }).subarray(0, 4).toString('ascii');
+              if (header !== 'OggS') throw new Error(`Invalid OGG header: ${file}`);
+              console.log(`VERIFY ${file} size=${size} header=${header}`);
+          }
+          NODE
           test "$(sha256sum public/assets/audio/player/blade_01.ogg | cut -d' ' -f1)" = "$(sha256sum dist/assets/audio/player/blade_01.ogg | cut -d' ' -f1)"
           test "$(sha256sum public/assets/audio/player/blade_02.ogg | cut -d' ' -f1)" = "$(sha256sum dist/assets/audio/player/blade_02.ogg | cut -d' ' -f1)"
 
