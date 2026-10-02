@@ -15,6 +15,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Analyze current asset
         run: |
           ffprobe -hide_banner -v error -show_entries format=duration,size -show_entries stream=codec_name,sample_rate,channels,bit_rate -of json public/assets/audio/player/machete_swing_heavy.ogg
