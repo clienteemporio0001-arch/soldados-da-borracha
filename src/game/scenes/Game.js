@@ -100,6 +100,12 @@ export class Game extends Scene
         this.directionFx = { lean: 0 };
         this.lastMoveDirection = 0;
 
+        // Guarda de recuperação: impede que um corpo fique preso em um estado
+        // fisicamente impossível durante uma colisão/contato em pleno salto.
+        this.physicsStallSince = 0;
+        this.physicsStallX = this.player.x;
+        this.physicsStallY = this.player.y;
+
         // FÔLEGO é um sistema-base do personagem e existe desde a Fase 1.
         // As habilidades que consomem stamina continuam desbloqueadas progressivamente.
         this.maxStamina = 100;
@@ -2174,10 +2180,17 @@ export class Game extends Scene
         this.physics.add.existing(this.snake);
 
         this.snake.body.setSize(72, 24);
-        this.snake.body.setCollideWorldBounds(true);
+
+        // A cobra é um inimigo de chão: não precisa participar da resolução
+        // de colisão das plataformas. Mantemos o corpo físico apenas para
+        // overlap/dano, eliminando uma fonte de instabilidade entre a cobra
+        // e as plataformas elevadas do trecho logo após ela.
+        this.snake.body.setAllowGravity(false);
+        this.snake.body.setCollideWorldBounds(false);
+        this.snake.setPosition(1120, 640);
+        this.snake.body.reset(1120, 640);
         this.snake.body.setVelocityX(this.snakePatrol.speed);
 
-        this.physics.add.collider(this.snake, this.platforms);
         this.physics.add.overlap(this.player, this.snake, () => {
             this.handleSnakeContact();
         });
@@ -3530,6 +3543,72 @@ createHud ()
         });
     }
 
+    recoverPlayerPhysicsStall (time, grounded, direction)
+    {
+        const body = this.player?.body;
+
+        if (
+            !body ||
+            this.isPlayerDead ||
+            this.phaseCompleted ||
+            grounded ||
+            this.isDashing === true ||
+            time < (this.knockbackUntil || 0)
+        )
+        {
+            this.physicsStallSince = 0;
+            this.physicsStallX = this.player?.x ?? 0;
+            this.physicsStallY = this.player?.y ?? 0;
+            return;
+        }
+
+        const moved =
+            Math.abs((this.player.x ?? 0) - this.physicsStallX) +
+            Math.abs((this.player.y ?? 0) - this.physicsStallY);
+
+        const velocityStalled =
+            Math.abs(body.velocity.x) < 4 &&
+            Math.abs(body.velocity.y) < 4;
+
+        const embeddedStall = body.embedded === true && velocityStalled;
+        const frozenInAir = velocityStalled && moved < 2;
+
+        if (!embeddedStall && !frozenInAir)
+        {
+            this.physicsStallSince = 0;
+            this.physicsStallX = this.player.x;
+            this.physicsStallY = this.player.y;
+            return;
+        }
+
+        if (this.physicsStallSince === 0)
+        {
+            this.physicsStallSince = time;
+            this.physicsStallX = this.player.x;
+            this.physicsStallY = this.player.y;
+            return;
+        }
+
+        // Um frame no ápice do salto é normal. Só recupera depois de
+        // 180 ms realmente imóvel, evitando falsos positivos.
+        if (time - this.physicsStallSince < 180) return;
+
+        const escapeDirection =
+            direction !== 0
+                ? direction
+                : (this.playerVisual?.facing < 0 ? -1 : 1);
+
+        // Pequeno deslocamento para baixo + impulso horizontal tira o corpo
+        // de uma eventual penetração em uma plataforma sem alterar o salto normal.
+        body.reset(this.player.x, this.player.y + 6);
+        body.setVelocityX(escapeDirection * 140);
+        body.setVelocityY(120);
+
+        this.physicsStallSince = 0;
+        this.physicsStallX = this.player.x;
+        this.physicsStallY = this.player.y + 6;
+    }
+
     queueJumpInput (time)
     {
         this.jumpBufferUntil = time + this.jumpBufferMs;
@@ -3732,6 +3811,7 @@ createHud ()
             this.updateGroundedState(grounded);
             this.consumeJumpBuffer(grounded);
             this.applyFastFall(grounded);
+            this.recoverPlayerPhysicsStall(time, grounded, direction);
         }
         else
         {
