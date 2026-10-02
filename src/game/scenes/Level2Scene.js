@@ -123,7 +123,6 @@ export class Level2Scene extends Scene
         this.createHealthHud();
         this.createHungerHud();
         this.createStaminaHud();
-        this.staminaHud.setVisible(false);
         this.showLevelTitle();
         this.createLivingAtmosphere();
         this.createPorongaLightSystem();
@@ -3820,7 +3819,6 @@ export class Level2Scene extends Scene
         this.lastStaminaUpdateAt = time;
 
         if (
-            !this.doubleJumpUnlocked ||
             this.phaseCompleted ||
             this.isPlayerDead ||
             time < this.staminaRegenBlockedUntil ||
