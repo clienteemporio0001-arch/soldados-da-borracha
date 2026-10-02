@@ -774,24 +774,72 @@ export class Level5Scene extends Scene
         this.mapinguari.body.enable=false;
 
         const v=this.add.container(10700,470).setDepth(22).setVisible(false);
-        const shadow=this.add.ellipse(0,105,150,28,0x020302,.35);
-        const leftLeg=this.add.rectangle(-34,58,34,92,0x392f24).setOrigin(.5,.1);
-        const rightLeg=this.add.rectangle(34,58,34,92,0x392f24).setOrigin(.5,.1);
-        const torso=this.add.ellipse(0,-18,145,165,0x4a3b2c);
-        const moss=this.add.ellipse(-12,-28,110,75,0x2b472c,.75);
-        const leftArm=this.add.rectangle(-78,-12,34,128,0x46372a).setOrigin(.5,.1).setAngle(8);
-        const rightArm=this.add.rectangle(78,-12,34,128,0x46372a).setOrigin(.5,.1).setAngle(-8);
-        const head=this.add.ellipse(0,-112,72,67,0x3c3127);
-        const brow=this.add.rectangle(0,-122,66,12,0x241f1a,.8);
-        const eyeL=this.add.circle(-15,-111,5,0xd6b768,.88);
-        const eyeR=this.add.circle(15,-111,5,0xd6b768,.88);
+        const shadow=this.add.ellipse(0,118,166,30,0x020302,.38);
+
+        // Silhueta alongada: membros compridos e corpo pesado, mantendo o estilo
+        // de shapes simples usado pelos demais personagens da fase.
+        const leftLeg=this.add.rectangle(-36,55,36,112,0x392f24).setOrigin(.5,.08);
+        const rightLeg=this.add.rectangle(36,55,36,112,0x392f24).setOrigin(.5,.08);
+        const torso=this.add.ellipse(0,-18,150,170,0x4a3b2c);
+        const moss=this.add.ellipse(-18,-43,104,58,0x2b472c,.72);
+        const leftArm=this.add.rectangle(-82,-18,36,148,0x46372a).setOrigin(.5,.08).setAngle(8);
+        const rightArm=this.add.rectangle(82,-18,36,148,0x46372a).setOrigin(.5,.08).setAngle(-8);
+
+        // Cabeça com um único olho, sem nariz.
+        const head=this.add.ellipse(0,-118,78,72,0x3c3127);
+        const brow=this.add.rectangle(0,-131,58,11,0x241f1a,.82);
+        const eyeSocket=this.add.ellipse(0,-116,25,21,0x171713,.92);
+        const eye=this.add.circle(0,-116,8,0xd6b768,.95);
+        const pupil=this.add.circle(1,-116,3.2,0x171713,1);
+
+        // Boca principal na barriga: grande, escura e legível durante o combate.
+        const bellyLip=this.add.ellipse(0,15,100,72,0x2b211b,.98);
+        const bellyMouth=this.add.ellipse(0,18,82,54,0x100d0c,1);
+        const mouthGlow=this.add.ellipse(0,25,48,18,0x5c2a22,.72);
+        const teeth=[
+            this.add.triangle(-27,-2,-6,0,0,12,6,0,0xd7cfad,.9),
+            this.add.triangle(-9,-5,-6,0,0,13,6,0,0xd7cfad,.9),
+            this.add.triangle(9,-5,-6,0,0,13,6,0,0xd7cfad,.9),
+            this.add.triangle(27,-2,-6,0,0,12,6,0,0xd7cfad,.9),
+            this.add.triangle(-18,42,-6,0,0,-11,6,0,0xc8bea0,.82),
+            this.add.triangle(0,45,-6,0,0,-12,6,0,0xc8bea0,.82),
+            this.add.triangle(18,42,-6,0,0,-11,6,0,0xc8bea0,.82)
+        ];
+
         for(let i=0;i<6;i++){
             const leaf=this.add.ellipse(-45+i*18,-63+(i%2)*12,22,10,i%2?0x36583a:0x2a4930,.85).setAngle(i*17);
             v.add(leaf);
         }
-        v.add([shadow,leftLeg,rightLeg,torso,moss,leftArm,rightArm,head,brow,eyeL,eyeR]);
-        v.parts={leftLeg,rightLeg,torso,leftArm,rightArm,head,eyeL,eyeR};
+
+        v.add([
+            shadow,leftLeg,rightLeg,torso,moss,leftArm,rightArm,
+            bellyLip,bellyMouth,mouthGlow,...teeth,
+            head,brow,eyeSocket,eye,pupil
+        ]);
+        v.parts={
+            leftLeg,rightLeg,torso,leftArm,rightArm,head,
+            eye,bellyMouth
+        };
         this.mapinguariVisual=v;
+
+        // Zonas de dano acompanham as partes visuais, mas não substituem o corpo
+        // físico central usado pelo comportamento do boss.
+        this.mapinguariHitZones=[
+            { name:'head',      x:0,   y:-118, w:82,  h:76 },
+            { name:'torso',     x:0,   y:-18,  w:146, h:166 },
+            { name:'leftArm',   x:-84, y:45,   w:44,  h:148 },
+            { name:'rightArm',  x:84,  y:45,   w:44,  h:148 },
+            { name:'leftLeg',   x:-36, y:102,  w:44,  h:112 },
+            { name:'rightLeg',  x:36,  y:102,  w:44,  h:112 }
+        ].map(({name,x,y,w,h})=>{
+            const zone=this.add.rectangle(10700+x,470+y,w,h,0x000000,0);
+            this.physics.add.existing(zone);
+            zone.body.setAllowGravity(false);
+            zone.body.setImmovable(true);
+            zone.body.enable=false;
+            zone.mapinguariPart=name;
+            return { zone,x,y };
+        });
     }
 
     beginMapinguariReveal ()
@@ -809,6 +857,7 @@ export class Level5Scene extends Scene
         });
         this.time.delayedCall(1950,()=>{
             this.mapinguari.setPosition(10700,470);this.mapinguari.body.enable=true;
+            this.syncMapinguariHitZones();
             this.bossState='RECOVERY';
             this.bossNextActionAt=this.time.now+700;
             this.bossHud.setVisible(true);
@@ -826,7 +875,41 @@ export class Level5Scene extends Scene
         this.attackHitbox=this.add.rectangle(-100,-100,54,46,0x000000,0);
         this.physics.add.existing(this.attackHitbox);
         this.attackHitbox.body.setAllowGravity(false);this.attackHitbox.body.enable=false;
-        this.physics.add.overlap(this.attackHitbox,this.mapinguari,()=>this.tryHitMapinguari());
+
+        // Cada parte visual do Mapinguari pode receber o golpe. Todas convergem
+        // para tryHitMapinguari(), que já limita o dano a uma vez por swing.
+        this.mapinguariHitZones.forEach(({zone})=>{
+            this.physics.add.overlap(this.attackHitbox,zone,()=>this.tryHitMapinguari());
+        });
+    }
+
+    syncMapinguariHitZones ()
+    {
+        if(!this.mapinguariVisual||!this.mapinguariHitZones)return;
+
+        const angle=this.mapinguariVisual.rotation||0;
+        const cos=Math.cos(angle);
+        const sin=Math.sin(angle);
+        const scaleX=this.mapinguariVisual.scaleX??1;
+        const scaleY=this.mapinguariVisual.scaleY??1;
+        const enabled=this.mapinguari?.body?.enable===true&&!this.bossDefeated;
+
+        this.mapinguariHitZones.forEach(({zone,x,y})=>{
+            const localX=x*scaleX;
+            const localY=y*scaleY;
+            zone.setPosition(
+                this.mapinguariVisual.x+localX*cos-localY*sin,
+                this.mapinguariVisual.y+localX*sin+localY*cos
+            );
+            zone.body.enable=enabled;
+        });
+    }
+
+    setMapinguariHitZonesEnabled (enabled)
+    {
+        this.mapinguariHitZones?.forEach(({zone})=>{
+            if(zone?.body)zone.body.enable=enabled;
+        });
     }
 
     queueAttackInput ()
@@ -1176,6 +1259,7 @@ export class Level5Scene extends Scene
     {
         if(!this.bossStarted||this.bossDefeated||this.isPlayerDead||this.phaseCompleted)return;
         this.mapinguari.setPosition(this.mapinguariVisual.x,this.mapinguariVisual.y);
+        this.syncMapinguariHitZones();
 
         if(this.player.x<this.arenaMinX)this.player.x=this.arenaMinX;
         if(this.player.x>this.arenaMaxX)this.player.x=this.arenaMaxX;
@@ -1342,7 +1426,7 @@ export class Level5Scene extends Scene
         this.bossStage=1;this.bossProgress=0;this.bossStageProgress=0;this.bossVulnerable=false;this.bossState='RECOVERY';this.bossNextActionAt=this.time.now+900;this.bossAttackSerial=0;this.bossAttackHitRegistered=false;
         this.mapinguariVisual.setPosition(10700,470).setAngle(0).setAlpha(1).setVisible(true);
         this.mapinguariVisual.parts.torso.setScale(1);this.mapinguariVisual.parts.leftArm.setAngle(8);this.mapinguariVisual.parts.rightArm.setAngle(-8);
-        this.mapinguari.setPosition(10700,470);this.mapinguari.body.enable=true;
+        this.mapinguari.setPosition(10700,470);this.mapinguari.body.enable=true;this.syncMapinguariHitZones();
         if(this.arenaUnstable){this.tweens.killTweensOf(this.arenaUnstable.visual);this.arenaUnstable.triggered=false;this.arenaUnstable.body.body.enable=true;this.arenaUnstable.visual.setPosition(this.arenaUnstable.x,this.arenaUnstable.y).setAngle(0).setAlpha(1);}
         this.resetBossTreeOnly();this.bossTree.setAngle(0);this.updateBossHud();
     }
@@ -1355,7 +1439,7 @@ export class Level5Scene extends Scene
     defeatMapinguari ()
     {
         if(this.bossDefeated)return;
-        this.bossDefeated=true;this.bossVulnerable=false;this.bossState='DEFEATED';this.mapinguari.body.enable=false;this.bossHud.setVisible(false);
+        this.bossDefeated=true;this.bossVulnerable=false;this.bossState='DEFEATED';this.mapinguari.body.enable=false;this.setMapinguariHitZonesEnabled(false);this.bossHud.setVisible(false);
         this.player.body.setVelocity(0,0);this.knockbackUntil=this.time.now+2500;
         this.cameras.main.shake(180,.004);
         this.tweens.add({targets:this.mapinguariVisual,y:500,scaleY:.82,angle:this.mapinguariVisual.x>this.player.x?8:-8,duration:520,ease:'Quad.Out'});
