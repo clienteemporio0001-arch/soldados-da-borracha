@@ -127,7 +127,7 @@ class AudioManager
         if (this.music) {
             const asset = AUDIO_ASSETS[this.musicKey] ?? {};
             const target = this.categoryVolume('music', this.musicBaseGain * (asset.gain ?? 1));
-            this.music.setVolume?.(target);
+            if (Math.abs((this.music.volume ?? 0) - target) >= 0.015) this.music.setVolume?.(target);
         }
 
         for (const [id, entry] of this.loops.entries()) {
@@ -261,8 +261,11 @@ class AudioManager
     playMusic (key, options = {})
     {
         if (this.musicKey === key && this.music?.isPlaying) {
-            this.musicBaseGain = options.volume ?? this.musicBaseGain ?? 1;
-            this.refreshActiveVolumes();
+            const nextBaseGain = options.volume ?? this.musicBaseGain ?? 1;
+            if (nextBaseGain !== this.musicBaseGain) {
+                this.musicBaseGain = nextBaseGain;
+                this.refreshActiveVolumes();
+            }
             return this.music;
         }
         if (!this.has(key)) return null;
