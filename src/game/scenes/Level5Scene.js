@@ -110,6 +110,8 @@ export class Level5Scene extends Scene
         this.bossNextActionAt = 0;
         this.bossAttackSerial = 0;
         this.bossAttackHitRegistered = false;
+        this.bossFacing = -1;
+        this.bossLastChaseAt = 0;
         this.bossCheckpoint = { x: 8960, y: 535 };
 
         this.createRecentClues();
@@ -780,7 +782,6 @@ export class Level5Scene extends Scene
         // independentes para preservar as animações existentes do boss.
         const torso=this.add.ellipse(0,-18,154,174,0x4a3b2c);
         const chest=this.add.ellipse(0,-54,124,72,0x514131,.92);
-        const moss=this.add.ellipse(-20,-48,108,60,0x2b472c,.72);
 
         const createArm=(x,angle,mirror=1)=>{
             const arm=this.add.container(x,-18).setAngle(angle);
@@ -805,21 +806,23 @@ export class Level5Scene extends Scene
         };
 
         const createLeg=(x,mirror=1)=>{
-            const leg=this.add.container(x,48);
-            const thigh=this.add.ellipse(0,32,43,74,0x392f24);
-            const knee=this.add.circle(mirror*2,66,19,0x342b22);
-            const shin=this.add.ellipse(mirror*3,96,38,70,0x372d23).setAngle(mirror*3);
-            const foot=this.add.ellipse(mirror*7,135,58,28,0x2e2720).setAngle(mirror*4);
-            const heel=this.add.ellipse(mirror*-8,130,26,20,0x3d3126,.9);
+            // Mantém pés e garras acima da superfície da arena (y=592)
+            // sem alterar a posição do corpo físico do boss.
+            const leg=this.add.container(x,42);
+            const thigh=this.add.ellipse(0,20,43,54,0x392f24);
+            const knee=this.add.circle(mirror*2,45,17,0x342b22);
+            const shin=this.add.ellipse(mirror*3,67,36,48,0x372d23).setAngle(mirror*3);
+            const heel=this.add.ellipse(mirror*-8,91,24,18,0x3d3126,.9);
+            const foot=this.add.ellipse(mirror*7,99,58,26,0x2e2720).setAngle(mirror*4);
             const claws=[
-                this.add.triangle(mirror*2,145,-6,0,0,17,6,0,0xbfaf8a,.9).setAngle(mirror*2),
-                this.add.triangle(mirror*16,143,-6,0,0,16,6,0,0xbfaf8a,.88).setAngle(mirror*-7),
-                this.add.triangle(mirror*29,138,-5,0,0,14,5,0,0xbfaf8a,.84).setAngle(mirror*-13)
+                this.add.triangle(mirror*2,106,-6,0,0,14,6,0,0xbfaf8a,.9).setAngle(mirror*2),
+                this.add.triangle(mirror*16,104,-6,0,0,13,6,0,0xbfaf8a,.88).setAngle(mirror*-7),
+                this.add.triangle(mirror*29,101,-5,0,0,12,5,0,0xbfaf8a,.84).setAngle(mirror*-13)
             ];
             const fur=[
-                this.add.triangle(mirror*-15,30,-7,0,0,16,7,0,0x302820,.88).setAngle(mirror*13),
-                this.add.triangle(mirror*14,67,-7,0,0,16,7,0,0x302820,.84).setAngle(mirror*-13),
-                this.add.triangle(mirror*-12,100,-6,0,0,15,6,0,0x302820,.8).setAngle(mirror*11)
+                this.add.triangle(mirror*-15,20,-7,0,0,14,7,0,0x302820,.88).setAngle(mirror*13),
+                this.add.triangle(mirror*14,47,-7,0,0,14,7,0,0x302820,.84).setAngle(mirror*-13),
+                this.add.triangle(mirror*-12,70,-6,0,0,13,6,0,0x302820,.8).setAngle(mirror*11)
             ];
             leg.add([thigh,knee,shin,heel,foot,...fur,...claws]);
             leg.foot=foot;leg.claws=claws;
@@ -880,7 +883,7 @@ export class Level5Scene extends Scene
 
         v.add([
             shadow,leftLeg,rightLeg,
-            torso,chest,moss,...bodyFur,
+            torso,chest,...bodyFur,
             leftArm,rightArm,
             bellyLip,bellyMouth,mouthGlow,...teeth,
             head,...headFur,brow,eyeSocket,eye,pupil,eyeGlint
@@ -900,8 +903,8 @@ export class Level5Scene extends Scene
             { name:'torso',     x:0,   y:-18,  w:150, h:170 },
             { name:'leftArm',   x:-86, y:53,   w:52,  h:174 },
             { name:'rightArm',  x:86,  y:53,   w:52,  h:174 },
-            { name:'leftLeg',   x:-39, y:113,  w:58,  h:142 },
-            { name:'rightLeg',  x:39,  y:113,  w:58,  h:142 }
+            { name:'leftLeg',   x:-39, y:88,   w:58,  h:104 },
+            { name:'rightLeg',  x:39,  y:88,   w:58,  h:104 }
         ].map(({name,x,y,w,h})=>{
             const zone=this.add.rectangle(10700+x,470+y,w,h,0x000000,0);
             this.physics.add.existing(zone);
@@ -1329,11 +1332,21 @@ export class Level5Scene extends Scene
     updateBoss (time)
     {
         if(!this.bossStarted||this.bossDefeated||this.isPlayerDead||this.phaseCompleted)return;
-        this.mapinguari.setPosition(this.mapinguariVisual.x,this.mapinguariVisual.y);
-        this.syncMapinguariHitZones();
 
         if(this.player.x<this.arenaMinX)this.player.x=this.arenaMinX;
         if(this.player.x>this.arenaMaxX)this.player.x=this.arenaMaxX;
+
+        // O boss persegue somente durante RECOVERY, preservando telegraphs,
+        // ataques, vulnerabilidade e todos os tweens já existentes.
+        if(this.bossState==='RECOVERY'){
+            this.updateMapinguariChase(time);
+        } else {
+            this.bossLastChaseAt=time;
+            this.updateMapinguariFacing();
+        }
+
+        this.mapinguari.setPosition(this.mapinguariVisual.x,this.mapinguariVisual.y);
+        this.syncMapinguariHitZones();
 
         if(this.bossState==='VULNERABLE')return;
         if(time<this.bossNextActionAt)return;
@@ -1341,6 +1354,44 @@ export class Level5Scene extends Scene
         if(this.bossState==='RECOVERY'||this.bossState==='DORMANT'){
             this.chooseBossAttack();
         }
+    }
+
+    updateMapinguariFacing ()
+    {
+        if(!this.player||!this.mapinguariVisual)return;
+        const dx=this.player.x-this.mapinguariVisual.x;
+        if(Math.abs(dx)<8)return;
+
+        this.bossFacing=dx<0?-1:1;
+        const magnitude=Math.max(.001,Math.abs(this.mapinguariVisual.scaleX||1));
+        this.mapinguariVisual.scaleX=magnitude*this.bossFacing;
+    }
+
+    updateMapinguariChase (time)
+    {
+        if(!this.player||!this.mapinguariVisual)return;
+
+        const previous=this.bossLastChaseAt||time;
+        const dt=Math.min(.05,Math.max(0,(time-previous)/1000));
+        this.bossLastChaseAt=time;
+        this.updateMapinguariFacing();
+
+        const dx=this.player.x-this.mapinguariVisual.x;
+        const distance=Math.abs(dx);
+        const stopDistance=135;
+        if(distance<=stopDistance)return;
+
+        const speed=this.bossStage===3?105:this.bossStage===2?92:80;
+        const maxStep=Math.max(0,distance-stopDistance);
+        const step=Math.min(speed*dt,maxStep);
+        const direction=dx<0?-1:1;
+        const nextX=Phaser.Math.Clamp(
+            this.mapinguariVisual.x+direction*step,
+            this.arenaMinX+90,
+            this.arenaMaxX-90
+        );
+
+        this.mapinguariVisual.x=nextX;
     }
 
     chooseBossAttack ()
@@ -1494,8 +1545,8 @@ export class Level5Scene extends Scene
 
     resetBossFight ()
     {
-        this.bossStage=1;this.bossProgress=0;this.bossStageProgress=0;this.bossVulnerable=false;this.bossState='RECOVERY';this.bossNextActionAt=this.time.now+900;this.bossAttackSerial=0;this.bossAttackHitRegistered=false;
-        this.mapinguariVisual.setPosition(10700,470).setAngle(0).setAlpha(1).setVisible(true);
+        this.bossStage=1;this.bossProgress=0;this.bossStageProgress=0;this.bossVulnerable=false;this.bossState='RECOVERY';this.bossNextActionAt=this.time.now+900;this.bossAttackSerial=0;this.bossAttackHitRegistered=false;this.bossFacing=-1;this.bossLastChaseAt=this.time.now;
+        this.mapinguariVisual.setPosition(10700,470).setAngle(0).setScale(1).setAlpha(1).setVisible(true);
         this.mapinguariVisual.parts.torso.setScale(1);this.mapinguariVisual.parts.leftArm.setAngle(8);this.mapinguariVisual.parts.rightArm.setAngle(-8);
         this.mapinguari.setPosition(10700,470);this.mapinguari.body.enable=true;this.syncMapinguariHitZones();
         if(this.arenaUnstable){this.tweens.killTweensOf(this.arenaUnstable.visual);this.arenaUnstable.triggered=false;this.arenaUnstable.body.body.enable=true;this.arenaUnstable.visual.setPosition(this.arenaUnstable.x,this.arenaUnstable.y).setAngle(0).setAlpha(1);}
