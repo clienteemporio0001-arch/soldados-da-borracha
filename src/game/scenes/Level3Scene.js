@@ -36,7 +36,7 @@ export class Level3Scene extends Scene
         this.jumpsUsed=0; this.jumpWasDown=false; this.wasGrounded=false; this.jumpBufferUntil=0; this.jumpBufferMs=130; this.coyoteTimeMs=100; this.coyoteUntil=0; this.lastAirVelocityY=0; this.fastFallActive=false; this.motionFx={scaleX:1,scaleY:1}; this.directionFx={lean:0}; this.lastMoveDirection=0;
         this.maxStamina=100; this.stamina=100; this.doubleJumpStaminaCost=30; this.dashStaminaCost=25; this.staminaRegenDelay=350; this.staminaGroundRegen=40; this.staminaAirRegen=12; this.staminaRegenBlockedUntil=0; this.lastStaminaUpdateAt=this.time.now; this.nextStaminaFeedbackAt=0;
         this.dashUnlocked=this.registry.get('dashUnlocked')===true; this.isDashing=false; this.dashLandingVisual=false; this.dashEndsAt=0; this.nextDashAt=0; this.airDashUsed=false; this.nextDashDeniedFeedbackAt=0; this.dashDirection=1; this.dashSpeed=520; this.dashDuration = 380; this.dashCooldown=380;
-        this.isAttacking=false; this.attackStartedAt=0; this.nextAttackAt=0; this.attackDirection=1; this.attackBufferUntil=0; this.attackBufferMs=100; this.attackVisualVariant=-1; this.attackArcShown=false; this.attackHitSnakeRegistered=false; this.attackHitCarapanaRegistered=false;
+        this.isAttacking=false; this.attackStartedAt=0; this.nextAttackAt=0; this.attackDirection=1; this.attackBufferUntil=0; this.attackBufferMs=100; this.attackVisualVariant=-1; this.attackSoundVariant=-1; this.attackArcShown=false; this.attackHitSnakeRegistered=false; this.attackHitCarapanaRegistered=false; this.attackHitBossRegistered=false;
         this.createSnake(); this.createCarapana(); this.createAttackHitbox(); this.createFruits(); this.createCaboclinhoTrial(); this.createFinalZone();
         this.cursors=this.input.keyboard.createCursorKeys(); this.keyA=this.input.keyboard.addKey('A'); this.keyD=this.input.keyboard.addKey('D'); this.keyW=this.input.keyboard.addKey('W'); this.keyS=this.input.keyboard.addKey('S'); this.spaceKey=this.input.keyboard.addKey('SPACE'); this.keyJ=this.input.keyboard.addKey('J'); this.keyX=this.input.keyboard.addKey('X'); this.keyShift=this.input.keyboard.addKey('SHIFT');
         this.keyJ.on('down', () => this.queueAttackInput()); this.keyX.on('down', () => this.queueAttackInput());
@@ -1814,6 +1814,7 @@ export class Level3Scene extends Scene
         this.caboclinhoAirDashUsed = false;
         this.caboclinhoAttackTimers = [];
         this.caboclinhoArrows = [];
+        this.caboclinhoSecondArrowQueued = false;
         this.caboclinhoVisualDestroyed = false;
 
         this.caboclinhoVisual = this.createCaboclinhoVisual();
@@ -1836,6 +1837,10 @@ export class Level3Scene extends Scene
             this.caboclinho,
             () => this.tryHitCaboclinho()
         );
+
+        // Garante limpeza mesmo se a scene for encerrada por um caminho diferente
+        // dos botões de transição normais.
+        this.events.once('shutdown', () => this.cleanupCaboclinhoBoss());
 
         this.caboclinhoArenaBarrierL = this.add.rectangle(6920, 520, 28, 280, 0x153321, 0.82).setDepth(14).setVisible(false);
         this.caboclinhoArenaBarrierR = this.add.rectangle(8580, 520, 28, 280, 0x153321, 0.82).setDepth(14).setVisible(false);
@@ -2204,6 +2209,8 @@ export class Level3Scene extends Scene
         this.caboclinhoDashHitRegistered = false;
         this.caboclinhoJumpsUsed = 0;
         this.caboclinhoAirDashUsed = false;
+        this.caboclinhoSecondArrowQueued = false;
+        this.attackHitBossRegistered = false;
         this.caboclinhoVisualDestroyed = false;
 
         if (this.caboclinho) {
@@ -2562,13 +2569,18 @@ export class Level3Scene extends Scene
             !this.caboclinho?.body?.enable
         ) return;
 
-        const vulnerable =
-            this.caboclinhoState === 'VULNERABLE' ||
-            this.caboclinhoState === 'RECOVERY' ||
-            this.caboclinhoState === 'BOW_AIM';
+        // O facão deve registrar dano quando realmente toca o corpo do boss.
+        // Mantemos invulnerabilidade apenas nos estados em que ele está entrando
+        // na luta, em recoil ou executando um dash rápido.
+        const blockedState =
+            this.caboclinhoState === 'INTRO' ||
+            this.caboclinhoState === 'HIT' ||
+            this.caboclinhoState === 'DASH' ||
+            this.caboclinhoState === 'AIR_DASH' ||
+            this.caboclinhoState === 'DEFEATED';
 
         this.attackHitBossRegistered = true;
-        if (!vulnerable) {
+        if (blockedState) {
             this.showBlockDeflect(this.caboclinho.x, this.caboclinho.y - 12, true);
             return;
         }
