@@ -200,7 +200,7 @@ export class Level2Scene extends Scene
         this.createFinalBridgeVisual(finalSteps[3]);
 
         this.bossHintSign=createBossHintSign(this,{
-            x:5400,
+            x:5200,
             y:650,
             title:'DICA: CURUPIRA',
             text:'Mantenha distância e evite os ataques em área. Quando surgir uma abertura, ataque rapidamente, recue e espere o próximo momento seguro.'
