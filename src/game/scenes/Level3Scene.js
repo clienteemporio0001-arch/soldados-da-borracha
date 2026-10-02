@@ -7,6 +7,7 @@ import { addMuddySwampWaterFromGroundSegments } from '../muddySwampWater.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 import { getAudioManager } from '../audio/AudioManager.js';
 import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
+import { createBossHintSign } from '../bossHintSign.js';
 
 export class Level3Scene extends Scene
 {
@@ -106,6 +107,13 @@ export class Level3Scene extends Scene
             this.physics.add.existing(body,true);this.platforms.add(body);
             this.add.rectangle(x,y,w,22,0x4f3826,.96).setDepth(10);
             this.add.ellipse(x,y-12,w*.82,8,0x3e7142,.62).setDepth(11);
+        });
+
+        this.bossHintSign=createBossHintSign(this,{
+            x:5650,
+            y:650,
+            title:'DICA: CABOCLINHO DA MATA',
+            text:'Fique fora do alcance dos ataques. Saia da área de perigo e se aproxime apenas quando houver uma abertura; ataque e volte a se afastar.'
         });
 }
 
@@ -1646,6 +1654,7 @@ export class Level3Scene extends Scene
         this.time.delayedCall(650, () => {
             this.player.setPosition(this.spawnPoint.x, this.spawnPoint.y);
             this.player.body.setVelocity(0, 0);
+            this.bossHintSign?.reset?.();
             this.health = 100;
             this.hunger = 100;
             this.stamina = this.maxStamina;
@@ -4175,6 +4184,7 @@ createHud ()
         if(this.player.y>720&&!this.isPlayerDead){
             this.handlePlayerDeath();
         }
+        this.bossHintSign?.update?.(this.player);
         this.syncPlayerVisual();this.animatePlayerVisual(time);this.updatePorongaLight();this.updateAttack(time);this.updateMacheteVisual(time);this.updateAttackSprite(time);this.updateSnake(time);this.updateCarapana(time);this.updateFruits(time);this.updateHunger(time);this.updateLivingAtmosphere();this.weatherSystem?.update(time);this.updateCaboclinhoBoss(time);this.animateCaboclinhoVisual(time);this.oncaEncounter?.update(time);this.forestMonkeySystem?.update(time);
 
         this.audioManager?.updateScene(this, { grounded, time });
