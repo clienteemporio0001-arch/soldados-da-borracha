@@ -165,9 +165,23 @@ jobs:
                   }""",
                   timeout=30000
               )
+
+              // Input hit tests in Phaser 4 depend on the camera renderList and
+              // camera matrices from a completed render. Wait for the level to
+              // have rendered at least once before simulating player input.
+              await page.wait_for_function(
+                  """() => {
+                      const s=window.__soldadosAudioTestGame.scene.getScene('Game');
+                      const camera=s?.cameras?.main;
+                      return !!camera && camera.scrollX >= 0 && camera.scrollY >= 0 &&
+                          (camera.renderList?.length ?? 0) > 0;
+                  }""",
+                  timeout=10000
+              )
+
               canvas = page.locator('canvas')
               await canvas.click(position={'x': 512, 'y': 384})
-              await page.wait_for_timeout(250)
+              await page.wait_for_timeout(100)
               return context, page, canvas
 
           async def main():
