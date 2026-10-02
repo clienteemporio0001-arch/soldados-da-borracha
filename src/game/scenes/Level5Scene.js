@@ -210,7 +210,7 @@ export class Level5Scene extends Scene
         });
 
         this.bossHintSign=createBossHintSign(this,{
-            x:6000,
+            x:5750,
             y:650,
             title:'DICA: MAPINGUARI',
             text:'Mantenha distância e evite os ataques em área. Espere uma abertura, ataque a barriga e recue. Só se aproxime novamente quando ele estiver vulnerável.'
