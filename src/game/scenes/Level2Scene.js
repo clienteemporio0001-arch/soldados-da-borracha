@@ -188,7 +188,8 @@ export class Level2Scene extends Scene
             ]
         });
 
-        const finalSteps = [[8740,575,150],[8970,520,150],[9200,455,140],[9430,375,130]].forEach(([x,y,w])=>{
+        const finalSteps = [[8740,575,150],[8970,520,150],[9200,455,140],[9430,375,130]];
+        finalSteps.forEach(([x,y,w])=>{
             const body=this.add.rectangle(x,y,w,22,0x000000,0);
             this.physics.add.existing(body,true);this.platforms.add(body);
             this.add.rectangle(x,y,w,22,0x4a3425,.96).setDepth(10);
