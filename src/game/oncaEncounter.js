@@ -27,6 +27,8 @@ export class OncaEncounter
         this.exitSpeed = 620;
         this.visualScale = 0.38;
         this.nextEligibleAt = scene.time.now + 12000;
+        this.distantRoarTimer = null;
+        this.distantRoarBlockedUntil = scene.time.now + 8000;
 
         if (!scene.anims.exists('onca-run')) {
             scene.anims.create({
@@ -42,6 +44,8 @@ export class OncaEncounter
             loop: true,
             callback: () => this.trySpawn()
         });
+
+        this.scheduleDistantRoar();
 
         scene.events.once('shutdown', () => this.destroy());
     }
@@ -79,7 +83,11 @@ export class OncaEncounter
 
         this.active = true;
         this.state = 'WARNING';
-        this.scene.audioManager?.playSfx?.('jaguar_growl', { cooldown: 1800, volume: 0.9 });
+        this.scene.audioManager?.playSfx?.('jaguar_roar', {
+            cooldown: 1800,
+            cooldownKey: 'jaguar_roar_warning',
+            volume: 0.95
+        });
         this.attackCount = 0;
         this.hitRegistered = false;
         this.side = Math.random() < 0.5 ? -1 : 1;
@@ -174,6 +182,14 @@ export class OncaEncounter
         this.clearEffects();
         this.state = 'CHARGE';
         this.hitRegistered = false;
+        if (this.attackCount === 0) {
+            this.scene.audioManager?.playSfx?.('jaguar_roar', {
+                cooldown: 1200,
+                cooldownKey: 'jaguar_roar_first_charge',
+                volume: 0.72,
+                rate: 1.03
+            });
+        }
         this.scene.audioManager?.playSfx?.('jaguar_charge', { cooldown: 420, volume: 0.9 });
         this.side = side;
 
@@ -284,6 +300,47 @@ export class OncaEncounter
         }
     }
 
+    scheduleDistantRoar ()
+    {
+        if (this.destroyed) return;
+        if (this.distantRoarTimer) {
+            this.distantRoarTimer.remove(false);
+            this.distantRoarTimer = null;
+        }
+
+        const delay = 24000 + Math.random() * 18000;
+        this.distantRoarTimer = this.scene.time.delayedCall(delay, () => {
+            this.distantRoarTimer = null;
+            this.tryDistantRoar();
+            this.scheduleDistantRoar();
+        });
+    }
+
+    tryDistantRoar ()
+    {
+        if (this.destroyed || this.active || this.state !== 'IDLE') return;
+        if (this.scene.isPlayerDead || this.scene.phaseCompleted) return;
+        if (this.scene.time.now < this.distantRoarBlockedUntil) return;
+
+        const eligibility = this.canSpawn() || {};
+        const allowed = typeof eligibility === 'boolean' ? eligibility : eligibility.allowed !== false;
+        const bossActive = typeof eligibility === 'object' && eligibility.bossActive === true;
+        if (!allowed) return;
+        if (Math.random() > 0.45) return;
+
+        const baseVolume = bossActive ? 0.28 : (0.32 + Math.random() * 0.10);
+        const rate = 0.94 + Math.random() * 0.06;
+        const detune = -80 + Math.random() * 60;
+
+        this.scene.audioManager?.playSfx?.('jaguar_roar', {
+            cooldown: 8000,
+            cooldownKey: 'jaguar_roar_distant',
+            volume: baseVolume,
+            rate,
+            detune
+        });
+    }
+
     schedule (delay, callback)
     {
         const timer = this.scene.time.delayedCall(delay, () => {
@@ -350,6 +407,7 @@ export class OncaEncounter
         this.state = 'IDLE';
         this.hitRegistered = false;
         this.attackCount = 0;
+        this.distantRoarBlockedUntil = Math.max(this.distantRoarBlockedUntil, this.scene.time.now + 8000);
 
         if (startCooldown && !this.destroyed) {
             this.nextEligibleAt = this.scene.time.now + 25000 + Math.random() * 20000;
@@ -363,6 +421,10 @@ export class OncaEncounter
         if (this.checkTimer) {
             this.checkTimer.remove(false);
             this.checkTimer = null;
+        }
+        if (this.distantRoarTimer) {
+            this.distantRoarTimer.remove(false);
+            this.distantRoarTimer = null;
         }
         this.cleanupActive(false);
     }

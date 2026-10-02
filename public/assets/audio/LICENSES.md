@@ -46,3 +46,5 @@ Todos os arquivos abaixo foram selecionados somente de fontes identificadas como
 - Para **macaco**, `grunt_01.ogg` funciona como vocal curto; não é apresentado como gravação zoológica real de macaco.
 - Para **Curupira**, o assovio usa `spell_01.ogg` como efeito místico provisório, preservando licença CC0.
 - `music_final` continua opcional e não foi carregado porque não foi selecionada uma faixa final específica nesta etapa.
+
+| `enemies/jaguar_roar_v2.ogg` | `Tiger Roar` | lauramellis | https://freesound.org/people/lauramellis/sounds/263115/ | CC0 1.0 | Freesound; gravação real de tigre usada como vocalização de felino grande para a onça no jogo; corte de 1,8 s do preview HQ oficial, mono Vorbis 44.1 kHz |

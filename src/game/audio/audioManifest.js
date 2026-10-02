@@ -30,6 +30,7 @@ export const AUDIO_ASSETS = {
     rock_throw: { category: 'sfx', path: 'audio/player/air_01.ogg', license: 'CC0-1.0', gain: 0.5, rate: 1.28 },
     rock_impact: { category: 'sfx', path: 'audio/enemies/stone_01.ogg', license: 'CC0-1.0', gain: 0.72 },
     jaguar_growl: { category: 'sfx', path: 'audio/enemies/jaguar_growl.ogg', license: 'CC0-1.0', gain: 0.86, rate: 0.82 },
+    jaguar_roar: { category: 'sfx', path: 'audio/enemies/jaguar_roar_v2.ogg', license: 'CC0-1.0', gain: 0.92, rate: 1.0 },
     jaguar_charge: { category: 'sfx', path: 'audio/player/air_02.ogg', license: 'CC0-1.0', gain: 0.8, rate: 0.76 },
 
     curupira_whistle: { category: 'sfx', path: 'audio/bosses/spell_01.ogg', license: 'CC0-1.0', gain: 0.78, rate: 1.2 },
