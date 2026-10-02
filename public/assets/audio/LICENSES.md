@@ -18,7 +18,7 @@ Todos os arquivos abaixo foram selecionados somente de fontes identificadas como
 | `player/player_step_02_v2.ogg` | `Fantozzi-SandR1.ogg` | Fantozzi | https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 1.0 | OGG/Opus derivado do pacote CC0 (espelho verificado: roobie/skelly) |
 | `player/player_step_03_v2.ogg` | `Fantozzi-SandL2.ogg` | Fantozzi | https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 1.0 | OGG/Opus derivado do pacote CC0 (espelho verificado: roobie/skelly) |
 | `player/player_step_04_v2.ogg` | `Fantozzi-SandR2.ogg` | Fantozzi | https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 1.0 | OGG/Opus derivado do pacote CC0 (espelho verificado: roobie/skelly) |
-| `player/machete_swing_heavy.ogg` | `Swish_9.wav` | artisticdude | https://opengameart.org/content/swishes-sound-pack | CC0 1.0 | japalekhin/shadow-training (`assets/audio/swish-9.ogg`); convertido para Vorbis 44.1 kHz mono |
+| `player/machete_swing_heavy.ogg` | `Swish_9.wav` | artisticdude | https://opengameart.org/content/swishes-sound-pack | CC0 1.0 | japalekhin/shadow-training (`assets/audio/swish-9.ogg`); OGG Vorbis 48 kHz estéreo, sem nova conversão nesta etapa |
 | `player/blade_02.ogg` | `blade_02.ogg` | rubberduck | https://opengameart.org/content/80-cc0-rpg-sfx | CC0 1.0 | shionn/Echoes-of-the-Forgotten-Depths |
 | `player/air_01.ogg` | `sfx100v2_air_01.ogg` | rubberduck | https://opengameart.org/content/100-cc0-sfx-2 | CC0 1.0 | marcel-st/war30k-adventure |
 | `player/air_02.ogg` | `sfx100v2_air_02.ogg` | rubberduck | https://opengameart.org/content/100-cc0-sfx-2 | CC0 1.0 | marcel-st/war30k-adventure |
