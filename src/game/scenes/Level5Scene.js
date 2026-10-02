@@ -1385,10 +1385,9 @@ export class Level5Scene extends Scene
         const maxStep=Math.max(0,distance-stopDistance);
         const step=Math.min(speed*dt,maxStep);
         const direction=dx<0?-1:1;
-        const nextX=Phaser.Math.Clamp(
-            this.mapinguariVisual.x+direction*step,
+        const nextX=Math.max(
             this.arenaMinX+90,
-            this.arenaMaxX-90
+            Math.min(this.arenaMaxX-90,this.mapinguariVisual.x+direction*step)
         );
 
         this.mapinguariVisual.x=nextX;
