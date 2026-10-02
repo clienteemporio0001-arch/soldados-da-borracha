@@ -307,8 +307,8 @@ export function createBasicMobileControls (scene)
 
     const applyMobileHudLayout = () => {
         if (scene.healthHud) scene.healthHud.setPosition(18, 18).setScale(0.94);
-        if (scene.hungerHud) scene.hungerHud.setPosition(18, 52).setScale(0.94);
-        if (scene.staminaHud) scene.staminaHud.setPosition(18, 86).setScale(0.94);
+        if (scene.hungerHud) scene.hungerHud.setPosition(204, 18).setScale(0.94);
+        if (scene.staminaHud) scene.staminaHud.setPosition(390, 18).setScale(0.94);
     };
 
     const refreshJoystickGeometry = () => {

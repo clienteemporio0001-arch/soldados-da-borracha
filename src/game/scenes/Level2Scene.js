@@ -166,6 +166,11 @@ export class Level2Scene extends Scene
         this.weatherSystem = createTropicalStormSystem(this, { phase: 2 });
         this.audioManager = getAudioManager(this);
         this.audioManager?.startScene(this, { music: 'music_forest', ambient: 'forest_ambient' });
+        this.audioSettingsUi = createAudioSettingsControl(this, {
+            x: 900,
+            y: 27,
+            buttonSize: 40
+        });
 
         this.horizontalExpansion = createHorizontalExpansion(this, {
             phase: 2,
@@ -4727,35 +4732,9 @@ export class Level2Scene extends Scene
         this.livingAtmospherePermanent.length=0;
     }
 
-    createHud ()
+createHud ()
     {
-        const panel = this.add.rectangle(15, 15, 286, 112, 0x06100d, 0.58)
-            .setOrigin(0)
-            .setScrollFactor(0)
-            .setDepth(100);
-        panel.setStrokeStyle(1, 0x78917c, 0.3);
-        const showDesktopControls = this.isTouchDevice !== true;
-        panel.setVisible(showDesktopControls);
-
-        this.controlsTitle = this.add.text(26, 24, 'CONTROLES', {
-            fontFamily: 'Arial Black',
-            fontSize: '12px',
-            color: '#f1e1ae'
-        }).setScrollFactor(0).setDepth(101).setVisible(showDesktopControls);
-
-        this.controlsText = this.add.text(26, 45, 'A/D ou ←/→  mover\nW / ↑ / Espaço  pular\nS / ↓  queda rápida\nJ / X  atacar', {
-            fontFamily: 'Arial',
-            fontSize: '11px',
-            color: '#c7d6ca',
-            lineSpacing: 1
-        }).setScrollFactor(0).setDepth(101).setVisible(showDesktopControls);
-
         this.createQuickMenuButton();
-        this.audioSettingsUi = createAudioSettingsControl(this, {
-            x: 900,
-            y: 27,
-            buttonSize: 40
-        });
     }
 
     cleanupSceneHazardsBeforeTransition ()
@@ -4797,25 +4776,25 @@ export class Level2Scene extends Scene
 
     createStaminaHud ()
     {
-        this.staminaHud = this.add.container(320, 90)
+        this.staminaHud = this.add.container(390, 18)
             .setScrollFactor(0)
             .setDepth(102);
 
-        const background = this.add.rectangle(0, 0, 220, 30, 0x06100d, 0.64).setOrigin(0);
+        const background = this.add.rectangle(0, 0, 178, 26, 0x06100d, 0.64).setOrigin(0);
         background.setStrokeStyle(1, 0x78917c, 0.28);
 
-        const label = this.add.text(10, 7, 'FÔLEGO', {
+        const label = this.add.text(8, 6, 'FÔLEGO', {
             fontFamily: 'Arial Black',
             fontSize: '11px',
             color: '#cfe5d2'
         });
 
-        const barBack = this.add.rectangle(62, 9, 90, 12, 0x1d3025, 0.95).setOrigin(0);
+        const barBack = this.add.rectangle(52, 8, 72, 10, 0x1d3025, 0.95).setOrigin(0);
         barBack.setStrokeStyle(1, 0x668574, 0.55);
 
-        this.staminaBar = this.add.rectangle(62, 9, 90, 12, 0x72b58a, 1).setOrigin(0);
+        this.staminaBar = this.add.rectangle(52, 8, 72, 10, 0x72b58a, 1).setOrigin(0);
 
-        this.staminaText = this.add.text(162, 7, '100/100', {
+        this.staminaText = this.add.text(132, 6, '100/100', {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: '#ffffff'
@@ -4829,31 +4808,31 @@ export class Level2Scene extends Scene
     {
         if (!this.staminaBar || !this.staminaText) return;
         const ratio = Math.max(0, Math.min(1, this.stamina / this.maxStamina));
-        this.staminaBar.width = 90 * ratio;
+        this.staminaBar.width = 72 * ratio;
         this.staminaText.setText(Math.round(this.stamina) + '/' + this.maxStamina);
     }
 
     createHealthHud ()
     {
-        this.healthHud = this.add.container(320, 18)
+        this.healthHud = this.add.container(18, 18)
             .setScrollFactor(0)
             .setDepth(102);
 
-        const background = this.add.rectangle(0, 0, 220, 30, 0x06100d, 0.64).setOrigin(0);
+        const background = this.add.rectangle(0, 0, 178, 26, 0x06100d, 0.64).setOrigin(0);
         background.setStrokeStyle(1, 0x78917c, 0.28);
 
-        const label = this.add.text(10, 7, 'VIDA', {
+        const label = this.add.text(8, 6, 'VIDA', {
             fontFamily: 'Arial Black',
             fontSize: '11px',
             color: '#f1e1ae'
         });
 
-        const barBack = this.add.rectangle(62, 9, 90, 12, 0x351b18, 0.95).setOrigin(0);
+        const barBack = this.add.rectangle(52, 8, 72, 10, 0x351b18, 0.95).setOrigin(0);
         barBack.setStrokeStyle(1, 0x8e6f62, 0.55);
 
-        this.healthBar = this.add.rectangle(62, 9, 90, 12, 0x8fb35b, 1).setOrigin(0);
+        this.healthBar = this.add.rectangle(52, 8, 72, 10, 0x8fb35b, 1).setOrigin(0);
 
-        this.healthText = this.add.text(162, 7, '100/100', {
+        this.healthText = this.add.text(132, 6, '100/100', {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: '#ffffff'
@@ -4865,25 +4844,25 @@ export class Level2Scene extends Scene
 
     createHungerHud ()
     {
-        this.hungerHud = this.add.container(320, 54)
+        this.hungerHud = this.add.container(204, 18)
             .setScrollFactor(0)
             .setDepth(102);
 
-        const background = this.add.rectangle(0, 0, 220, 30, 0x06100d, 0.64).setOrigin(0);
+        const background = this.add.rectangle(0, 0, 178, 26, 0x06100d, 0.64).setOrigin(0);
         background.setStrokeStyle(1, 0x78917c, 0.28);
 
-        this.hungerLabel = this.add.text(10, 7, 'FOME', {
+        this.hungerLabel = this.add.text(8, 6, 'FOME', {
             fontFamily: 'Arial Black',
             fontSize: '11px',
             color: '#f1e1ae'
         });
 
-        const barBack = this.add.rectangle(62, 9, 90, 12, 0x3d2b16, 0.95).setOrigin(0);
+        const barBack = this.add.rectangle(52, 8, 72, 10, 0x3d2b16, 0.95).setOrigin(0);
         barBack.setStrokeStyle(1, 0x9b7b45, 0.55);
 
-        this.hungerBar = this.add.rectangle(62, 9, 90, 12, 0xd49a3a, 1).setOrigin(0);
+        this.hungerBar = this.add.rectangle(52, 8, 72, 10, 0xd49a3a, 1).setOrigin(0);
 
-        this.hungerText = this.add.text(162, 7, '100/100', {
+        this.hungerText = this.add.text(132, 6, '100/100', {
             fontFamily: 'Arial',
             fontSize: '11px',
             color: '#ffffff'
@@ -4897,7 +4876,7 @@ export class Level2Scene extends Scene
     {
         const ratio = Math.max(0, this.health / this.maxHealth);
 
-        this.healthBar.width = 90 * ratio;
+        this.healthBar.width = 72 * ratio;
         this.healthText.setText(`${this.health}/${this.maxHealth}`);
     }
 
@@ -4905,7 +4884,7 @@ export class Level2Scene extends Scene
     {
         const ratio = Math.max(0, this.hunger / this.maxHunger);
 
-        this.hungerBar.width = 90 * ratio;
+        this.hungerBar.width = 72 * ratio;
         this.hungerText.setText(`${this.hunger}/${this.maxHunger}`);
 
         if (this.hunger <= 0)
