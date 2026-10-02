@@ -776,26 +776,79 @@ export class Level5Scene extends Scene
         const v=this.add.container(10700,470).setDepth(22).setVisible(false);
         const shadow=this.add.ellipse(0,118,166,30,0x020302,.38);
 
-        // Silhueta alongada: membros compridos e corpo pesado, mantendo o estilo
-        // de shapes simples usado pelos demais personagens da fase.
-        const leftLeg=this.add.rectangle(-36,55,36,112,0x392f24).setOrigin(.5,.08);
-        const rightLeg=this.add.rectangle(36,55,36,112,0x392f24).setOrigin(.5,.08);
-        const torso=this.add.ellipse(0,-18,150,170,0x4a3b2c);
-        const moss=this.add.ellipse(-18,-43,104,58,0x2b472c,.72);
-        const leftArm=this.add.rectangle(-82,-18,36,148,0x46372a).setOrigin(.5,.08).setAngle(8);
-        const rightArm=this.add.rectangle(82,-18,36,148,0x46372a).setOrigin(.5,.08).setAngle(-8);
+        // Silhueta alongada e orgânica. Os membros continuam sendo partes
+        // independentes para preservar as animações existentes do boss.
+        const torso=this.add.ellipse(0,-18,154,174,0x4a3b2c);
+        const chest=this.add.ellipse(0,-54,124,72,0x514131,.92);
+        const moss=this.add.ellipse(-20,-48,108,60,0x2b472c,.72);
 
-        // Cabeça com um único olho, sem nariz.
-        const head=this.add.ellipse(0,-118,78,72,0x3c3127);
-        const brow=this.add.rectangle(0,-131,58,11,0x241f1a,.82);
-        const eyeSocket=this.add.ellipse(0,-116,25,21,0x171713,.92);
-        const eye=this.add.circle(0,-116,8,0xd6b768,.95);
-        const pupil=this.add.circle(1,-116,3.2,0x171713,1);
+        const createArm=(x,angle,mirror=1)=>{
+            const arm=this.add.container(x,-18).setAngle(angle);
+            const upper=this.add.ellipse(0,31,38,76,0x46372a);
+            const elbow=this.add.circle(mirror*2,67,18,0x413328);
+            const forearm=this.add.ellipse(mirror*4,100,34,82,0x3f3227).setAngle(mirror*4);
+            const hand=this.add.ellipse(mirror*5,143,42,34,0x372c23).setAngle(mirror*7);
+            const palm=this.add.ellipse(mirror*5,140,28,22,0x4a3a2c,.72);
+            const claws=[
+                this.add.triangle(mirror*-9,157,-5,0,0,18,5,0,0xcbbd96,.92).setAngle(mirror*8),
+                this.add.triangle(mirror*4,161,-5,0,0,19,5,0,0xcbbd96,.92).setAngle(mirror*2),
+                this.add.triangle(mirror*16,157,-5,0,0,17,5,0,0xcbbd96,.92).setAngle(mirror*-8)
+            ];
+            const fur=[
+                this.add.triangle(mirror*-13,35,-8,0,0,18,8,0,0x342a22,.9).setAngle(mirror*18),
+                this.add.triangle(mirror*13,62,-7,0,0,17,7,0,0x3b3026,.86).setAngle(mirror*-15),
+                this.add.triangle(mirror*-11,101,-7,0,0,17,7,0,0x342a22,.86).setAngle(mirror*14)
+            ];
+            arm.add([upper,elbow,forearm,hand,palm,...fur,...claws]);
+            arm.hand=hand;arm.claws=claws;
+            return arm;
+        };
 
-        // Boca principal na barriga: grande, escura e legível durante o combate.
-        const bellyLip=this.add.ellipse(0,15,100,72,0x2b211b,.98);
-        const bellyMouth=this.add.ellipse(0,18,82,54,0x100d0c,1);
-        const mouthGlow=this.add.ellipse(0,25,48,18,0x5c2a22,.72);
+        const createLeg=(x,mirror=1)=>{
+            const leg=this.add.container(x,48);
+            const thigh=this.add.ellipse(0,32,43,74,0x392f24);
+            const knee=this.add.circle(mirror*2,66,19,0x342b22);
+            const shin=this.add.ellipse(mirror*3,96,38,70,0x372d23).setAngle(mirror*3);
+            const foot=this.add.ellipse(mirror*7,135,58,28,0x2e2720).setAngle(mirror*4);
+            const heel=this.add.ellipse(mirror*-8,130,26,20,0x3d3126,.9);
+            const claws=[
+                this.add.triangle(mirror*2,145,-6,0,0,17,6,0,0xbfaf8a,.9).setAngle(mirror*2),
+                this.add.triangle(mirror*16,143,-6,0,0,16,6,0,0xbfaf8a,.88).setAngle(mirror*-7),
+                this.add.triangle(mirror*29,138,-5,0,0,14,5,0,0xbfaf8a,.84).setAngle(mirror*-13)
+            ];
+            const fur=[
+                this.add.triangle(mirror*-15,30,-7,0,0,16,7,0,0x302820,.88).setAngle(mirror*13),
+                this.add.triangle(mirror*14,67,-7,0,0,16,7,0,0x302820,.84).setAngle(mirror*-13),
+                this.add.triangle(mirror*-12,100,-6,0,0,15,6,0,0x302820,.8).setAngle(mirror*11)
+            ];
+            leg.add([thigh,knee,shin,heel,foot,...fur,...claws]);
+            leg.foot=foot;leg.claws=claws;
+            return leg;
+        };
+
+        const leftLeg=createLeg(-38,-1);
+        const rightLeg=createLeg(38,1);
+        const leftArm=createArm(-82,8,-1);
+        const rightArm=createArm(82,-8,1);
+
+        // Cabeça com um único olho e sem nariz, agora com contorno mais irregular.
+        const head=this.add.ellipse(0,-118,82,74,0x3c3127);
+        const headFur=[
+            this.add.triangle(-31,-143,-8,0,0,-19,8,0,0x332a22,.92).setAngle(-14),
+            this.add.triangle(-10,-151,-8,0,0,-20,8,0,0x332a22,.94).setAngle(-4),
+            this.add.triangle(12,-151,-8,0,0,-20,8,0,0x332a22,.94).setAngle(5),
+            this.add.triangle(32,-142,-8,0,0,-18,8,0,0x332a22,.9).setAngle(14)
+        ];
+        const brow=this.add.ellipse(0,-131,61,15,0x241f1a,.86);
+        const eyeSocket=this.add.ellipse(0,-116,28,23,0x171713,.94);
+        const eye=this.add.circle(0,-116,9,0xd6b768,.98);
+        const pupil=this.add.ellipse(1,-116,5,9,0x171713,1);
+        const eyeGlint=this.add.circle(-2,-119,1.8,0xf4e7a8,.9);
+
+        // Boca principal na barriga permanece como foco visual.
+        const bellyLip=this.add.ellipse(0,15,102,74,0x2b211b,.98);
+        const bellyMouth=this.add.ellipse(0,18,84,56,0x100d0c,1);
+        const mouthGlow=this.add.ellipse(0,25,50,19,0x5c2a22,.72);
         const teeth=[
             this.add.triangle(-27,-2,-6,0,0,12,6,0,0xd7cfad,.9),
             this.add.triangle(-9,-5,-6,0,0,13,6,0,0xd7cfad,.9),
@@ -806,31 +859,49 @@ export class Level5Scene extends Scene
             this.add.triangle(18,42,-6,0,0,-11,6,0,0xc8bea0,.82)
         ];
 
+        // Tufos de pelo quebram o contorno oval do tronco e reforçam a criatura.
+        const bodyFur=[];
+        [
+            [-66,-63,-20],[-72,-32,-25],[-73,2,-29],[-66,35,-33],
+            [66,-63,20],[72,-32,25],[73,2,29],[66,35,33],
+            [-45,62,-17],[-20,69,-8],[20,69,8],[45,62,17]
+        ].forEach(([x,y,angle],i)=>{
+            bodyFur.push(this.add.triangle(
+                x,y,-8,0,0,18+(i%3)*3,8,0,
+                i%2?0x382e25:0x403329,
+                .88
+            ).setAngle(angle));
+        });
+
         for(let i=0;i<6;i++){
-            const leaf=this.add.ellipse(-45+i*18,-63+(i%2)*12,22,10,i%2?0x36583a:0x2a4930,.85).setAngle(i*17);
+            const leaf=this.add.ellipse(-45+i*18,-63+(i%2)*12,22,10,i%2?0x36583a:0x2a4930,.78).setAngle(i*17);
             v.add(leaf);
         }
 
         v.add([
-            shadow,leftLeg,rightLeg,torso,moss,leftArm,rightArm,
+            shadow,leftLeg,rightLeg,
+            torso,chest,moss,...bodyFur,
+            leftArm,rightArm,
             bellyLip,bellyMouth,mouthGlow,...teeth,
-            head,brow,eyeSocket,eye,pupil
+            head,...headFur,brow,eyeSocket,eye,pupil,eyeGlint
         ]);
         v.parts={
             leftLeg,rightLeg,torso,leftArm,rightArm,head,
-            eye,bellyMouth
+            eye,bellyMouth,
+            leftHand:leftArm.hand,rightHand:rightArm.hand,
+            leftFoot:leftLeg.foot,rightFoot:rightLeg.foot
         };
         this.mapinguariVisual=v;
 
         // Zonas de dano acompanham as partes visuais, mas não substituem o corpo
         // físico central usado pelo comportamento do boss.
         this.mapinguariHitZones=[
-            { name:'head',      x:0,   y:-118, w:82,  h:76 },
-            { name:'torso',     x:0,   y:-18,  w:146, h:166 },
-            { name:'leftArm',   x:-84, y:45,   w:44,  h:148 },
-            { name:'rightArm',  x:84,  y:45,   w:44,  h:148 },
-            { name:'leftLeg',   x:-36, y:102,  w:44,  h:112 },
-            { name:'rightLeg',  x:36,  y:102,  w:44,  h:112 }
+            { name:'head',      x:0,   y:-118, w:86,  h:80 },
+            { name:'torso',     x:0,   y:-18,  w:150, h:170 },
+            { name:'leftArm',   x:-86, y:53,   w:52,  h:174 },
+            { name:'rightArm',  x:86,  y:53,   w:52,  h:174 },
+            { name:'leftLeg',   x:-39, y:113,  w:58,  h:142 },
+            { name:'rightLeg',  x:39,  y:113,  w:58,  h:142 }
         ].map(({name,x,y,w,h})=>{
             const zone=this.add.rectangle(10700+x,470+y,w,h,0x000000,0);
             this.physics.add.existing(zone);
