@@ -471,6 +471,9 @@ export class Level3Scene extends Scene
         this.attackBufferUntil=0;
         this.attackArcShown=false;
         this.attackVisualVariant=(this.attackVisualVariant+1)%2;
+        this.attackSoundVariant=(this.attackSoundVariant+1)%3;
+        const macheteSwingSounds=['player_machete_swing_1','player_machete_swing_2','player_machete_swing_3'];
+        this.audioManager?.playSfx?.(macheteSwingSounds[this.attackSoundVariant], { cooldown: 0 });
 
         if('attackHitRegistered' in this)this.attackHitRegistered=false;
         if('attackHitSnakeRegistered' in this)this.attackHitSnakeRegistered=false;
