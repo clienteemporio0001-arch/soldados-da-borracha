@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - ".github/workflows/diagnose-attack-audio.yml"
+      - "public/assets/audio/player/machete_swing_heavy.ogg"
 
 permissions:
   contents: read
