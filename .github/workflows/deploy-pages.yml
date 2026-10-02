@@ -107,12 +107,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y chromium chromium-driver
+          command -v chromium || true
+          command -v chromium-browser || true
+          command -v google-chrome || true
+          command -v google-chrome-stable || true
+          command -v chromedriver || true
           python -m pip install --disable-pip-version-check selenium
 
       - name: Test published machete audio on desktop and mobile
         run: |
           python - <<'PY'
           import json
+          import shutil
           import time
           from selenium import webdriver
           from selenium.webdriver.chrome.options import Options
@@ -124,7 +130,15 @@ jobs:
 
           def make_driver(touch=False):
               options = Options()
-              options.binary_location = '/usr/bin/chromium'
+              browser = next((
+                  shutil.which(name)
+                  for name in ('chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable')
+                  if shutil.which(name)
+              ), None)
+              if not browser:
+                  raise RuntimeError('No Chrome/Chromium binary found on runner')
+              print('[BROWSER BINARY]', browser)
+              options.binary_location = browser
               options.add_argument('--headless=new')
               options.add_argument('--no-sandbox')
               options.add_argument('--disable-dev-shm-usage')
