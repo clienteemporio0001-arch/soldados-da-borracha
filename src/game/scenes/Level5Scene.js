@@ -808,7 +808,7 @@ export class Level5Scene extends Scene
         const createLeg=(x,mirror=1)=>{
             // Mantém pés e garras acima da superfície da arena (y=592)
             // sem alterar a posição do corpo físico do boss.
-            const leg=this.add.container(x,42);
+            const leg=this.add.container(x,2);
             const thigh=this.add.ellipse(0,20,43,54,0x392f24);
             const knee=this.add.circle(mirror*2,45,17,0x342b22);
             const shin=this.add.ellipse(mirror*3,67,36,48,0x372d23).setAngle(mirror*3);
@@ -903,8 +903,8 @@ export class Level5Scene extends Scene
             { name:'torso',     x:0,   y:-18,  w:150, h:170 },
             { name:'leftArm',   x:-86, y:53,   w:52,  h:174 },
             { name:'rightArm',  x:86,  y:53,   w:52,  h:174 },
-            { name:'leftLeg',   x:-39, y:88,   w:58,  h:104 },
-            { name:'rightLeg',  x:39,  y:88,   w:58,  h:104 }
+            { name:'leftLeg',   x:-39, y:60,   w:58,  h:126 },
+            { name:'rightLeg',  x:39,  y:60,   w:58,  h:126 }
         ].map(({name,x,y,w,h})=>{
             const zone=this.add.rectangle(10700+x,470+y,w,h,0x000000,0);
             this.physics.add.existing(zone);
