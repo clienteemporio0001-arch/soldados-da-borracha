@@ -2167,6 +2167,9 @@ export class Game extends Scene
 
         this.snakeVisual = this.add.container(this.snake.x, this.snake.y).setDepth(19);
         this.snakeVisual.facing = 1;
+        this.snakeVisualLastFacing = 1;
+        this.snakeVisualUpdateInterval = 33;
+        this.nextSnakeVisualUpdateAt = 0;
         this.snakeMaxHealth = 50;
         this.snakeHealth = 50;
         this.snakeAlive = true;
@@ -2211,12 +2214,30 @@ export class Game extends Scene
         if (this.snake.x >= patrol.maxX)
         {
             this.snake.body.setVelocityX(-patrol.speed);
-            this.snakeVisual.facing = -1;
+            if (this.snakeVisual.facing !== -1)
+            {
+                this.snakeVisual.facing = -1;
+            }
         }
         else if (this.snake.x <= patrol.minX)
         {
             this.snake.body.setVelocityX(patrol.speed);
-            this.snakeVisual.facing = 1;
+            if (this.snakeVisual.facing !== 1)
+            {
+                this.snakeVisual.facing = 1;
+            }
+        }
+
+        // A física continua em todos os steps. Somente a animação procedural
+        // da cobra é reduzida no touch para aliviar o custo de render/update.
+        if (this.isTouchDevice === true && time < this.nextSnakeVisualUpdateAt)
+        {
+            return;
+        }
+
+        if (this.isTouchDevice === true)
+        {
+            this.nextSnakeVisualUpdateAt = time + this.snakeVisualUpdateInterval;
         }
 
         const seconds = time * 0.001;
@@ -2225,7 +2246,12 @@ export class Game extends Scene
         const waveTail = Math.sin(seconds * 8 - 1.5);
 
         this.snakeVisual.setPosition(this.snake.x, this.snake.y - 2 + wave * 1.2);
-        this.snakeVisual.setScale(this.snakeVisual.facing, 1);
+
+        if (this.snakeVisualLastFacing !== this.snakeVisual.facing)
+        {
+            this.snakeVisualLastFacing = this.snakeVisual.facing;
+            this.snakeVisual.setScale(this.snakeVisualLastFacing, 1);
+        }
 
         this.snakeVisual.parts.bodyFront.y = wave * 1.4;
         this.snakeVisual.parts.bodyBack.y = waveBack * 1.8;
