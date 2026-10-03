@@ -6,6 +6,7 @@ import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSys
 import { getAudioManager } from '../audio/AudioManager.js';
 import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
 import { createForestMonkeySystem } from '../forestMonkeySystem.js';
+import { createPhaseExitBridge } from '../phaseExitBridge.js';
 
 export class Game extends Scene
 {
@@ -634,11 +635,18 @@ export class Game extends Scene
         [[8410,637],[8440,633],[8565,638],[8600,632]].forEach(([x,y],i)=>useArea.fillEllipse(x,y-(i%2)*2,13,5));
 
         this.tweens.add({targets:doorGlow,alpha:{from:.05,to:.14},duration:1600,yoyo:true,repeat:-1,ease:'Sine.InOut'});
+
+        this.finalBridge = createPhaseExitBridge(this, {
+            startX: 8640,
+            startY: 650,
+            length: 250,
+            rise: -8
+        });
     }
 
     createCompletionZone ()
     {
-        this.completionZone = this.add.rectangle(8490, 585, 180, 135, 0x000000, 0);
+        this.completionZone = this.add.rectangle(8950, 575, 70, 170, 0x000000, 0);
         this.physics.add.existing(this.completionZone);
 
         this.completionZone.body.setAllowGravity(false);
