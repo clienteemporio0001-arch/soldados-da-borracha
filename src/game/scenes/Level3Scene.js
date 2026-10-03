@@ -110,7 +110,7 @@ export class Level3Scene extends Scene
             this.add.rectangle(x,y,w,22,0x4f3826,.96).setDepth(10);
             this.add.ellipse(x,y-12,w*.82,8,0x3e7142,.62).setDepth(11);
         });
-        this.finalBridge = createPhaseExitBridge(this, { step: finalSteps[finalSteps.length - 1], length: 330 });
+        this.finalBridge = createPhaseExitBridge(this, { step: finalSteps[finalSteps.length - 1], length: 330, landingLength: 85 });
 
         this.bossHintSign=createBossHintSign(this,{
             x:5550,
@@ -3208,7 +3208,7 @@ if (panel.active) panel.destroy();
 
     createFinalZone ()
     {
-        this.finalZone=this.add.rectangle(11635,205,70,175,0x000000,0);this.physics.add.existing(this.finalZone);this.finalZone.body.setAllowGravity(false);this.finalZone.body.setImmovable(true);this.physics.add.overlap(this.player,this.finalZone,()=>this.completeLevel3());
+        this.finalZone=this.add.rectangle(11645,205,55,175,0x000000,0);this.physics.add.existing(this.finalZone);this.finalZone.body.setAllowGravity(false);this.finalZone.body.setImmovable(true);this.physics.add.overlap(this.player,this.finalZone,()=>this.completeLevel3());
     }
 
     completeLevel3 ()
