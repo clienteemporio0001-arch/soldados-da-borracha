@@ -8,6 +8,7 @@ import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSys
 import { getAudioManager } from '../audio/AudioManager.js';
 import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
 import { createBossHintSign } from '../bossHintSign.js';
+import { createPhaseExitBridge } from '../phaseExitBridge.js';
 
 export class Level2Scene extends Scene
 {
@@ -197,7 +198,7 @@ export class Level2Scene extends Scene
             this.add.rectangle(x,y,w,22,0x4a3425,.96).setDepth(10);
             this.add.ellipse(x,y-12,w*.82,8,0x315a37,.62).setDepth(11);
         });
-        this.createFinalBridgeVisual(finalSteps[3]);
+        this.finalBridge = createPhaseExitBridge(this, { step: finalSteps[3], length: 330 });
 
         this.bossHintSign=createBossHintSign(this,{
             x:5200,
@@ -3922,35 +3923,9 @@ export class Level2Scene extends Scene
         }
     }
 
-    createFinalBridgeVisual (lastStep)
-    {
-        const stepX=lastStep[0],stepY=lastStep[1],stepWidth=lastStep[2];
-        const startX=stepX+stepWidth*.42,endX=startX+330;
-        const deckY=function(x){const t=(x-startX)/(endX-startX);return stepY-19+Math.sin(t*Math.PI)*16-t*10;};
-        const g=this.add.graphics().setDepth(12);
-        g.fillStyle(0x17120e,.30);g.fillRect(startX,deckY(startX)+10,endX-startX,16);
-        for(let i=0;i<8;i++){
-            const t=(i+.5)/8,x=startX+t*(endX-startX),y=deckY(x),w=(endX-startX)/8+5,h=18;
-            g.fillStyle(i%2?0x5a3b25:0x67462b,.98);g.fillRect(x-w/2,y-h/2,w,h);
-            g.lineStyle(1.5,0x9a7048,.62);g.lineBetween(x-w/2+4,y-h/2+3,x+w/2-4,y-h/2+1);
-        }
-        g.lineStyle(5,0x2d2118,.96);
-        for(const offset of [-34,34]){
-            g.beginPath();
-            for(let i=0;i<=16;i++){const t=i/16,x=startX+t*(endX-startX),y=deckY(x)+offset-5;if(i===0)g.moveTo(x,y);else g.lineTo(x,y);}
-            g.strokePath();
-        }
-        g.lineStyle(2,0x806044,.82);
-        for(let i=0;i<=16;i+=2){const t=i/16,x=startX+t*(endX-startX),y=deckY(x);g.lineBetween(x,y-3,x,y-39);g.lineBetween(x,y+3,x,y+39);}
-        g.fillStyle(0x3b281b,.98);g.fillRect(startX-15,deckY(startX)-74,14,82);g.fillRect(endX+1,deckY(endX)-74,14,82);
-        g.lineStyle(4,0x2d2118,.94);g.lineBetween(startX-8,deckY(startX)-64,startX+42,deckY(startX)-20);g.lineBetween(endX+8,deckY(endX)-64,endX-42,deckY(endX)-20);
-        g.lineStyle(6,0x2d2118,.96);g.lineBetween(stepX+stepWidth*.38,stepY-8,startX+12,deckY(startX)-1);
-        this.finalBridgeVisual=g;
-    }
-
     createFinalZone ()
     {
-        this.finalZone = this.add.rectangle(9600, 320, 150, 190, 0x000000, 0);
+        this.finalZone = this.add.rectangle(9860, 305, 60, 180, 0x000000, 0);
         this.physics.add.existing(this.finalZone);
         this.finalZone.body.setAllowGravity(false);
         this.finalZone.body.setImmovable(true);
