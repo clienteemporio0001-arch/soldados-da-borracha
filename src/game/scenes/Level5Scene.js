@@ -714,65 +714,76 @@ export class Level5Scene extends Scene
 
     createBoundCompanionAtBossTree ()
     {
-        const c=this.add.container(11630,520).setDepth(16);
+        // Visual compacto, na mesma escala do protagonista (~75 px de altura).
+        // A imagem enviada serve apenas como referência de identidade/roupa.
+        const c=this.add.container(11648,520).setDepth(16);
 
-        // Adaptação vetorial da referência enviada: lenço claro estampado,
-        // cabelo escuro, blusa creme, faixa vermelha, saia verde-oliva e botas.
-        const skirt=this.add.polygon(0,10,[-17,-28,17,-28,26,28,-26,28],0x34392b,.98);
-        const skirtShade=this.add.polygon(-8,12,[-6,-26,5,-26,10,26,-10,26],0x252b22,.5);
-        const hem=this.add.rectangle(0,36,45,4,0x8f4938,.9);
+        const hairBack=this.add.ellipse(-3,-28,16,22,0x17120f,.98);
+        const neck=this.add.rectangle(0,-18,5,6,0xb77b58,.98);
 
-        const blouse=this.add.rectangle(0,-23,31,38,0xd7c29d,.98).setStrokeStyle(1,0x6c563c,.55);
-        const blouseShade=this.add.rectangle(-8,-22,9,34,0x8d785b,.24);
-        const collarLeft=this.add.triangle(-8,-40,-8,0,5,9,9,0,0xefe0bf,.95);
-        const collarRight=this.add.triangle(8,-40,-9,0,-5,9,8,0,0xefe0bf,.95);
+        const blouse=this.add.rectangle(0,-8,22,23,0xd9c5a2,.98)
+            .setStrokeStyle(1,0x715b43,.45);
+        const blouseShade=this.add.rectangle(-6,-8,6,20,0x8f7a5f,.18);
+        const collarLeft=this.add.triangle(-4,-18,-5,-2,1,-2,4,4,0xf0dfbd,.92);
+        const collarRight=this.add.triangle(4,-18,-4,-2,2,-2,5,4,0xf0dfbd,.92);
 
-        const sash=this.add.rectangle(0,-3,37,7,0x843b2f,.98);
-        const sashTail=this.add.rectangle(11,14,7,31,0x733328,.96).setAngle(8);
+        const sash=this.add.rectangle(0,4,24,4,0x8d4335,.98);
+        const sashTail=this.add.rectangle(7,14,5,18,0x7b382d,.96).setAngle(7);
 
-        const neck=this.add.rectangle(0,-46,8,8,0xb77b58);
-        const head=this.add.ellipse(0,-58,20,25,0xb87956,.98);
-        const hair=this.add.ellipse(-5,-60,18,28,0x15120f,.98);
-        const face=this.add.ellipse(3,-58,13,22,0xc48661,.98);
-        const eye=this.add.circle(7,-61,1.2,0x241813,1);
-        const tear=this.add.circle(8,-57,1,0x83b9cf,.8);
+        const skirt=this.add.polygon(0,15,[-11,-8,11,-8,15,15,-15,15],0x38402f,.98);
+        const skirtShade=this.add.polygon(-5,15,[-4,-7,3,-7,6,14,-6,14],0x252b23,.42);
+        const hem=this.add.rectangle(0,29,27,3,0x8f4938,.9);
 
-        const scarf=this.add.triangle(-2,-72,-18,4,9,-8,18,5,0xdcc79e,.98);
-        const scarfKnot=this.add.circle(-14,-61,5,0xc7ad83,.98);
+        const leftLeg=this.add.rectangle(-7,35,6,11,0x5e4632,.98);
+        const rightLeg=this.add.rectangle(7,35,6,11,0x5e4632,.98);
+        const leftBoot=this.add.rectangle(-8,42,9,5,0x443126,.98);
+        const rightBoot=this.add.rectangle(8,42,9,5,0x443126,.98);
+
+        const head=this.add.ellipse(1,-29,13,16,0xc18460,.98);
+        const hairFront=this.add.ellipse(-3,-31,10,17,0x17120f,.98);
+        const face=this.add.ellipse(4,-29,8,13,0xc88b66,.98);
+        const eye=this.add.circle(6,-31,1,0x271915,1);
+        const tear=this.add.circle(7,-27,0.8,0x84b8cb,.78);
+
+        const scarf=this.add.polygon(-1,-37,[-11,-3,-4,-8,7,-7,12,0,4,4,-6,4],0xdcc79f,.98);
+        const scarfKnot=this.add.circle(-8,-28,3.2,0xc5aa82,.98);
         const scarfPrint=[
-            this.add.circle(-4,-69,1.6,0x9d4936,.9),
-            this.add.circle(4,-67,1.4,0x9d4936,.9),
-            this.add.circle(-11,-63,1.4,0x9d4936,.9)
+            this.add.circle(-3,-39,1,0x9f4a37,.9),
+            this.add.circle(3,-38,1,0x9f4a37,.9),
+            this.add.circle(-7,-34,1,0x9f4a37,.9)
         ];
 
-        const leftArm=this.add.rectangle(-18,-19,9,36,0xc08a68,.98).setAngle(10);
-        const rightArm=this.add.rectangle(18,-19,9,36,0xc08a68,.98).setAngle(-9);
-        const leftHand=this.add.circle(-14,-2,4,0xb87956);
-        const rightHand=this.add.circle(14,-2,4,0xb87956);
+        const leftArm=this.add.rectangle(-13,-7,6,22,0xc08a68,.98).setAngle(8);
+        const rightArm=this.add.rectangle(13,-7,6,22,0xc08a68,.98).setAngle(-8);
+        const leftHand=this.add.circle(-11,3,2.7,0xb87956,.98);
+        const rightHand=this.add.circle(11,3,2.7,0xb87956,.98);
 
-        const leftBoot=this.add.rectangle(-12,50,12,31,0x5b432f,.98).setOrigin(.5,0);
-        const rightBoot=this.add.rectangle(12,50,12,31,0x5b432f,.98).setOrigin(.5,0);
-        const leftFoot=this.add.rectangle(-15,78,20,7,0x453225,.98);
-        const rightFoot=this.add.rectangle(15,78,20,7,0x453225,.98);
-
-        // Cordas passam na frente da personagem e seguem até o tronco,
-        // reforçando que ela está presa sem adicionar qualquer collider.
+        // Três voltas de corda passam na frente do torso e seguem até o tronco.
+        // Não há collider nem body físico associado à personagem.
         const ropes=this.add.graphics();
-        ropes.lineStyle(4,0x7d603c,.98);
-        ropes.beginPath();ropes.moveTo(-24,-31);ropes.lineTo(27,-27);ropes.strokePath();
-        ropes.beginPath();ropes.moveTo(-25,-20);ropes.lineTo(28,-17);ropes.strokePath();
-        ropes.beginPath();ropes.moveTo(-23,-8);ropes.lineTo(27,-5);ropes.strokePath();
-        ropes.lineStyle(3,0xa08152,.9);
-        ropes.beginPath();ropes.moveTo(24,-28);ropes.lineTo(50,-23);ropes.strokePath();
-        ropes.beginPath();ropes.moveTo(24,-7);ropes.lineTo(50,-3);ropes.strokePath();
+        ropes.lineStyle(3,0x80613d,.98);
+        [-11,-4,3].forEach(y=>{
+            ropes.beginPath();
+            ropes.moveTo(-15,y);
+            ropes.lineTo(16,y+1);
+            ropes.strokePath();
+        });
+        ropes.lineStyle(2.5,0xa18354,.9);
+        ropes.beginPath();ropes.moveTo(14,-10);ropes.lineTo(32,-9);ropes.strokePath();
+        ropes.beginPath();ropes.moveTo(14,2);ropes.lineTo(32,4);ropes.strokePath();
 
         c.add([
-            skirt,skirtShade,hem,leftBoot,rightBoot,leftFoot,rightFoot,
+            hairBack,neck,
+            skirt,skirtShade,hem,leftLeg,rightLeg,leftBoot,rightBoot,
             blouse,blouseShade,collarLeft,collarRight,sash,sashTail,
-            leftArm,rightArm,leftHand,rightHand,neck,hair,head,face,eye,tear,
-            scarf,scarfKnot,...scarfPrint,ropes
+            leftArm,rightArm,leftHand,rightHand,
+            head,hairFront,face,eye,tear,
+            scarf,scarfKnot,...scarfPrint,
+            ropes
         ]);
 
+        // Pequeno ajuste de escala para combinar com o protagonista sem dominar a arena.
+        c.setScale(.94);
         this.companionArea=c;
     }
 
