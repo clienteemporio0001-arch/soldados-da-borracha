@@ -292,7 +292,7 @@ export function createBasicMobileControls (scene)
     fullscreenButton.hit.setDepth(depth + 3);
     fullscreenButton.label.setDepth(depth + 4);
 
-    const rotateText = scene.add.text(512, 32, 'Dica: gire o celular para jogar em tela ampla', {
+    const rotateText = scene.add.text(512, 68, 'Dica: gire o celular para jogar em tela ampla', {
         fontFamily: 'Arial',
         fontSize: '15px',
         color: '#eef4ef',
