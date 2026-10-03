@@ -6,6 +6,7 @@ import { Level2Scene } from './scenes/Level2Scene';
 import { Level3Scene } from './scenes/Level3Scene';
 import { Level4Scene } from './scenes/Level4Scene';
 import { Level5Scene } from './scenes/Level5Scene';
+import { FinalVideoScene } from './scenes/FinalVideoScene';
 import { LevelSelectScene } from './scenes/LevelSelectScene';
 import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
@@ -42,6 +43,7 @@ const config = {
         Level3Scene,
         Level4Scene,
         Level5Scene,
+        FinalVideoScene,
         GameOver
     ]
 };
