@@ -131,9 +131,7 @@ export class IntroScene extends Scene
             return;
         }
 
-        const label = this.sys.game.device.input.touch
-            ? 'TOQUE PARA INICIAR'
-            : 'CLIQUE PARA INICIAR';
+        const label = 'CLIQUE / TOQUE PARA INICIAR';
 
         this.startPrompt = this.add.text(512, 650, label, {
             fontFamily: 'Arial Black',
