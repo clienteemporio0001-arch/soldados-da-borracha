@@ -2497,22 +2497,6 @@ export class Game extends Scene
         this.updateStaminaHud();
     }
 
-    showStaminaBlockedFeedback ()
-    {
-        if (!this.staminaHud || !this.staminaHud.visible || this.time.now < this.nextStaminaFeedbackAt) return;
-
-        this.nextStaminaFeedbackAt = this.time.now + 220;
-        this.tweens.killTweensOf(this.staminaBar);
-        this.tweens.add({
-            targets: this.staminaBar,
-            alpha: 0.25,
-            duration: 70,
-            yoyo: true,
-            repeat: 2,
-            onComplete: () => this.staminaBar.setAlpha(1)
-        });
-    }
-
     updateHungerHud ()
     {
         const ratio = Math.max(0, this.hunger / this.maxHunger);
@@ -3675,7 +3659,6 @@ createHud ()
 
         if (this.stamina < this.jumpStaminaCost)
         {
-            this.showStaminaBlockedFeedback();
             this.jumpBufferUntil = 0;
             return false;
         }
