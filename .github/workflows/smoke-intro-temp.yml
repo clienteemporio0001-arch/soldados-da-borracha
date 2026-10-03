@@ -194,27 +194,29 @@ jobs:
               finally:
                   await context.close()
 
-              # Force autoplay without a gesture to exercise the locked fallback.
+              # Exercise the fallback UI deterministically. Headless Chrome may
+              # allow autoplay even with a strict autoplay policy, so simulate Phaser's
+              # documented VIDEO_LOCKED event after stopping playback.
               context, page, errors = await new_page(browser, False)
               try:
+                  await start_from_menu(page)
                   await page.evaluate("""() => {
-                      const game=window.__soldadosAudioTestGame;
-                      game.scene.getScene('MainMenu').scene.start('IntroScene');
+                      const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
+                      s.video.stop(false);
+                      s.video.touchLocked=true;
+                      s.video.emit('locked', s.video);
                   }""")
-                  await wait_intro(page)
                   await page.wait_for_function(
-                      """() => {
-                          const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
-                          return !!s.startPrompt || !!s.video?.touchLocked;
-                      }""",
-                      timeout=10000
+                      "() => !!window.__soldadosAudioTestGame.scene.getScene('IntroScene').startPrompt",
+                      timeout=5000
                   )
                   fallback_before = await intro_state(page)
                   await game_point(page, 512, 650)
                   await page.wait_for_timeout(1500)
                   fallback_after = await intro_state(page)
-                  assert fallback_before['prompt'] is True or fallback_before.get('paused') is True, fallback_before
+                  assert fallback_before['prompt'] is True, fallback_before
                   assert fallback_after['currentTime'] > 0 and fallback_after['paused'] is False, (fallback_before, fallback_after)
+                  assert fallback_after['prompt'] is False, fallback_after
                   assert not errors, errors
                   print('[INTRO AUTOPLAY FALLBACK]', json.dumps({'before':fallback_before,'after':fallback_after}, sort_keys=True))
               finally:
@@ -235,22 +237,22 @@ jobs:
 
               context, page, errors = await new_page(browser, True)
               try:
+                  await start_from_menu(page, True)
                   await page.evaluate("""() => {
-                      const game=window.__soldadosAudioTestGame;
-                      game.scene.getScene('MainMenu').scene.start('IntroScene');
+                      const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
+                      s.video.stop(false);
+                      s.video.touchLocked=true;
+                      s.video.emit('locked', s.video);
                   }""")
-                  await wait_intro(page)
                   await page.wait_for_function(
-                      """() => {
-                          const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
-                          return !!s.startPrompt || !!s.video?.touchLocked;
-                      }""",
-                      timeout=10000
+                      "() => !!window.__soldadosAudioTestGame.scene.getScene('IntroScene').startPrompt",
+                      timeout=5000
                   )
                   await game_point(page, 512, 650, tap=True)
                   await page.wait_for_timeout(1500)
                   state = await intro_state(page)
                   assert state['currentTime'] > 0 and state['paused'] is False, state
+                  assert state['prompt'] is False, state
                   assert state['playsInline'] is True and state['fullscreen'] is False, state
                   assert not errors, errors
                   print('[INTRO MOBILE FALLBACK]', json.dumps(state, sort_keys=True))
