@@ -663,3 +663,182 @@ jobs:
 
           asyncio.run(main())
           PY
+
+
+  smoke-test-stability:
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup browser test tools
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check playwright
+
+      - name: Exercise all phases and scene transitions
+        run: |
+          python - <<'PY'
+          import asyncio
+          import json
+          import os
+          import shutil
+          import time
+          from playwright.async_api import async_playwright
+
+          BASE = 'https://clienteemporio0001-arch.github.io/soldados-da-borracha/'
+
+          PHASES = [
+              ('Game', 125, 452),
+              ('Level2Scene', 305, 352),
+              ('Level3Scene', 500, 462),
+              ('Level4Scene', 700, 347),
+              ('Level5Scene', 890, 447),
+          ]
+
+          def chrome_binary():
+              candidates = [
+                  '/opt/google/chrome/chrome',
+                  '/opt/google/chrome/google-chrome',
+                  shutil.which('google-chrome-stable'),
+                  shutil.which('google-chrome'),
+              ]
+              for candidate in candidates:
+                  if candidate and os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                      return candidate
+              raise RuntimeError(f'No Chrome binary found: {candidates}')
+
+          async def wait_scene(page, key):
+              await page.wait_for_function(
+                  """key => {
+                      const game=window.__soldadosAudioTestGame;
+                      const s=game?.scene?.getScene?.(key);
+                      return !!s && s.scene.isActive() && !!s.player;
+                  }""",
+                  key,
+                  timeout=20000
+              )
+
+          async def exercise_phase(page, key, seconds=60):
+              errors = []
+              page.on('pageerror', lambda err: errors.append('pageerror: '+str(err)))
+              page.on('console', lambda msg: errors.append('console.error: '+msg.text) if msg.type == 'error' else None)
+
+              await wait_scene(page, key)
+
+              initial = await page.evaluate("""key => {
+                  const s=window.__soldadosAudioTestGame.scene.getScene(key);
+                  return {
+                      x:s.player?.x ?? null,
+                      y:s.player?.y ?? null,
+                      health:s.health ?? null,
+                      stamina:s.stamina ?? null
+                  };
+              }""", key)
+
+              if key == 'Level2Scene':
+                  await page.evaluate("""() => {
+                      const s=window.__soldadosAudioTestGame.scene.getScene('Level2Scene');
+                      s.startCurupiraEncounter?.();
+                  }""")
+              elif key == 'Level3Scene':
+                  await page.evaluate("""() => {
+                      const s=window.__soldadosAudioTestGame.scene.getScene('Level3Scene');
+                      s.startCaboclinhoTrial?.();
+                  }""")
+              elif key == 'Level5Scene':
+                  await page.evaluate("""() => {
+                      const s=window.__soldadosAudioTestGame.scene.getScene('Level5Scene');
+                      s.beginMapinguariReveal?.();
+                  }""")
+
+              start = time.monotonic()
+              cycle = 0
+              while time.monotonic() - start < seconds:
+                  await page.keyboard.down('ArrowRight')
+                  await page.wait_for_timeout(350)
+                  await page.keyboard.up('ArrowRight')
+                  await page.keyboard.press('Space')
+                  await page.wait_for_timeout(180)
+                  await page.keyboard.press('J')
+                  await page.wait_for_timeout(500)
+
+                  if cycle % 6 == 0:
+                      await page.evaluate("""key => {
+                          const s=window.__soldadosAudioTestGame.scene.getScene(key);
+                          if (s?.player && !s.isPlayerDead && !s.phaseCompleted && typeof s.damagePlayer === 'function') {
+                              s.damagePlayer(1, 0, 0);
+                          }
+                      }""", key)
+
+                  cycle += 1
+
+              final = await page.evaluate("""key => {
+                  const s=window.__soldadosAudioTestGame.scene.getScene(key);
+                  return {
+                      active:s?.scene?.isActive?.() ?? false,
+                      x:s?.player?.x ?? null,
+                      y:s?.player?.y ?? null,
+                      health:s?.health ?? null,
+                      stamina:s?.stamina ?? null,
+                      playerDead:s?.isPlayerDead ?? null,
+                      phaseCompleted:s?.phaseCompleted ?? null,
+                      bossStarted:s?.bossStarted ?? s?.arenaStarted ?? s?.caboclinhoTestActive ?? null
+                  };
+              }""", key)
+
+              assert final['active'] is True, (key, final)
+              assert not errors, (key, errors)
+              print('[STABILITY]', key, json.dumps({'initial':initial,'final':final}, sort_keys=True))
+              return initial, final
+
+          async def main():
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(
+                      executable_path=chrome_binary(),
+                      headless=True,
+                      args=['--no-sandbox','--disable-dev-shm-usage']
+                  )
+                  context = await browser.new_context(viewport={'width':1024,'height':768})
+                  page = await context.new_page()
+                  url = BASE + '?audio-test=1&stability-test=1&cache=' + str(time.time_ns())
+                  response = await page.goto(url, wait_until='networkidle', timeout=30000)
+                  assert response and response.status == 200
+                  await page.wait_for_function(
+                      "() => !!window.__soldadosAudioTestGame && window.__soldadosAudioTestGame.scene.isActive('MainMenu')",
+                      timeout=30000
+                  )
+                  canvas = page.locator('canvas')
+
+                  for index, (key, x, y) in enumerate(PHASES):
+                      if not await page.evaluate("() => window.__soldadosAudioTestGame.scene.isActive('MainMenu')"):
+                          await page.evaluate("""key => {
+                              const game=window.__soldadosAudioTestGame;
+                              const s=game.scene.getScene(key);
+                              s?.cleanupSceneHazardsBeforeTransition?.();
+                              s?.scene?.start?.('MainMenu');
+                          }""", PHASES[index-1][0] if index else key)
+                          await page.wait_for_function(
+                              "() => window.__soldadosAudioTestGame.scene.isActive('MainMenu')",
+                              timeout=10000
+                          )
+
+                      await canvas.click(position={'x':512,'y':580})
+                      await page.wait_for_function(
+                          "() => window.__soldadosAudioTestGame.scene.isActive('LevelSelectScene')",
+                          timeout=10000
+                      )
+                      await canvas.click(position={'x':x,'y':y})
+                      await exercise_phase(page, key, 60)
+
+                      if key == 'Game':
+                          stamina = await page.evaluate("""() => {
+                              const s=window.__soldadosAudioTestGame.scene.getScene('Game');
+                              return {stamina:s.stamina, cost:s.jumpStaminaCost};
+                          }""")
+                          assert stamina['cost'] == 15, stamina
+
+                  await context.close()
+                  await browser.close()
+
+          asyncio.run(main())
+          PY
