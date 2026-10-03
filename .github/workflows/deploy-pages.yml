@@ -593,8 +593,10 @@ jobs:
                               const s=window.__soldadosAudioTestGame.scene.getScene('Game');
                               return {x:s.player.x, y:s.player.y, stamina:s.stamina, health:s.health};
                           }""")
-                          await page.keyboard.press('ArrowRight')
-                          await page.wait_for_timeout(180)
+                          await page.keyboard.down('ArrowRight')
+                          await page.wait_for_timeout(260)
+                          await page.keyboard.up('ArrowRight')
+                          await page.wait_for_timeout(80)
                           moved = await page.evaluate("""() => {
                               const s=window.__soldadosAudioTestGame.scene.getScene('Game');
                               return {x:s.player.x, y:s.player.y, stamina:s.stamina};
