@@ -3825,11 +3825,13 @@ createHud ()
 
         if (!this.isPlayerDead && !this.phaseCompleted)
         {
+            let direction = 0;
+
             if (time >= this.knockbackUntil)
             {
                 const moveLeft = this.cursors.left.isDown || this.keyA.isDown || this.mobileInput?.left === true;
                 const moveRight = this.cursors.right.isDown || this.keyD.isDown || this.mobileInput?.right === true;
-                const direction = moveLeft && !moveRight ? -1 : moveRight && !moveLeft ? 1 : 0;
+                direction = moveLeft && !moveRight ? -1 : moveRight && !moveLeft ? 1 : 0;
                 if (direction !== 0 && this.lastMoveDirection !== 0 && direction !== this.lastMoveDirection) this.showDirectionChangeFeedback(direction);
                 if (direction !== 0) this.lastMoveDirection = direction;
                 if (!applyWetGroundMovement(this, direction, moveSpeed, grounded, time)) this.player.body.setVelocityX(direction * moveSpeed);
