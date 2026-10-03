@@ -718,8 +718,8 @@ export class Level5Scene extends Scene
 
         // Adaptação vetorial da referência enviada: lenço claro estampado,
         // cabelo escuro, blusa creme, faixa vermelha, saia verde-oliva e botas.
-        const skirt=this.add.trapezoid(0,10,34,56,52,4,0x34392b,.98);
-        const skirtShade=this.add.trapezoid(-8,12,13,52,21,3,0x252b22,.5);
+        const skirt=this.add.polygon(0,10,[-17,-28,17,-28,26,28,-26,28],0x34392b,.98);
+        const skirtShade=this.add.polygon(-8,12,[-6,-26,5,-26,10,26,-10,26],0x252b22,.5);
         const hem=this.add.rectangle(0,36,45,4,0x8f4938,.9);
 
         const blouse=this.add.rectangle(0,-23,31,38,0xd7c29d,.98).setStrokeStyle(1,0x6c563c,.55);
