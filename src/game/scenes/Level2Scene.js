@@ -198,7 +198,7 @@ export class Level2Scene extends Scene
             this.add.rectangle(x,y,w,22,0x4a3425,.96).setDepth(10);
             this.add.ellipse(x,y-12,w*.82,8,0x315a37,.62).setDepth(11);
         });
-        this.finalBridge = createPhaseExitBridge(this, { step: finalSteps[3], length: 330 });
+        this.finalBridge = createPhaseExitBridge(this, { step: finalSteps[3], length: 330, landingLength: 75 });
 
         this.bossHintSign=createBossHintSign(this,{
             x:5200,
@@ -3925,7 +3925,7 @@ export class Level2Scene extends Scene
 
     createFinalZone ()
     {
-        this.finalZone = this.add.rectangle(9860, 305, 60, 180, 0x000000, 0);
+        this.finalZone = this.add.rectangle(9870, 305, 50, 180, 0x000000, 0);
         this.physics.add.existing(this.finalZone);
         this.finalZone.body.setAllowGravity(false);
         this.finalZone.body.setImmovable(true);
