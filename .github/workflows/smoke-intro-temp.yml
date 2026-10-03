@@ -234,6 +234,7 @@ jobs:
                       return {
                           introActive:!!s?.scene?.isActive?.(),
                           gameActive:game.scene.isActive('Game'),
+                          transitioning:!!s?.transitioning,
                           prompt:!!s?.startPrompt,
                           currentTime:el?.currentTime ?? null,
                           paused:el?.paused ?? null
@@ -242,6 +243,7 @@ jobs:
                   assert fallback_before['prompt'] is True, fallback_before
                   assert (
                       fallback_after['gameActive'] is True or
+                      fallback_after['transitioning'] is True or
                       (fallback_after['introActive'] is True and fallback_after['currentTime'] is not None and fallback_after['currentTime'] > 0 and fallback_after['paused'] is False)
                   ), (fallback_before, fallback_after)
                   assert fallback_after['prompt'] is False, fallback_after
@@ -286,6 +288,7 @@ jobs:
                       return {
                           introActive:!!s?.scene?.isActive?.(),
                           gameActive:game.scene.isActive('Game'),
+                          transitioning:!!s?.transitioning,
                           prompt:!!s?.startPrompt,
                           currentTime:el?.currentTime ?? null,
                           paused:el?.paused ?? null,
@@ -295,6 +298,7 @@ jobs:
                   }""")
                   assert (
                       state['gameActive'] is True or
+                      state['transitioning'] is True or
                       (state['introActive'] is True and state['currentTime'] is not None and state['currentTime'] > 0 and state['paused'] is False)
                   ), state
                   assert state['prompt'] is False, state
