@@ -465,9 +465,13 @@ export class Level5Scene extends Scene
     createRecentClues ()
     {
         const g=this.add.graphics().setDepth(12);
-        // 1. tecido recente
-        this.clueCloth=this.add.rectangle(1140,425,32,14,0x9e3f52,.95).setAngle(-16).setDepth(14);
-        this.tweens.add({targets:this.clueCloth,angle:{from:-20,to:-11},y:this.clueCloth.y-3,duration:650,yoyo:true,repeat:-1,ease:'Sine.InOut'});
+        // 1. pista da esposa: usa o asset real da bolsa, apenas visual.
+        // O ponto narrativo/sensor existente permanece inalterado.
+        this.clueCloth=this.add.image(1140,592,'bolsaEsposa')
+            .setOrigin(.5,1)
+            .setDisplaySize(56,56)
+            .setAngle(-7)
+            .setDepth(14);
 
         // 2. mesma marca da Fase 4
         g.lineStyle(5,0xc3a477,.92);
