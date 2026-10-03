@@ -8,6 +8,7 @@ import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSys
 import { getAudioManager } from '../audio/AudioManager.js';
 import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
 import { createBossHintSign } from '../bossHintSign.js';
+import { createPhaseExitBridge } from '../phaseExitBridge.js';
 
 export class Level3Scene extends Scene
 {
@@ -15,7 +16,7 @@ export class Level3Scene extends Scene
 
     create ()
     {
-        this.worldWidth=11400;
+        this.worldWidth=11700;
         this.physics.world.setBounds(0,0,this.worldWidth,768);
         this.cameras.main.setBounds(0,0,this.worldWidth,768);
         this.cameras.main.setBackgroundColor('#526750');
@@ -99,15 +100,17 @@ export class Level3Scene extends Scene
             ]
         });
 
-        [
+        const finalSteps = [
             [7200,500,150],[7540,445,140],[7860,390,150],[8200,455,150],
             [10860,500,150],[10970,425,135],[11080,350,125],[11200,285,120]
-        ].forEach(([x,y,w])=>{
+        ];
+        finalSteps.forEach(([x,y,w])=>{
             const body=this.add.rectangle(x,y,w,22,0x000000,0);
             this.physics.add.existing(body,true);this.platforms.add(body);
             this.add.rectangle(x,y,w,22,0x4f3826,.96).setDepth(10);
             this.add.ellipse(x,y-12,w*.82,8,0x3e7142,.62).setDepth(11);
         });
+        this.finalBridge = createPhaseExitBridge(this, { step: finalSteps[finalSteps.length - 1], length: 330 });
 
         this.bossHintSign=createBossHintSign(this,{
             x:5550,
@@ -3205,7 +3208,7 @@ if (panel.active) panel.destroy();
 
     createFinalZone ()
     {
-        this.finalZone=this.add.rectangle(11235,235,100,165,0x000000,0);this.physics.add.existing(this.finalZone);this.finalZone.body.setAllowGravity(false);this.finalZone.body.setImmovable(true);this.physics.add.overlap(this.player,this.finalZone,()=>this.completeLevel3());
+        this.finalZone=this.add.rectangle(11635,205,70,175,0x000000,0);this.physics.add.existing(this.finalZone);this.finalZone.body.setAllowGravity(false);this.finalZone.body.setImmovable(true);this.physics.add.overlap(this.player,this.finalZone,()=>this.completeLevel3());
     }
 
     completeLevel3 ()
