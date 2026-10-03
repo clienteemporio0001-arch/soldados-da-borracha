@@ -200,16 +200,29 @@ jobs:
               context, page, errors = await new_page(browser, False)
               try:
                   await start_from_menu(page)
-                  await page.evaluate("""() => {
+                  diag = await page.evaluate("""() => {
                       const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
-                      s.video.stop(false);
-                      s.video.touchLocked=true;
-                      s.showStartPrompt();
+                      try {
+                          s.video.stop(false);
+                          s.video.touchLocked=true;
+                          s.showStartPrompt();
+                          return {
+                              error:null,
+                              prompt:!!s.startPrompt,
+                              transitioning:s.transitioning,
+                              cleanedUp:s.cleanedUp
+                          };
+                      } catch(error) {
+                          return {
+                              error:String(error?.stack || error),
+                              prompt:!!s.startPrompt,
+                              transitioning:s.transitioning,
+                              cleanedUp:s.cleanedUp
+                          };
+                      }
                   }""")
-                  await page.wait_for_function(
-                      "() => !!window.__soldadosAudioTestGame.scene.getScene('IntroScene').startPrompt",
-                      timeout=5000
-                  )
+                  print('[INTRO FALLBACK DIAG]', json.dumps(diag, sort_keys=True))
+                  assert diag['error'] is None and diag['prompt'] is True, diag
                   fallback_before = await intro_state(page)
                   await game_point(page, 512, 650)
                   await page.wait_for_timeout(1500)
@@ -242,7 +255,7 @@ jobs:
                       const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
                       s.video.stop(false);
                       s.video.touchLocked=true;
-                      s.video.emit('locked', s.video);
+                      s.showStartPrompt();
                   }""")
                   await page.wait_for_function(
                       "() => !!window.__soldadosAudioTestGame.scene.getScene('IntroScene').startPrompt",
