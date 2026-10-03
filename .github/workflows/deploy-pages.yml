@@ -508,3 +508,156 @@ jobs:
 
           asyncio.run(main())
           PY
+
+
+  smoke-test-phase1:
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup browser test tools
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check playwright
+
+      - name: Test Phase 1 runtime and jump stamina
+        run: |
+          python - <<'PY'
+          import asyncio
+          import json
+          import os
+          import shutil
+          import time
+          from playwright.async_api import async_playwright
+
+          BASE = 'https://clienteemporio0001-arch.github.io/soldados-da-borracha/'
+
+          def chrome_binary():
+              candidates = [
+                  '/opt/google/chrome/chrome',
+                  '/opt/google/chrome/google-chrome',
+                  shutil.which('google-chrome-stable'),
+                  shutil.which('google-chrome'),
+              ]
+              for candidate in candidates:
+                  if candidate and os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                      return candidate
+              raise RuntimeError(f'No executable Chrome binary found: {candidates}')
+
+          async def open_root(browser, touch=False):
+              context = await browser.new_context(
+                  viewport={'width': 1024, 'height': 768},
+                  has_touch=touch
+              )
+              page = await context.new_page()
+              errors = []
+              page.on('pageerror', lambda err: errors.append(str(err)))
+              page.on('console', lambda msg: errors.append(msg.text) if msg.type == 'error' else None)
+              url = BASE + '?audio-test=1&phase1-test=1&cache=' + str(time.time_ns())
+              response = await page.goto(url, wait_until='networkidle', timeout=30000)
+              assert response is not None and response.status == 200
+              await page.wait_for_function(
+                  "() => !!window.__soldadosAudioTestGame && window.__soldadosAudioTestGame.scene.isActive('MainMenu')",
+                  timeout=30000
+              )
+              return context, page, errors
+
+          async def main():
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(
+                      executable_path=chrome_binary(),
+                      headless=True,
+                      args=['--no-sandbox', '--disable-dev-shm-usage']
+                  )
+                  try:
+                      # Desktop: use the real menu + phase selector pointer flow.
+                      context, page, errors = await open_root(browser, touch=False)
+                      try:
+                          canvas = page.locator('canvas')
+                          await canvas.click(position={'x': 512, 'y': 580})
+                          await page.wait_for_function(
+                              "() => window.__soldadosAudioTestGame.scene.isActive('LevelSelectScene')",
+                              timeout=10000
+                          )
+                          await canvas.click(position={'x': 125, 'y': 452})
+                          await page.wait_for_function(
+                              """() => {
+                                  const game=window.__soldadosAudioTestGame;
+                                  const s=game.scene.getScene('Game');
+                                  return !!s && s.scene.isActive() && !!s.player && !!s.staminaHud;
+                              }""",
+                              timeout=15000
+                          )
+
+                          before = await page.evaluate("""() => {
+                              const s=window.__soldadosAudioTestGame.scene.getScene('Game');
+                              return {x:s.player.x, y:s.player.y, stamina:s.stamina, health:s.health};
+                          }""")
+                          await page.keyboard.press('ArrowRight')
+                          await page.wait_for_timeout(180)
+                          moved = await page.evaluate("""() => {
+                              const s=window.__soldadosAudioTestGame.scene.getScene('Game');
+                              return {x:s.player.x, y:s.player.y, stamina:s.stamina};
+                          }""")
+                          assert moved['x'] > before['x'], {'before':before,'moved':moved}
+
+                          await page.keyboard.press('Space')
+                          await page.wait_for_timeout(120)
+                          jumped = await page.evaluate("""() => {
+                              const s=window.__soldadosAudioTestGame.scene.getScene('Game');
+                              return {stamina:s.stamina, vy:s.player.body.velocity.y, firstJumpConsumed:s.firstJumpConsumed};
+                          }""")
+                          assert jumped['firstJumpConsumed'] is True, jumped
+                          assert jumped['stamina'] <= before['stamina'] - 14.5, {'before':before,'jumped':jumped}
+                          assert jumped['vy'] < 0, jumped
+
+                          await page.wait_for_timeout(1600)
+                          regenerated = await page.evaluate("""() => {
+                              const s=window.__soldadosAudioTestGame.scene.getScene('Game');
+                              return {stamina:s.stamina, grounded:s.player.body.blocked.down || s.player.body.touching.down};
+                          }""")
+                          assert regenerated['stamina'] > jumped['stamina'], {'jumped':jumped,'regen':regenerated}
+                          assert not errors, errors
+                          print('[PHASE1 DESKTOP]', json.dumps({'before':before,'moved':moved,'jumped':jumped,'regenerated':regenerated}, sort_keys=True))
+                      finally:
+                          await context.close()
+
+                      # Mobile: same Game jump pipeline, driven by mobileInput.jump.
+                      context, page, errors = await open_root(browser, touch=True)
+                      try:
+                          await page.evaluate("""() => {
+                              const game=window.__soldadosAudioTestGame;
+                              game.scene.getScene('MainMenu').scene.start('Game');
+                          }""")
+                          await page.wait_for_function(
+                              """() => {
+                                  const s=window.__soldadosAudioTestGame.scene.getScene('Game');
+                                  return !!s && s.scene.isActive() && !!s.player && !!s.staminaHud && !!s.mobileInput;
+                              }""",
+                              timeout=15000
+                          )
+                          mobile = await page.evaluate("""async () => {
+                              const s=window.__soldadosAudioTestGame.scene.getScene('Game');
+                              const before=s.stamina;
+                              s.mobileInput.jump=true;
+                              await new Promise(r=>setTimeout(r,80));
+                              s.mobileInput.jump=false;
+                              await new Promise(r=>setTimeout(r,80));
+                              return {
+                                  before,
+                                  after:s.stamina,
+                                  firstJumpConsumed:s.firstJumpConsumed,
+                                  vy:s.player.body.velocity.y
+                              };
+                          }""")
+                          assert mobile['firstJumpConsumed'] is True, mobile
+                          assert mobile['after'] <= mobile['before'] - 14.5, mobile
+                          assert not errors, errors
+                          print('[PHASE1 MOBILE]', json.dumps(mobile, sort_keys=True))
+                      finally:
+                          await context.close()
+                  finally:
+                      await browser.close()
+
+          asyncio.run(main())
+          PY
