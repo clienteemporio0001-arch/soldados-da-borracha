@@ -6,7 +6,8 @@ export function createPhaseExitBridge (scene, options = {})
         startY: explicitStartY = null,
         length = 330,
         rise = -10,
-        depth = 12
+        depth = 12,
+        landingLength = 96
     } = options;
 
     const startX = step
@@ -97,11 +98,39 @@ export function createPhaseExitBridge (scene, options = {})
         bodies.push(body);
     }
 
+    // Pequena plataforma de chegada, encostada na última tábua, para que a
+    // ponte termine visual e fisicamente em solo seguro antes do trigger.
+    const landingStartX = endX - 5;
+    const landingEndX = endX + landingLength;
+    const landingY = deckY(endX);
+
+    g.fillStyle(0x4a3425, 0.98);
+    g.fillRect(landingStartX, landingY - 9, landingLength + 5, 28);
+    g.fillStyle(0x315a37, 0.72);
+    g.fillRect(landingStartX, landingY - 12, landingLength + 5, 7);
+    g.fillStyle(0x6f5238, 0.32);
+    g.fillEllipse(endX + landingLength * 0.55, landingY + 7, landingLength * 0.78, 12);
+
+    const landingBody = scene.add.rectangle(
+        endX + landingLength * 0.5,
+        landingY,
+        landingLength + 12,
+        24,
+        0x000000,
+        0
+    );
+    scene.physics.add.existing(landingBody, true);
+    scene.platforms.add(landingBody);
+    bodies.push(landingBody);
+
     return {
         visual: g,
         bodies,
         startX,
         endX,
+        landingStartX,
+        landingEndX,
+        landingY,
         startY: deckY(startX),
         endY: deckY(endX),
         deckY
