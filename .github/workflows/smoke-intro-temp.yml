@@ -1,0 +1,278 @@
+name: Temporary intro video smoke test
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/smoke-intro-temp.yml'
+
+jobs:
+  intro-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup browser test tools
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check playwright
+
+      - name: Test cinematic intro on desktop and mobile
+        run: |
+          python - <<'PY'
+          import asyncio
+          import json
+          import os
+          import shutil
+          import time
+          from playwright.async_api import async_playwright
+
+          BASE = 'https://clienteemporio0001-arch.github.io/soldados-da-borracha/'
+
+          def chrome_binary():
+              candidates = [
+                  '/opt/google/chrome/chrome',
+                  '/opt/google/chrome/google-chrome',
+                  shutil.which('google-chrome-stable'),
+                  shutil.which('google-chrome'),
+              ]
+              for candidate in candidates:
+                  if candidate and os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                      return candidate
+              raise RuntimeError(f'No Chrome binary found: {candidates}')
+
+          async def new_page(browser, mobile=False):
+              context = await browser.new_context(
+                  viewport={'width': 390, 'height': 844} if mobile else {'width': 1024, 'height': 768},
+                  has_touch=mobile,
+                  is_mobile=mobile
+              )
+              page = await context.new_page()
+              errors = []
+              page.on('pageerror', lambda err: errors.append('pageerror: ' + str(err)))
+              page.on('console', lambda msg: errors.append('console.error: ' + msg.text) if msg.type == 'error' else None)
+              response = await page.goto(
+                  BASE + '?audio-test=1&intro-smoke=1&cache=' + str(time.time_ns()),
+                  wait_until='networkidle',
+                  timeout=30000
+              )
+              assert response and response.status == 200
+              await page.wait_for_function(
+                  "() => !!window.__soldadosAudioTestGame && window.__soldadosAudioTestGame.scene.isActive('MainMenu')",
+                  timeout=30000
+              )
+              return context, page, errors
+
+          async def game_point(page, x, y, tap=False):
+              canvas = page.locator('canvas')
+              box = await canvas.bounding_box()
+              assert box
+              pos = {'x': (x / 1024) * box['width'], 'y': (y / 768) * box['height']}
+              if tap:
+                  await canvas.tap(position=pos)
+              else:
+                  await canvas.click(position=pos)
+
+          async def wait_intro(page):
+              await page.wait_for_function(
+                  """() => {
+                      const game=window.__soldadosAudioTestGame;
+                      const s=game.scene.getScene('IntroScene');
+                      return !!s && s.scene.isActive() && !!s.video;
+                  }""",
+                  timeout=15000
+              )
+
+          async def intro_state(page):
+              return await page.evaluate("""() => {
+                  const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
+                  const el=s?.video?.video;
+                  return {
+                      active:!!s?.scene?.isActive?.(),
+                      transitioning:s?.transitioning ?? null,
+                      displayWidth:s?.video?.displayWidth ?? null,
+                      displayHeight:s?.video?.displayHeight ?? null,
+                      currentTime:el?.currentTime ?? null,
+                      duration:el?.duration ?? null,
+                      paused:el?.paused ?? null,
+                      muted:el?.muted ?? null,
+                      defaultMuted:el?.defaultMuted ?? null,
+                      volume:el?.volume ?? null,
+                      playsInline:el?.playsInline ?? null,
+                      controls:el?.controls ?? null,
+                      disablePictureInPicture:el?.disablePictureInPicture ?? null,
+                      fullscreen:!!document.fullscreenElement,
+                      prompt:!!s?.startPrompt
+                  };
+              }""")
+
+          async def start_from_menu(page, mobile=False):
+              await game_point(page, 512, 500, tap=mobile)
+              await wait_intro(page)
+
+          async def assert_playing(page):
+              a = await intro_state(page)
+              await page.wait_for_timeout(1200)
+              b = await intro_state(page)
+              assert a['active'] is True and b['active'] is True, (a, b)
+              assert b['currentTime'] is not None and a['currentTime'] is not None and b['currentTime'] > a['currentTime'], (a, b)
+              assert b['paused'] is False, b
+              assert b['muted'] is False and b['defaultMuted'] is False, b
+              assert b['volume'] > 0, b
+              assert b['playsInline'] is True, b
+              assert b['controls'] is False, b
+              assert b['fullscreen'] is False, b
+              assert 1000 <= b['displayWidth'] <= 1024.5, b
+              assert 570 <= b['displayHeight'] <= 580, b
+              return b
+
+          async def wait_game(page):
+              await page.wait_for_function(
+                  """() => {
+                      const game=window.__soldadosAudioTestGame;
+                      const s=game.scene.getScene('Game');
+                      return !!s && s.scene.isActive() && !!s.player;
+                  }""",
+                  timeout=20000
+              )
+
+          async def desktop_suite(browser):
+              # Natural MainMenu -> Intro -> playback -> complete -> Game
+              context, page, errors = await new_page(browser, False)
+              try:
+                  await start_from_menu(page)
+                  playing = await assert_playing(page)
+                  assert playing['duration'] and playing['duration'] > 40, playing
+                  await page.evaluate("""() => {
+                      const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
+                      const el=s.video.video;
+                      el.currentTime=Math.max(0, el.duration - 0.20);
+                  }""")
+                  await wait_game(page)
+                  assert not errors, errors
+                  print('[INTRO DESKTOP COMPLETE]', json.dumps(playing, sort_keys=True))
+              finally:
+                  await context.close()
+
+              # Pointer skip
+              context, page, errors = await new_page(browser, False)
+              try:
+                  await start_from_menu(page)
+                  await game_point(page, 900, 45)
+                  await wait_game(page)
+                  assert not errors, errors
+                  print('[INTRO DESKTOP POINTER SKIP] PASS')
+              finally:
+                  await context.close()
+
+              # ESC / ENTER / SPACE only
+              for key in ['Escape', 'Enter', 'Space']:
+                  context, page, errors = await new_page(browser, False)
+                  try:
+                      await start_from_menu(page)
+                      await page.keyboard.press(key)
+                      await wait_game(page)
+                      assert not errors, (key, errors)
+                      print('[INTRO DESKTOP KEY SKIP]', key, 'PASS')
+                  finally:
+                      await context.close()
+
+              # Phase selector must bypass intro.
+              context, page, errors = await new_page(browser, False)
+              try:
+                  await game_point(page, 512, 580)
+                  await page.wait_for_function(
+                      "() => window.__soldadosAudioTestGame.scene.isActive('LevelSelectScene')",
+                      timeout=10000
+                  )
+                  state = await page.evaluate("""() => ({
+                      select:window.__soldadosAudioTestGame.scene.isActive('LevelSelectScene'),
+                      intro:window.__soldadosAudioTestGame.scene.isActive('IntroScene')
+                  })""")
+                  assert state['select'] is True and state['intro'] is False, state
+                  assert not errors, errors
+                  print('[INTRO PHASE SELECT BYPASS] PASS')
+              finally:
+                  await context.close()
+
+              # Force autoplay without a gesture to exercise the locked fallback.
+              context, page, errors = await new_page(browser, False)
+              try:
+                  await page.evaluate("""() => {
+                      const game=window.__soldadosAudioTestGame;
+                      game.scene.getScene('MainMenu').scene.start('IntroScene');
+                  }""")
+                  await wait_intro(page)
+                  await page.wait_for_function(
+                      """() => {
+                          const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
+                          return !!s.startPrompt || !!s.video?.touchLocked;
+                      }""",
+                      timeout=10000
+                  )
+                  fallback_before = await intro_state(page)
+                  await game_point(page, 512, 650)
+                  await page.wait_for_timeout(1500)
+                  fallback_after = await intro_state(page)
+                  assert fallback_before['prompt'] is True or fallback_before.get('paused') is True, fallback_before
+                  assert fallback_after['currentTime'] > 0 and fallback_after['paused'] is False, (fallback_before, fallback_after)
+                  assert not errors, errors
+                  print('[INTRO AUTOPLAY FALLBACK]', json.dumps({'before':fallback_before,'after':fallback_after}, sort_keys=True))
+              finally:
+                  await context.close()
+
+          async def mobile_suite(browser):
+              context, page, errors = await new_page(browser, True)
+              try:
+                  await start_from_menu(page, True)
+                  playing = await assert_playing(page)
+                  assert playing['playsInline'] is True and playing['fullscreen'] is False, playing
+                  await game_point(page, 900, 45, tap=True)
+                  await wait_game(page)
+                  assert not errors, errors
+                  print('[INTRO MOBILE PLAY+SKIP]', json.dumps(playing, sort_keys=True))
+              finally:
+                  await context.close()
+
+              context, page, errors = await new_page(browser, True)
+              try:
+                  await page.evaluate("""() => {
+                      const game=window.__soldadosAudioTestGame;
+                      game.scene.getScene('MainMenu').scene.start('IntroScene');
+                  }""")
+                  await wait_intro(page)
+                  await page.wait_for_function(
+                      """() => {
+                          const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
+                          return !!s.startPrompt || !!s.video?.touchLocked;
+                      }""",
+                      timeout=10000
+                  )
+                  await game_point(page, 512, 650, tap=True)
+                  await page.wait_for_timeout(1500)
+                  state = await intro_state(page)
+                  assert state['currentTime'] > 0 and state['paused'] is False, state
+                  assert state['playsInline'] is True and state['fullscreen'] is False, state
+                  assert not errors, errors
+                  print('[INTRO MOBILE FALLBACK]', json.dumps(state, sort_keys=True))
+              finally:
+                  await context.close()
+
+          async def main():
+              async with async_playwright() as p:
+                  browser = await p.chromium.launch(
+                      executable_path=chrome_binary(),
+                      headless=True,
+                      args=[
+                          '--no-sandbox',
+                          '--disable-dev-shm-usage',
+                          '--autoplay-policy=user-gesture-required'
+                      ]
+                  )
+                  try:
+                      await desktop_suite(browser)
+                      await mobile_suite(browser)
+                  finally:
+                      await browser.close()
+
+          asyncio.run(main())
+          PY
