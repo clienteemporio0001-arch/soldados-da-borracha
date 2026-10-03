@@ -7,6 +7,7 @@ import { addMuddySwampWaterFromGroundSegments } from '../muddySwampWater.js';
 import { createTropicalStormSystem, applyWetGroundMovement } from '../weatherSystem.js';
 import { getAudioManager } from '../audio/AudioManager.js';
 import { createAudioSettingsControl } from '../ui/AudioSettingsPanel.js';
+import { createPhaseExitBridge } from '../phaseExitBridge.js';
 
 export class Level4Scene extends Scene
 {
@@ -15,7 +16,7 @@ export class Level4Scene extends Scene
 
     create ()
     {
-        this.worldWidth = 12300;
+        this.worldWidth = 12650;
         this.physics.world.setBounds(0, 0, this.worldWidth, 768);
         this.cameras.main.setBounds(0, 0, this.worldWidth, 768);
         this.cameras.main.setBackgroundColor('#394b42');
@@ -198,14 +199,16 @@ export class Level4Scene extends Scene
             ]
         });
 
-        [
+        const finalSteps = [
             [11620,575,160],[11810,510,150],[11970,440,140],[12100,365,120]
-        ].forEach(([x,y,w])=>{
+        ];
+        finalSteps.forEach(([x,y,w])=>{
             const body=this.add.rectangle(x,y,w,22,0x000000,0);
             this.physics.add.existing(body,true);this.platforms.add(body);
             this.add.rectangle(x,y,w,22,0x493527,.96).setDepth(10);
             this.add.ellipse(x,y-12,w*.8,8,0x46553a,.58).setDepth(11);
         });
+        this.finalBridge = createPhaseExitBridge(this, { step: finalSteps[finalSteps.length - 1], length: 330 });
 }
 
     createWoundedForest ()
@@ -2648,7 +2651,7 @@ export class Level4Scene extends Scene
         this.escapeFinishZone.body.setImmovable(true);
         this.physics.add.overlap(this.player,this.escapeFinishZone,()=>{if(this.escapeStarted)this.completeEscape();});
 
-        this.finalZone=this.add.rectangle(12120,345,110,190,0x000000,0);
+        this.finalZone=this.add.rectangle(12560,295,70,180,0x000000,0);
         this.physics.add.existing(this.finalZone);
         this.finalZone.body.setAllowGravity(false);
         this.finalZone.body.setImmovable(true);
@@ -2659,11 +2662,9 @@ export class Level4Scene extends Scene
         g.fillStyle(0x63503e,.72);
         g.fillEllipse(11650,405,12,24);
 
-        // Entrada escura entre raízes e pedras.
-        g.fillStyle(0x050706,.9);g.fillEllipse(12150,330,145,230);
-        g.lineStyle(22,0x3e2c1f,.95);
-        g.beginPath();g.moveTo(12070,455);g.lineTo(12125,260);g.strokePath();
-        g.beginPath();g.moveTo(12230,455);g.lineTo(12175,260);g.strokePath();
+        // Abertura visual antes da ponte: o rastro conduz para a travessia.
+        g.fillStyle(0x756449,.18);
+        g.fillEllipse(12185,405,210,34);
     }
 
     completeLevel4 ()
