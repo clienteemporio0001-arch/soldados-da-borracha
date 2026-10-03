@@ -208,7 +208,7 @@ export class Level4Scene extends Scene
             this.add.rectangle(x,y,w,22,0x493527,.96).setDepth(10);
             this.add.ellipse(x,y-12,w*.8,8,0x46553a,.58).setDepth(11);
         });
-        this.finalBridge = createPhaseExitBridge(this, { step: finalSteps[finalSteps.length - 1], length: 330 });
+        this.finalBridge = createPhaseExitBridge(this, { step: finalSteps[finalSteps.length - 1], length: 330, landingLength: 105 });
 }
 
     createWoundedForest ()
@@ -2651,7 +2651,7 @@ export class Level4Scene extends Scene
         this.escapeFinishZone.body.setImmovable(true);
         this.physics.add.overlap(this.player,this.escapeFinishZone,()=>{if(this.escapeStarted)this.completeEscape();});
 
-        this.finalZone=this.add.rectangle(12560,295,70,180,0x000000,0);
+        this.finalZone=this.add.rectangle(12570,295,55,180,0x000000,0);
         this.physics.add.existing(this.finalZone);
         this.finalZone.body.setAllowGravity(false);
         this.finalZone.body.setImmovable(true);
