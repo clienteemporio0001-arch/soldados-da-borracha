@@ -465,17 +465,16 @@ export class Level5Scene extends Scene
     createRecentClues ()
     {
         const g=this.add.graphics().setDepth(12);
-        // 1. pista da esposa: usa o asset real da bolsa, apenas visual.
-        // O ponto narrativo/sensor existente permanece inalterado.
-        this.clueCloth=this.add.image(1140,592,'bolsaEsposa')
+        // 1. tecido recente
+        // (a primeira pista narrativa permanece sem objeto visual adicional)
+
+        // 2. pista da esposa: a bolsa real ocupa exatamente o antigo ponto
+        // visual do losango, apoiada no chão e sem body/collider/hitbox.
+        this.clueBag=this.add.image(1720,592,'bolsaEsposa')
             .setOrigin(.5,1)
             .setDisplaySize(56,56)
             .setAngle(-7)
             .setDepth(14);
-
-        // 2. mesma marca da Fase 4
-        g.lineStyle(5,0xc3a477,.92);
-        g.beginPath();g.moveTo(1700,500);g.lineTo(1720,480);g.lineTo(1740,500);g.lineTo(1720,520);g.closePath();g.strokePath();
 
         // 3. pegadas humanas muito recentes
         g.fillStyle(0x665241,.8);
@@ -498,6 +497,10 @@ export class Level5Scene extends Scene
             this.showBriefText('O tecido é recente.',1050);
         } else if(this.clueStage===1 && x>1550){
             this.clueStage=2;
+            if(this.clueBag){
+                this.clueBag.destroy();
+                this.clueBag=null;
+            }
             this.showBriefText('A mesma marca.',950);
         } else if(this.clueStage===2 && x>2050){
             this.clueStage=3;
