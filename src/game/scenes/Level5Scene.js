@@ -714,27 +714,26 @@ export class Level5Scene extends Scene
 
     createBoundCompanionAtBossTree ()
     {
-        // Usa diretamente o PNG real enviado pelo usuário. A personagem é
-        // puramente visual: não recebe body, collider, overlap ou hitbox.
-        const c=this.add.container(11648,565).setDepth(16);
+        // Asset real enviado pelo usuário. É apenas visual: sem body, collider,
+        // overlap de combate ou hitbox.
+        const c=this.add.container(11652,575).setDepth(16);
 
         const image=this.add.image(0,0,'amada')
             .setOrigin(.5,1)
-            .setDisplaySize(94,94);
+            .setDisplaySize(82,82);
 
-        // Cordas são apenas um overlay narrativo sobre o asset e seguem até
-        // o tronco da árvore. Não participam da física nem do combate.
+        // Cordas visuais prendem o torso ao tronco da árvore.
         const ropes=this.add.graphics();
-        ropes.lineStyle(2.5,0x80613d,.98);
-        [-46,-39,-32].forEach(y=>{
+        ropes.lineStyle(2.4,0x80613d,.98);
+        [-40,-34,-28].forEach(y=>{
             ropes.beginPath();
-            ropes.moveTo(-21,y);
-            ropes.lineTo(22,y+1);
+            ropes.moveTo(-18,y);
+            ropes.lineTo(19,y+1);
             ropes.strokePath();
         });
-        ropes.lineStyle(2.2,0xa18354,.92);
-        ropes.beginPath();ropes.moveTo(18,-45);ropes.lineTo(34,-43);ropes.strokePath();
-        ropes.beginPath();ropes.moveTo(18,-32);ropes.lineTo(34,-29);ropes.strokePath();
+        ropes.lineStyle(2.1,0xa18354,.92);
+        ropes.beginPath();ropes.moveTo(16,-39);ropes.lineTo(30,-38);ropes.strokePath();
+        ropes.beginPath();ropes.moveTo(16,-28);ropes.lineTo(30,-26);ropes.strokePath();
 
         c.add([image,ropes]);
         this.companionImage=image;
