@@ -718,30 +718,45 @@ export class Level5Scene extends Scene
 
     createBoundCompanionAtBossTree ()
     {
-        // Asset real enviado pelo usuário. É apenas visual: sem body, collider,
-        // overlap de combate ou hitbox.
-        const c=this.add.container(11652,575).setDepth(16);
+        const groundY=592;
 
-        const image=this.add.image(0,0,'amada')
+        // Asset real da amada, sem body/collider/hitbox.
+        // Mantém a proporção original do PNG e alinha os pés ao chão da arena.
+        const image=this.add.image(11658,groundY,'amada')
             .setOrigin(.5,1)
-            .setDisplaySize(82,82);
+            .setDepth(16);
 
-        // Cordas visuais prendem o torso ao tronco da árvore.
-        const ropes=this.add.graphics();
-        ropes.lineStyle(2.4,0x80613d,.98);
-        [-40,-34,-28].forEach(y=>{
-            ropes.beginPath();
-            ropes.moveTo(-18,y);
-            ropes.lineTo(19,y+1);
-            ropes.strokePath();
-        });
-        ropes.lineStyle(2.1,0xa18354,.92);
-        ropes.beginPath();ropes.moveTo(16,-39);ropes.lineTo(30,-38);ropes.strokePath();
-        ropes.beginPath();ropes.moveTo(16,-28);ropes.lineTo(30,-26);ropes.strokePath();
+        const targetHeight=84;
+        const sourceWidth=image.width||1;
+        const sourceHeight=image.height||1;
+        image.setDisplaySize(targetHeight*(sourceWidth/sourceHeight),targetHeight);
 
-        c.add([image,ropes]);
+        // Cordas simples em primeiro plano: duas voltas no torso/cintura,
+        // conectadas ao tronco sem cobrir rosto ou cabeça.
+        const ropes=this.add.graphics().setDepth(17);
+        ropes.lineStyle(3,0x7b5a36,.98);
+        ropes.beginPath();
+        ropes.moveTo(11640,groundY-47);
+        ropes.lineTo(11674,groundY-45);
+        ropes.strokePath();
+        ropes.beginPath();
+        ropes.moveTo(11640,groundY-37);
+        ropes.lineTo(11674,groundY-35);
+        ropes.strokePath();
+
+        ropes.lineStyle(2.5,0xa08050,.9);
+        ropes.beginPath();
+        ropes.moveTo(11672,groundY-46);
+        ropes.lineTo(11687,groundY-44);
+        ropes.strokePath();
+        ropes.beginPath();
+        ropes.moveTo(11672,groundY-36);
+        ropes.lineTo(11687,groundY-33);
+        ropes.strokePath();
+
         this.companionImage=image;
-        this.companionArea=c;
+        this.companionRopes=ropes;
+        this.companionArea=image;
     }
 
     meetCompanion ()
@@ -786,9 +801,49 @@ export class Level5Scene extends Scene
         this.platforms.add(this.arenaLeftPlatform);this.platforms.add(this.arenaRightPlatform);
         this.addArenaUnstablePlatform(10750,555,140,18);
 
-        this.bossTree=this.add.rectangle(11680,365,44,360,0x3a291e,.96).setDepth(7);
-        this.bossTreeLeaves=this.add.container(11680,185).setDepth(6);
-        for(let i=0;i<7;i++)this.bossTreeLeaves.add(this.add.circle((i-3)*24,(i%2)*16,38,0x113220,.92));
+        // Mantém o bossTree original porque ele participa do telegraph do ataque TREE.
+        // O novo visual orgânico é apenas decorativo e não altera hitboxes ou lógica do boss.
+        this.bossTree=this.add.rectangle(11680,365,44,360,0x3a291e,.08).setDepth(7);
+
+        const treeVisual=this.add.container(11680,592).setDepth(8.5);
+        const trunk=this.add.polygon(0,-178,[
+            -42,178,-36,118,-29,56,-25,-18,-30,-92,-22,-178,
+            18,-178,27,-96,24,-20,31,48,38,112,48,178
+        ],0x493323,.99);
+
+        const trunkShade=this.add.polygon(-10,-175,[
+            -18,175,-13,105,-12,30,-8,-46,-13,-112,-7,-175,
+            8,-175,5,-90,8,-10,5,72,10,148
+        ],0x2e2219,.48);
+
+        const bark1=this.add.rectangle(-18,-225,7,165,0x76553a,.34).setAngle(2);
+        const bark2=this.add.rectangle(15,-185,6,190,0x806044,.28).setAngle(-3);
+
+        const leftRoot=this.add.polygon(-30,-8,[-8,0,-60,16,-84,26,-16,25],0x3d2c20,.98);
+        const rightRoot=this.add.polygon(28,-8,[8,0,58,14,84,24,14,25],0x3d2c20,.98);
+        const centerRoot=this.add.polygon(0,-5,[-12,0,-27,31,4,25,18,2],0x543a27,.95);
+
+        const branchLeft=this.add.polygon(-28,-285,[-8,12,-82,-44,-74,-55,2,-5],0x493323,.98).setAngle(-4);
+        const branchRight=this.add.polygon(26,-300,[5,10,78,-54,89,-45,14,18],0x493323,.98).setAngle(3);
+        const upperFork=this.add.polygon(4,-332,[-9,15,-34,-78,-21,-83,11,8],0x422f22,.98);
+
+        treeVisual.add([
+            leftRoot,rightRoot,centerRoot,
+            trunk,trunkShade,bark1,bark2,
+            branchLeft,branchRight,upperFork
+        ]);
+        this.bossTreeVisual=treeVisual;
+
+        this.bossTreeLeaves=this.add.container(11680,190).setDepth(6);
+        [
+            [-88,5,54,38],[-52,-35,62,45],[-10,-48,68,48],
+            [38,-38,64,45],[82,-3,56,40],[-45,22,58,42],[27,18,66,44]
+        ].forEach(([x,y,w,h],i)=>{
+            this.bossTreeLeaves.add(
+                this.add.ellipse(x,y,w,h,i%2?0x173d27:0x10351f,.94)
+            );
+        });
+
         this.createBoundCompanionAtBossTree();
     }
 
