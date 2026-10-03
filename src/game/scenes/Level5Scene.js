@@ -714,76 +714,30 @@ export class Level5Scene extends Scene
 
     createBoundCompanionAtBossTree ()
     {
-        // Visual compacto, na mesma escala do protagonista (~75 px de altura).
-        // A imagem enviada serve apenas como referência de identidade/roupa.
-        const c=this.add.container(11648,520).setDepth(16);
+        // Usa diretamente o PNG real enviado pelo usuário. A personagem é
+        // puramente visual: não recebe body, collider, overlap ou hitbox.
+        const c=this.add.container(11648,565).setDepth(16);
 
-        const hairBack=this.add.ellipse(-3,-28,16,22,0x17120f,.98);
-        const neck=this.add.rectangle(0,-18,5,6,0xb77b58,.98);
+        const image=this.add.image(0,0,'amada')
+            .setOrigin(.5,1)
+            .setDisplaySize(94,94);
 
-        const blouse=this.add.rectangle(0,-8,22,23,0xd9c5a2,.98)
-            .setStrokeStyle(1,0x715b43,.45);
-        const blouseShade=this.add.rectangle(-6,-8,6,20,0x8f7a5f,.18);
-        const collarLeft=this.add.triangle(-4,-18,-5,-2,1,-2,4,4,0xf0dfbd,.92);
-        const collarRight=this.add.triangle(4,-18,-4,-2,2,-2,5,4,0xf0dfbd,.92);
-
-        const sash=this.add.rectangle(0,4,24,4,0x8d4335,.98);
-        const sashTail=this.add.rectangle(7,14,5,18,0x7b382d,.96).setAngle(7);
-
-        const skirt=this.add.polygon(0,15,[-11,-8,11,-8,15,15,-15,15],0x38402f,.98);
-        const skirtShade=this.add.polygon(-5,15,[-4,-7,3,-7,6,14,-6,14],0x252b23,.42);
-        const hem=this.add.rectangle(0,29,27,3,0x8f4938,.9);
-
-        const leftLeg=this.add.rectangle(-7,35,6,11,0x5e4632,.98);
-        const rightLeg=this.add.rectangle(7,35,6,11,0x5e4632,.98);
-        const leftBoot=this.add.rectangle(-8,42,9,5,0x443126,.98);
-        const rightBoot=this.add.rectangle(8,42,9,5,0x443126,.98);
-
-        const head=this.add.ellipse(1,-29,13,16,0xc18460,.98);
-        const hairFront=this.add.ellipse(-3,-31,10,17,0x17120f,.98);
-        const face=this.add.ellipse(4,-29,8,13,0xc88b66,.98);
-        const eye=this.add.circle(6,-31,1,0x271915,1);
-        const tear=this.add.circle(7,-27,0.8,0x84b8cb,.78);
-
-        const scarf=this.add.polygon(-1,-37,[-11,-3,-4,-8,7,-7,12,0,4,4,-6,4],0xdcc79f,.98);
-        const scarfKnot=this.add.circle(-8,-28,3.2,0xc5aa82,.98);
-        const scarfPrint=[
-            this.add.circle(-3,-39,1,0x9f4a37,.9),
-            this.add.circle(3,-38,1,0x9f4a37,.9),
-            this.add.circle(-7,-34,1,0x9f4a37,.9)
-        ];
-
-        const leftArm=this.add.rectangle(-13,-7,6,22,0xc08a68,.98).setAngle(8);
-        const rightArm=this.add.rectangle(13,-7,6,22,0xc08a68,.98).setAngle(-8);
-        const leftHand=this.add.circle(-11,3,2.7,0xb87956,.98);
-        const rightHand=this.add.circle(11,3,2.7,0xb87956,.98);
-
-        // Três voltas de corda passam na frente do torso e seguem até o tronco.
-        // Não há collider nem body físico associado à personagem.
+        // Cordas são apenas um overlay narrativo sobre o asset e seguem até
+        // o tronco da árvore. Não participam da física nem do combate.
         const ropes=this.add.graphics();
-        ropes.lineStyle(3,0x80613d,.98);
-        [-11,-4,3].forEach(y=>{
+        ropes.lineStyle(2.5,0x80613d,.98);
+        [-46,-39,-32].forEach(y=>{
             ropes.beginPath();
-            ropes.moveTo(-15,y);
-            ropes.lineTo(16,y+1);
+            ropes.moveTo(-21,y);
+            ropes.lineTo(22,y+1);
             ropes.strokePath();
         });
-        ropes.lineStyle(2.5,0xa18354,.9);
-        ropes.beginPath();ropes.moveTo(14,-10);ropes.lineTo(32,-9);ropes.strokePath();
-        ropes.beginPath();ropes.moveTo(14,2);ropes.lineTo(32,4);ropes.strokePath();
+        ropes.lineStyle(2.2,0xa18354,.92);
+        ropes.beginPath();ropes.moveTo(18,-45);ropes.lineTo(34,-43);ropes.strokePath();
+        ropes.beginPath();ropes.moveTo(18,-32);ropes.lineTo(34,-29);ropes.strokePath();
 
-        c.add([
-            hairBack,neck,
-            skirt,skirtShade,hem,leftLeg,rightLeg,leftBoot,rightBoot,
-            blouse,blouseShade,collarLeft,collarRight,sash,sashTail,
-            leftArm,rightArm,leftHand,rightHand,
-            head,hairFront,face,eye,tear,
-            scarf,scarfKnot,...scarfPrint,
-            ropes
-        ]);
-
-        // Pequeno ajuste de escala para combinar com o protagonista sem dominar a arena.
-        c.setScale(.94);
+        c.add([image,ropes]);
+        this.companionImage=image;
         this.companionArea=c;
     }
 
