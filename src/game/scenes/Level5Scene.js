@@ -704,19 +704,76 @@ export class Level5Scene extends Scene
 
     createCompanionEncounter ()
     {
-        this.companionArea=this.add.container(8870,520).setDepth(18);
-        const shelter=this.add.graphics();
-        shelter.lineStyle(18,0x3d2b20,.96);shelter.beginPath();shelter.moveTo(-75,95);shelter.lineTo(-25,-70);shelter.lineTo(40,95);shelter.strokePath();
-        shelter.fillStyle(0x102419,.85);shelter.fillEllipse(0,70,160,60);
-        const body=this.add.rectangle(0,20,24,44,0x8f7350);
-        const head=this.add.circle(0,-10,9,0xb98560);
-        const cloth=this.add.rectangle(-12,7,18,30,0x7e3a48,.9).setAngle(5);
-        this.companionArea.add([shelter,body,head,cloth]);
-
-        this.companionSensor=this.add.rectangle(8860,510,150,220,0x000000,0);
+        // O encontro agora acontece já dentro da arena final, próximo da árvore
+        // onde a amada está presa. O sensor continua invisível e sem bloquear o player.
+        this.companionSensor=this.add.rectangle(11460,510,190,220,0x000000,0);
         this.physics.add.existing(this.companionSensor);
         this.companionSensor.body.setAllowGravity(false);this.companionSensor.body.setImmovable(true);
         this.physics.add.overlap(this.player,this.companionSensor,()=>this.meetCompanion());
+    }
+
+    createBoundCompanionAtBossTree ()
+    {
+        const c=this.add.container(11630,520).setDepth(16);
+
+        // Adaptação vetorial da referência enviada: lenço claro estampado,
+        // cabelo escuro, blusa creme, faixa vermelha, saia verde-oliva e botas.
+        const skirt=this.add.trapezoid(0,10,34,56,52,4,0x34392b,.98);
+        const skirtShade=this.add.trapezoid(-8,12,13,52,21,3,0x252b22,.5);
+        const hem=this.add.rectangle(0,36,45,4,0x8f4938,.9);
+
+        const blouse=this.add.rectangle(0,-23,31,38,0xd7c29d,.98).setStrokeStyle(1,0x6c563c,.55);
+        const blouseShade=this.add.rectangle(-8,-22,9,34,0x8d785b,.24);
+        const collarLeft=this.add.triangle(-8,-40,-8,0,5,9,9,0,0xefe0bf,.95);
+        const collarRight=this.add.triangle(8,-40,-9,0,-5,9,8,0,0xefe0bf,.95);
+
+        const sash=this.add.rectangle(0,-3,37,7,0x843b2f,.98);
+        const sashTail=this.add.rectangle(11,14,7,31,0x733328,.96).setAngle(8);
+
+        const neck=this.add.rectangle(0,-46,8,8,0xb77b58);
+        const head=this.add.ellipse(0,-58,20,25,0xb87956,.98);
+        const hair=this.add.ellipse(-5,-60,18,28,0x15120f,.98);
+        const face=this.add.ellipse(3,-58,13,22,0xc48661,.98);
+        const eye=this.add.circle(7,-61,1.2,0x241813,1);
+        const tear=this.add.circle(8,-57,1,0x83b9cf,.8);
+
+        const scarf=this.add.triangle(-2,-72,-18,4,9,-8,18,5,0xdcc79e,.98);
+        const scarfKnot=this.add.circle(-14,-61,5,0xc7ad83,.98);
+        const scarfPrint=[
+            this.add.circle(-4,-69,1.6,0x9d4936,.9),
+            this.add.circle(4,-67,1.4,0x9d4936,.9),
+            this.add.circle(-11,-63,1.4,0x9d4936,.9)
+        ];
+
+        const leftArm=this.add.rectangle(-18,-19,9,36,0xc08a68,.98).setAngle(10);
+        const rightArm=this.add.rectangle(18,-19,9,36,0xc08a68,.98).setAngle(-9);
+        const leftHand=this.add.circle(-14,-2,4,0xb87956);
+        const rightHand=this.add.circle(14,-2,4,0xb87956);
+
+        const leftBoot=this.add.rectangle(-12,50,12,31,0x5b432f,.98).setOrigin(.5,0);
+        const rightBoot=this.add.rectangle(12,50,12,31,0x5b432f,.98).setOrigin(.5,0);
+        const leftFoot=this.add.rectangle(-15,78,20,7,0x453225,.98);
+        const rightFoot=this.add.rectangle(15,78,20,7,0x453225,.98);
+
+        // Cordas passam na frente da personagem e seguem até o tronco,
+        // reforçando que ela está presa sem adicionar qualquer collider.
+        const ropes=this.add.graphics();
+        ropes.lineStyle(4,0x7d603c,.98);
+        ropes.beginPath();ropes.moveTo(-24,-31);ropes.lineTo(27,-27);ropes.strokePath();
+        ropes.beginPath();ropes.moveTo(-25,-20);ropes.lineTo(28,-17);ropes.strokePath();
+        ropes.beginPath();ropes.moveTo(-23,-8);ropes.lineTo(27,-5);ropes.strokePath();
+        ropes.lineStyle(3,0xa08152,.9);
+        ropes.beginPath();ropes.moveTo(24,-28);ropes.lineTo(50,-23);ropes.strokePath();
+        ropes.beginPath();ropes.moveTo(24,-7);ropes.lineTo(50,-3);ropes.strokePath();
+
+        c.add([
+            skirt,skirtShade,hem,leftBoot,rightBoot,leftFoot,rightFoot,
+            blouse,blouseShade,collarLeft,collarRight,sash,sashTail,
+            leftArm,rightArm,leftHand,rightHand,neck,hair,head,face,eye,tear,
+            scarf,scarfKnot,...scarfPrint,ropes
+        ]);
+
+        this.companionArea=c;
     }
 
     meetCompanion ()
@@ -731,7 +788,6 @@ export class Level5Scene extends Scene
         this.time.delayedCall(1100,()=>this.showDialogue('Ele está perto.',1050));
         this.time.delayedCall(2200,()=>{
             this.cameras.main.zoomTo(1,420);
-            this.moveCompanionToSafety();
             this.beginMapinguariReveal();
         });
     }
@@ -765,6 +821,7 @@ export class Level5Scene extends Scene
         this.bossTree=this.add.rectangle(11680,365,44,360,0x3a291e,.96).setDepth(7);
         this.bossTreeLeaves=this.add.container(11680,185).setDepth(6);
         for(let i=0;i<7;i++)this.bossTreeLeaves.add(this.add.circle((i-3)*24,(i%2)*16,38,0x113220,.92));
+        this.createBoundCompanionAtBossTree();
     }
 
     addArenaUnstablePlatform (x,y,w,h)
