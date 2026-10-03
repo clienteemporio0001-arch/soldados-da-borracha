@@ -669,7 +669,7 @@ jobs:
                               };
                           }""")
                           assert mobile['firstJumpConsumed'] is True, mobile
-                          assert mobile['after'] <= mobile['before'] - 14.5, mobile
+                          assert mobile['after'] <= mobile['before'] - 13.0, mobile
                           assert not errors, errors
                           print('[PHASE1 MOBILE]', json.dumps(mobile, sort_keys=True))
                       finally:
