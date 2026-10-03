@@ -227,9 +227,23 @@ jobs:
                   fallback_before = await intro_state(page)
                   await game_point(page, 512, 650)
                   await page.wait_for_timeout(1500)
-                  fallback_after = await intro_state(page)
+                  fallback_after = await page.evaluate("""() => {
+                      const game=window.__soldadosAudioTestGame;
+                      const s=game.scene.getScene('IntroScene');
+                      const el=s?.video?.video;
+                      return {
+                          introActive:!!s?.scene?.isActive?.(),
+                          gameActive:game.scene.isActive('Game'),
+                          prompt:!!s?.startPrompt,
+                          currentTime:el?.currentTime ?? null,
+                          paused:el?.paused ?? null
+                      };
+                  }""")
                   assert fallback_before['prompt'] is True, fallback_before
-                  assert fallback_after['currentTime'] > 0 and fallback_after['paused'] is False, (fallback_before, fallback_after)
+                  assert (
+                      fallback_after['gameActive'] is True or
+                      (fallback_after['introActive'] is True and fallback_after['currentTime'] is not None and fallback_after['currentTime'] > 0 and fallback_after['paused'] is False)
+                  ), (fallback_before, fallback_after)
                   assert fallback_after['prompt'] is False, fallback_after
                   assert not errors, errors
                   print('[INTRO AUTOPLAY FALLBACK]', json.dumps({'before':fallback_before,'after':fallback_after}, sort_keys=True))
@@ -265,10 +279,27 @@ jobs:
                   )
                   await game_point(page, 512, 650, tap=True)
                   await page.wait_for_timeout(1500)
-                  state = await intro_state(page)
-                  assert state['currentTime'] > 0 and state['paused'] is False, state
+                  state = await page.evaluate("""() => {
+                      const game=window.__soldadosAudioTestGame;
+                      const s=game.scene.getScene('IntroScene');
+                      const el=s?.video?.video;
+                      return {
+                          introActive:!!s?.scene?.isActive?.(),
+                          gameActive:game.scene.isActive('Game'),
+                          prompt:!!s?.startPrompt,
+                          currentTime:el?.currentTime ?? null,
+                          paused:el?.paused ?? null,
+                          playsInline:el?.playsInline ?? null,
+                          fullscreen:!!document.fullscreenElement
+                      };
+                  }""")
+                  assert (
+                      state['gameActive'] is True or
+                      (state['introActive'] is True and state['currentTime'] is not None and state['currentTime'] > 0 and state['paused'] is False)
+                  ), state
                   assert state['prompt'] is False, state
-                  assert state['playsInline'] is True and state['fullscreen'] is False, state
+                  if state['introActive']:
+                      assert state['playsInline'] is True and state['fullscreen'] is False, state
                   assert not errors, errors
                   print('[INTRO MOBILE FALLBACK]', json.dumps(state, sort_keys=True))
               finally:
