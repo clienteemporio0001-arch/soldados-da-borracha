@@ -9,167 +9,226 @@ export class IntroScene extends Scene
 
     create ()
     {
-        this.currentMoment = 0;
         this.transitioning = false;
+        this.cleanedUp = false;
+        this.video = null;
+        this.startPrompt = null;
+        this.autoplayFallbackTimer = null;
 
-        this.background = this.add.rectangle(512, 384, 1024, 768, 0x071714);
-        this.moon = this.add.circle(820, 125, 58, 0xdce4d5, 0.78);
+        this.add.rectangle(512, 384, 1024, 768, 0x000000).setDepth(0);
 
-        this.forest = this.add.graphics();
-        this.drawForest();
+        this.handleSkip = () => this.startGame();
+        this.handleVideoComplete = () => this.startGame();
+        this.handleVideoError = (_video, error) => {
+            console.warn('[IntroScene] Falha ao reproduzir intro.mp4; iniciando a Fase 1.', error ?? '');
+            this.startGame();
+        };
+        this.handleVideoStop = () => {
+            if (!this.transitioning) {
+                console.warn('[IntroScene] O vídeo da introdução foi interrompido; iniciando a Fase 1.');
+                this.startGame();
+            }
+        };
+        this.handleVideoLocked = () => this.showStartPrompt();
+        this.handleVideoPlaying = () => this.hideStartPrompt();
 
-        this.camp = this.add.container(210, 560);
-        const hut = this.add.rectangle(0, 0, 120, 70, 0x4a3322);
-        const roof = this.add.triangle(0, -60, -75, 45, 0, -25, 75, 45, 0x2f241b);
-        const fire = this.add.circle(75, 45, 10, 0xd07a32, 0.75);
-        this.camp.add([hut, roof, fire]);
+        this.createSkipControl();
+        this.bindSkipKeys();
 
-        this.fogA = this.add.rectangle(360, 610, 820, 110, 0xc5d6ce, 0.08);
-        this.fogB = this.add.rectangle(760, 665, 820, 90, 0xffffff, 0.05);
+        this.events.once('shutdown', this.cleanup, this);
+        this.events.once('destroy', this.cleanup, this);
 
-        this.shadow = this.add.container(760, 455).setAlpha(0);
-        const shadowBody = this.add.ellipse(0, 10, 120, 190, 0x020403, 0.96);
-        const shadowHead = this.add.circle(0, -80, 42, 0x020403, 0.98);
-        const eyeLeft = this.add.circle(-14, -86, 4, 0xb56b43, 0.95);
-        const eyeRight = this.add.circle(14, -86, 4, 0xb56b43, 0.95);
-        this.shadow.add([shadowBody, shadowHead, eyeLeft, eyeRight]);
+        if (!this.cache.video.exists('introVideo')) {
+            console.warn('[IntroScene] introVideo não está disponível no cache; iniciando a Fase 1.');
+            this.startGame();
+            return;
+        }
 
-        this.titleText = this.add.text(512, 250, '', {
-            fontFamily: 'Arial Black',
-            fontSize: '34px',
-            color: '#f1e1ae',
-            align: 'center'
-        }).setOrigin(0.5);
+        try {
+            this.video = this.add.video(512, 384, 'introVideo')
+                .setDepth(1)
+                .setScrollFactor(0);
 
-        this.bodyText = this.add.text(512, 355, '', {
-            fontFamily: 'Arial',
-            fontSize: '22px',
-            color: '#d4dfd7',
-            align: 'center',
-            lineSpacing: 8,
-            wordWrap: { width: 760 }
-        }).setOrigin(0.5);
+            this.video.setDisplaySize(1024, 576);
 
-        this.hintText = this.add.text(512, 710, 'ESPAÇO / ENTER / CLIQUE para avançar', {
-            fontFamily: 'Arial',
-            fontSize: '16px',
-            color: '#8ea397'
-        }).setOrigin(0.5);
+            this.video.on('created', (_video, width, height) => {
+                this.fitVideo(width, height);
+                this.configureNativeVideo();
+            });
+            this.video.on('metadata', () => {
+                const element = this.video?.video;
+                this.fitVideo(element?.videoWidth, element?.videoHeight);
+                this.configureNativeVideo();
+            });
+            this.video.once('complete', this.handleVideoComplete);
+            this.video.once('error', this.handleVideoError);
+            this.video.once('unsupported', this.handleVideoError);
+            this.video.on('locked', this.handleVideoLocked);
+            this.video.on('unlocked', () => this.hideStartPrompt());
+            this.video.on('play', this.handleVideoPlaying);
+            this.video.on('playing', this.handleVideoPlaying);
+            this.video.once('stop', this.handleVideoStop);
 
-        this.skipText = this.add.text(930, 36, 'Pular introdução', {
-            fontFamily: 'Arial',
-            fontSize: '16px',
-            color: '#b7c7bd'
-        })
+            this.configureNativeVideo();
+            this.video.play(false);
+
+            this.autoplayFallbackTimer = this.time.delayedCall(1400, () => {
+                if (!this.transitioning && this.video && !this.video.isPlaying()) {
+                    this.showStartPrompt();
+                }
+            });
+        }
+        catch (error) {
+            console.warn('[IntroScene] Não foi possível criar o vídeo da introdução; iniciando a Fase 1.', error);
+            this.startGame();
+        }
+    }
+
+    createSkipControl ()
+    {
+        const background = this.add.rectangle(970, 34, 178, 42, 0x000000, 0.58)
             .setOrigin(1, 0)
+            .setScrollFactor(0)
+            .setDepth(20)
+            .setStrokeStyle(1, 0xffffff, 0.18)
             .setInteractive({ useHandCursor: true });
 
-        this.skipText.on('pointerdown', (pointer, localX, localY, event) => {
-            event?.stopPropagation();
-            this.startGame();
-        });
+        const label = this.add.text(958, 55, 'PULAR INTRODUÇÃO', {
+            fontFamily: 'Arial Black',
+            fontSize: '14px',
+            color: '#ffffff'
+        })
+            .setOrigin(1, 0.5)
+            .setScrollFactor(0)
+            .setDepth(21);
 
-        this.input.keyboard.on('keydown-SPACE', () => this.advanceMoment());
-        this.input.keyboard.on('keydown-ENTER', () => this.advanceMoment());
-        this.input.on('pointerdown', () => this.advanceMoment());
+        background.on('pointerdown', this.handleSkip);
 
-        this.showMoment(0);
+        this.skipObjects = [background, label];
+        this.skipButton = background;
     }
 
-    drawForest ()
+    bindSkipKeys ()
     {
-        this.forest.clear();
-        this.forest.fillStyle(0x0b211b, 1);
-        this.forest.fillRect(0, 480, 1024, 288);
+        if (!this.input.keyboard) return;
 
-        [80, 180, 320, 470, 620, 790, 930].forEach((x, index) => {
-            this.forest.fillStyle(0x102a21, 1);
-            this.forest.fillRect(x, 250 + (index % 2) * 35, 28, 300);
-
-            this.forest.fillStyle(0x0b261d, 1);
-            this.forest.fillCircle(x + 14, 235 + (index % 2) * 35, 78);
-            this.forest.fillCircle(x - 38, 265 + (index % 2) * 28, 52);
-            this.forest.fillCircle(x + 62, 265 + (index % 2) * 30, 56);
-        });
+        this.input.keyboard.on('keydown-ESC', this.handleSkip);
+        this.input.keyboard.on('keydown-ENTER', this.handleSkip);
+        this.input.keyboard.on('keydown-SPACE', this.handleSkip);
     }
 
-    showMoment (index)
+    fitVideo (sourceWidth, sourceHeight)
     {
-        this.currentMoment = index;
+        if (!this.video) return;
 
-        if (index === 0)
-        {
-            this.background.setFillStyle(0x071714);
-            this.moon.setAlpha(0.78);
-            this.shadow.setAlpha(0);
-            this.camp.setAlpha(1);
-            this.titleText.setText('ACRE, AMAZÔNIA.');
-            this.bodyText.setText('Em meio à floresta, homens e mulheres construíam uma nova vida nos seringais.');
-        }
-        else if (index === 1)
-        {
-            this.background.setFillStyle(0x040b09);
-            this.fogA.setAlpha(0.16);
-            this.fogB.setAlpha(0.12);
-            this.shadow.setAlpha(0.9);
-            this.shadow.x = 790;
-            this.titleText.setText('NAQUELA MADRUGADA');
-            this.bodyText.setText('A neblina tomou conta da mata.\nEntão algo veio da floresta.');
-        }
-        else if (index === 2)
-        {
-            this.shadow.setAlpha(0.95);
-            this.shadow.x = 690;
-            this.titleText.setText('O ATAQUE FOI RÁPIDO.');
-            this.bodyText.setText('Ferido, ele não conseguiu impedir que a criatura levasse sua companheira.');
+        const width = Number(sourceWidth) || 16;
+        const height = Number(sourceHeight) || 9;
+        const scale = Math.min(1024 / width, 768 / height);
 
-            this.cameras.main.shake(260, 0.004);
-            this.cameras.main.flash(180, 24, 20, 18, false);
-        }
-        else
-        {
-            this.background.setFillStyle(0x31483f);
-            this.moon.setAlpha(0.12);
-            this.fogA.setAlpha(0.07);
-            this.fogB.setAlpha(0.05);
-            this.shadow.setAlpha(0);
-            this.camp.setAlpha(0.8);
-            this.titleText.setText('AO AMANHECER, RESTARAM APENAS RASTROS.');
-            this.bodyText.setText('Mesmo ferido, ele pegou seu facão e entrou na floresta.\n\nSOLDADO DA BORRACHA\nA jornada começa.');
-        }
+        this.video.setDisplaySize(width * scale, height * scale);
+        this.video.setPosition(512, 384);
     }
 
-    advanceMoment ()
+    configureNativeVideo ()
     {
-        if (this.transitioning)
-        {
-            return;
-        }
+        const element = this.video?.video;
+        if (!element) return;
 
-        if (this.currentMoment >= 3)
-        {
-            this.startGame();
-            return;
-        }
+        element.playsInline = true;
+        element.setAttribute?.('playsinline', '');
+        element.setAttribute?.('webkit-playsinline', '');
+        element.disablePictureInPicture = true;
+    }
 
-        this.transitioning = true;
+    showStartPrompt ()
+    {
+        if (this.transitioning || this.startPrompt) return;
 
-        this.cameras.main.fadeOut(220, 0, 0, 0);
+        const panel = this.add.rectangle(512, 384, 360, 82, 0x000000, 0.76)
+            .setScrollFactor(0)
+            .setDepth(30)
+            .setStrokeStyle(2, 0xf1e1ae, 0.65)
+            .setInteractive({ useHandCursor: true });
 
-        this.time.delayedCall(240, () => {
-            this.showMoment(this.currentMoment + 1);
-            this.cameras.main.fadeIn(260, 0, 0, 0);
-            this.transitioning = false;
-        });
+        const label = this.add.text(512, 384, 'CLIQUE OU TOQUE PARA INICIAR', {
+            fontFamily: 'Arial Black',
+            fontSize: '18px',
+            color: '#f1e1ae',
+            align: 'center'
+        })
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(31);
+
+        const startPlayback = () => {
+            if (this.transitioning || !this.video) return;
+            this.hideStartPrompt();
+            try {
+                this.configureNativeVideo();
+                this.video.play(false);
+            }
+            catch (error) {
+                console.warn('[IntroScene] O navegador bloqueou a reprodução do vídeo; iniciando a Fase 1.', error);
+                this.startGame();
+            }
+        };
+
+        panel.on('pointerdown', startPlayback);
+        this.startPrompt = { panel, label, startPlayback };
+    }
+
+    hideStartPrompt ()
+    {
+        if (!this.startPrompt) return;
+
+        this.startPrompt.panel?.off('pointerdown', this.startPrompt.startPlayback);
+        this.startPrompt.panel?.destroy();
+        this.startPrompt.label?.destroy();
+        this.startPrompt = null;
     }
 
     startGame ()
     {
-        if (this.scene.isActive('Game'))
-        {
-            return;
+        if (this.transitioning) return;
+
+        this.transitioning = true;
+        this.cleanup();
+        this.scene.start('Game');
+    }
+
+    cleanup ()
+    {
+        if (this.cleanedUp) return;
+        this.cleanedUp = true;
+
+        this.autoplayFallbackTimer?.remove?.(false);
+        this.autoplayFallbackTimer = null;
+
+        if (this.input?.keyboard) {
+            this.input.keyboard.off('keydown-ESC', this.handleSkip);
+            this.input.keyboard.off('keydown-ENTER', this.handleSkip);
+            this.input.keyboard.off('keydown-SPACE', this.handleSkip);
         }
 
-        this.scene.start('Game');
+        this.skipButton?.off('pointerdown', this.handleSkip);
+        this.hideStartPrompt();
+
+        if (this.video) {
+            this.video.off('complete', this.handleVideoComplete);
+            this.video.off('error', this.handleVideoError);
+            this.video.off('unsupported', this.handleVideoError);
+            this.video.off('locked', this.handleVideoLocked);
+            this.video.off('play', this.handleVideoPlaying);
+            this.video.off('playing', this.handleVideoPlaying);
+            this.video.off('stop', this.handleVideoStop);
+
+            try {
+                this.video.stop(false);
+            }
+            catch (_) {}
+
+            this.video.destroy();
+            this.video = null;
+        }
     }
 }
