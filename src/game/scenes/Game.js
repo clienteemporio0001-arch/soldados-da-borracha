@@ -640,13 +640,14 @@ export class Game extends Scene
             startX: 8640,
             startY: 650,
             length: 250,
-            rise: -8
+            rise: -8,
+            landingLength: 90
         });
     }
 
     createCompletionZone ()
     {
-        this.completionZone = this.add.rectangle(8950, 575, 70, 170, 0x000000, 0);
+        this.completionZone = this.add.rectangle(8965, 575, 60, 170, 0x000000, 0);
         this.physics.add.existing(this.completionZone);
 
         this.completionZone.body.setAllowGravity(false);
