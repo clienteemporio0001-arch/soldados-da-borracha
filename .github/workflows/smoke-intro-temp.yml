@@ -203,8 +203,9 @@ jobs:
                   diag = await page.evaluate("""() => {
                       const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
                       try {
-                          s.video.stop(false);
+                          s.video.video.pause();
                           s.video.touchLocked=true;
+                          s.video.playWhenUnlocked=true;
                           s.showStartPrompt();
                           return {
                               error:null,
