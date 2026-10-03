@@ -171,8 +171,14 @@ export class IntroScene extends Scene
 
         try
         {
-            this.video.stop(false);
-            this.video.play(false);
+            if (this.video.touchLocked && typeof this.video.createPlayPromise === 'function')
+            {
+                this.video.createPlayPromise();
+            }
+            else if (!this.video.isPlaying())
+            {
+                this.video.play(false);
+            }
         }
         catch (error)
         {
