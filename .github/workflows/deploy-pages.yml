@@ -603,8 +603,17 @@ jobs:
                           }""")
                           assert moved['x'] > before['x'], {'before':before,'moved':moved}
 
-                          await page.keyboard.press('Space')
-                          await page.wait_for_timeout(120)
+                          await page.wait_for_function(
+                              """() => {
+                                  const s=window.__soldadosAudioTestGame.scene.getScene('Game');
+                                  return !!s?.player?.body && (s.player.body.blocked.down || s.player.body.touching.down);
+                              }""",
+                              timeout=5000
+                          )
+                          await page.keyboard.down('Space')
+                          await page.wait_for_timeout(90)
+                          await page.keyboard.up('Space')
+                          await page.wait_for_timeout(90)
                           jumped = await page.evaluate("""() => {
                               const s=window.__soldadosAudioTestGame.scene.getScene('Game');
                               return {stamina:s.stamina, vy:s.player.body.velocity.y, firstJumpConsumed:s.firstJumpConsumed};
@@ -714,7 +723,7 @@ jobs:
                       const s=game?.scene?.getScene?.(key);
                       return !!s && s.scene.isActive() && !!s.player;
                   }""",
-                  key,
+                  arg=key,
                   timeout=20000
               )
 
