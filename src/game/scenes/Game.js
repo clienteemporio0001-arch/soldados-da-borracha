@@ -110,6 +110,7 @@ export class Game extends Scene
         // As habilidades que consomem stamina continuam desbloqueadas progressivamente.
         this.maxStamina = 100;
         this.stamina = 100;
+        this.jumpStaminaCost = 15;
         this.staminaRegenDelay = 350;
         this.staminaGroundRegen = 40;
         this.staminaAirRegen = 12;
@@ -2496,6 +2497,22 @@ export class Game extends Scene
         this.updateStaminaHud();
     }
 
+    showStaminaBlockedFeedback ()
+    {
+        if (!this.staminaHud || !this.staminaHud.visible || this.time.now < this.nextStaminaFeedbackAt) return;
+
+        this.nextStaminaFeedbackAt = this.time.now + 220;
+        this.tweens.killTweensOf(this.staminaBar);
+        this.tweens.add({
+            targets: this.staminaBar,
+            alpha: 0.25,
+            duration: 70,
+            yoyo: true,
+            repeat: 2,
+            onComplete: () => this.staminaBar.setAlpha(1)
+        });
+    }
+
     updateHungerHud ()
     {
         const ratio = Math.max(0, this.hunger / this.maxHunger);
@@ -3656,6 +3673,14 @@ createHud ()
         const canUseFirstJump = !this.firstJumpConsumed && (grounded || this.time.now <= this.coyoteUntil);
         if (!canUseFirstJump) return false;
 
+        if (this.stamina < this.jumpStaminaCost)
+        {
+            this.showStaminaBlockedFeedback();
+            this.jumpBufferUntil = 0;
+            return false;
+        }
+
+        this.spendStamina(this.jumpStaminaCost);
         this.player.body.setVelocityY(-520);
         this.firstJumpConsumed = true;
         this.coyoteUntil = 0;
