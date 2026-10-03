@@ -647,13 +647,20 @@ jobs:
                               }""",
                               timeout=15000
                           )
+                          await page.wait_for_function(
+                              """() => {
+                                  const s=window.__soldadosAudioTestGame.scene.getScene('Game');
+                                  return !!s?.player?.body && (s.player.body.blocked.down || s.player.body.touching.down);
+                              }""",
+                              timeout=5000
+                          )
                           mobile = await page.evaluate("""async () => {
                               const s=window.__soldadosAudioTestGame.scene.getScene('Game');
                               const before=s.stamina;
                               s.mobileInput.jump=true;
-                              await new Promise(r=>setTimeout(r,80));
+                              await new Promise(r=>setTimeout(r,100));
                               s.mobileInput.jump=false;
-                              await new Promise(r=>setTimeout(r,80));
+                              await new Promise(r=>setTimeout(r,100));
                               return {
                                   before,
                                   after:s.stamina,
