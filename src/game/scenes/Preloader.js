@@ -35,6 +35,7 @@ export class Preloader extends Scene
 
         this.load.image('logo', 'logo.png');
         this.load.image('amada', 'images/amada.png');
+        this.load.image('bolsaEsposa', 'images/bolsa_esposa.png');
         this.load.video('introVideo', 'video/intro.mp4', false);
         this.load.video('finalVideo', 'video/final.mp4', false);
         this.load.spritesheet('seringueiroAttack', 'attack.png?v=attack12-20260930', { frameWidth: 512, frameHeight: 512, endFrame: 11 });
