@@ -253,8 +253,9 @@ jobs:
                   await start_from_menu(page, True)
                   await page.evaluate("""() => {
                       const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
-                      s.video.stop(false);
+                      s.video.video.pause();
                       s.video.touchLocked=true;
+                      s.video.playWhenUnlocked=true;
                       s.showStartPrompt();
                   }""")
                   await page.wait_for_function(
