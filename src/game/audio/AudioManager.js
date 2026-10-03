@@ -24,6 +24,7 @@ class AudioManager
         this.cooldowns = new Map();
         this.sceneStates = new WeakMap();
         this.sceneLoopOwners = new Map();
+        this.soundTweens = new WeakMap();
         this.unlocked = false;
     }
 
@@ -203,23 +204,48 @@ class AudioManager
         });
     }
 
-    fadeSoundVolume (sound, target, duration = 0, onComplete = null)
+    killSoundTween (sound)
     {
         if (!sound) return;
+        const tween = this.soundTweens.get(sound);
+        if (tween) {
+            tween.stop?.();
+            tween.remove?.();
+            this.soundTweens.delete(sound);
+        }
+    }
+
+    disposeSound (sound)
+    {
+        if (!sound) return;
+        this.killSoundTween(sound);
+        sound.stop?.();
+        sound.destroy?.();
+    }
+
+    fadeSoundVolume (sound, target, duration = 0, onComplete = null)
+    {
+        if (!sound || !sound.manager) return;
         const safeTarget = Math.max(0, Math.min(1, target));
+        this.killSoundTween(sound);
+
         if (!this.scene?.tweens || duration <= 0) {
             sound.setVolume?.(safeTarget);
             onComplete?.();
             return;
         }
-        this.scene.tweens.killTweensOf(sound);
-        this.scene.tweens.add({
+
+        const tween = this.scene.tweens.add({
             targets: sound,
             volume: safeTarget,
             duration,
             ease: 'Sine.InOut',
-            onComplete
+            onComplete: () => {
+                this.soundTweens.delete(sound);
+                onComplete?.();
+            }
         });
+        this.soundTweens.set(sound, tween);
     }
 
     ensureLoop (id, key, options = {})
@@ -270,12 +296,7 @@ class AudioManager
         if (!entry) return;
         this.loops.delete(id);
         this.sceneLoopOwners.delete(id);
-        const dispose = () => {
-            try {
-                entry.sound?.stop?.();
-                entry.sound?.destroy?.();
-            } catch (_) {}
-        };
+        const dispose = () => this.disposeSound(entry.sound);
         if (fadeMs > 0 && entry.sound?.isPlaying) this.fadeSoundVolume(entry.sound, 0, fadeMs, dispose);
         else dispose();
     }
@@ -309,10 +330,7 @@ class AudioManager
 
             if (previous && previous !== next) {
                 this.fadeSoundVolume(previous, 0, options.fadeOut ?? 650, () => {
-                    try {
-                        previous.stop?.();
-                        previous.destroy?.();
-                    } catch (_) {}
+                    this.disposeSound(previous);
                 });
             }
             return next;
