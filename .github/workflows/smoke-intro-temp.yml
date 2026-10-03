@@ -204,7 +204,7 @@ jobs:
                       const s=window.__soldadosAudioTestGame.scene.getScene('IntroScene');
                       s.video.stop(false);
                       s.video.touchLocked=true;
-                      s.video.emit('locked', s.video);
+                      s.showStartPrompt();
                   }""")
                   await page.wait_for_function(
                       "() => !!window.__soldadosAudioTestGame.scene.getScene('IntroScene').startPrompt",
