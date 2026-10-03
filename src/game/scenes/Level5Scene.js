@@ -1569,12 +1569,27 @@ export class Level5Scene extends Scene
     {
         if(this.bossDefeated)return;
         this.bossDefeated=true;this.bossVulnerable=false;this.bossState='DEFEATED';this.mapinguari.body.enable=false;this.setMapinguariHitZonesEnabled(false);this.bossHud.setVisible(false);
+        this.phaseCompleted=true;this.isAttacking=false;this.isDashing=false;
+        if(this.attackHitbox?.body)this.attackHitbox.body.enable=false;
         this.player.body.setVelocity(0,0);this.knockbackUntil=this.time.now+2500;
         this.cameras.main.shake(180,.004);
         this.tweens.add({targets:this.mapinguariVisual,y:500,scaleY:.82,angle:this.mapinguariVisual.x>this.player.x?8:-8,duration:520,ease:'Quad.Out'});
-        this.time.delayedCall(850,()=>{
-            this.showBriefText('A floresta fica em silêncio.',1150);
-            this.time.delayedCall(1200,()=>this.retreatMapinguari());
+        this.time.delayedCall(650,()=>this.showBriefText('A floresta fica em silêncio.',900));
+        this.time.delayedCall(1550,()=>this.startFinalVideoAfterVictory());
+    }
+
+    startFinalVideoAfterVictory ()
+    {
+        if(this.finalVideoTransitionStarted)return;
+        this.finalVideoTransitionStarted=true;
+
+        this.player.body.setVelocity(0,0);
+        this.cameras.main.stopFollow();
+        this.cameras.main.fadeOut(350,2,7,5);
+
+        this.time.delayedCall(380,()=>{
+            this.cleanupSceneHazardsBeforeTransition();
+            this.scene.start('FinalVideoScene');
         });
     }
 
