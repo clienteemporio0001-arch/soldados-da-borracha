@@ -810,49 +810,66 @@ export class Level5Scene extends Scene
 
         const treeVisual=this.add.container(11680,592).setDepth(8.5);
 
-        // Visual da árvore final: tronco contínuo e galhos integrados.
-        // O bossTree físico/lógico permanece separado e intocado.
-        const trunk=this.add.polygon(0,-178,[
-            -46,178,-40,122,-36,66,-32,12,-35,-48,-31,-108,-25,-178,
-            24,-178,30,-112,28,-52,33,10,37,68,43,124,50,178
-        ],0x493323,.99);
+        // Visual final da árvore desenhado em Graphics para evitar artefatos
+        // de polígonos/retângulos soltos. O bossTree lógico continua separado.
+        const treeGraphics=this.add.graphics();
 
-        const trunkShade=this.add.polygon(-8,-176,[
-            -24,176,-19,112,-17,48,-18,-18,-17,-86,-13,-176,
-            5,-176,7,-94,6,-22,9,48,12,118,16,168
-        ],0x2e2219,.42);
+        // Tronco principal: largo, contínuo e com base mais pesada.
+        treeGraphics.fillStyle(0x493323,.99);
+        treeGraphics.fillRoundedRect(-44,-365,88,365,18);
 
-        // Texturas curtas ficam dentro do tronco; removidos os retângulos longos
-        // que apareciam como "varetas" soltas atravessando a composição.
-        const barkMarks=[
-            this.add.rectangle(-17,-248,5,48,0x76553a,.28).setAngle(3),
-            this.add.rectangle(13,-206,4,42,0x806044,.24).setAngle(-4),
-            this.add.rectangle(-8,-126,4,36,0x76553a,.22).setAngle(2)
-        ];
+        // Base/raízes.
+        treeGraphics.fillStyle(0x3d2c20,.99);
+        treeGraphics.fillTriangle(-42,-18,-118,18,-18,12);
+        treeGraphics.fillTriangle(42,-18,118,18,18,12);
+        treeGraphics.fillTriangle(-24,-8,0,34,28,-5);
 
-        const leftRoot=this.add.polygon(-30,-8,[-8,0,-60,16,-84,26,-16,25],0x3d2c20,.98);
-        const rightRoot=this.add.polygon(28,-8,[8,0,58,14,84,24,14,25],0x3d2c20,.98);
-        const centerRoot=this.add.polygon(0,-5,[-12,0,-27,31,4,25,18,2],0x543a27,.95);
+        // Sombra do tronco, sempre contida dentro dele.
+        treeGraphics.fillStyle(0x2e2219,.38);
+        treeGraphics.fillRoundedRect(-30,-355,22,338,10);
 
-        // Galhos mais grossos e conectados ao tronco, sem peças finas ou soltas.
-        const branchLeft=this.add.polygon(-24,-286,[
-            -10,18,-70,-34,-91,-53,-82,-66,-55,-44,5,-2
-        ],0x493323,.98);
-        const branchRight=this.add.polygon(24,-296,[
-            -4,12,56,-34,86,-60,96,-50,71,-24,12,20
-        ],0x493323,.98);
-        const crownForkLeft=this.add.polygon(-12,-330,[
-            -12,20,-30,-44,-26,-82,-14,-86,2,-36,8,10
-        ],0x422f22,.98);
-        const crownForkRight=this.add.polygon(12,-326,[
-            -8,16,18,-38,29,-72,40,-67,31,-24,9,22
-        ],0x422f22,.98);
+        // Galhos grossos e conectados ao tronco.
+        treeGraphics.lineStyle(30,0x493323,.99);
+        treeGraphics.beginPath();
+        treeGraphics.moveTo(-20,-286);
+        treeGraphics.lineTo(-92,-342);
+        treeGraphics.strokePath();
 
-        treeVisual.add([
-            leftRoot,rightRoot,centerRoot,
-            trunk,trunkShade,...barkMarks,
-            branchLeft,branchRight,crownForkLeft,crownForkRight
-        ]);
+        treeGraphics.beginPath();
+        treeGraphics.moveTo(20,-292);
+        treeGraphics.lineTo(96,-354);
+        treeGraphics.strokePath();
+
+        // Forquilhas superiores curtas, sem linhas atravessando a cena.
+        treeGraphics.lineStyle(22,0x422f22,.98);
+        treeGraphics.beginPath();
+        treeGraphics.moveTo(-10,-330);
+        treeGraphics.lineTo(-38,-398);
+        treeGraphics.strokePath();
+
+        treeGraphics.beginPath();
+        treeGraphics.moveTo(10,-326);
+        treeGraphics.lineTo(42,-392);
+        treeGraphics.strokePath();
+
+        // Marcas de casca curtas e internas.
+        treeGraphics.lineStyle(4,0x76553a,.28);
+        treeGraphics.beginPath();
+        treeGraphics.moveTo(-15,-300);
+        treeGraphics.lineTo(-12,-254);
+        treeGraphics.strokePath();
+
+        treeGraphics.beginPath();
+        treeGraphics.moveTo(13,-245);
+        treeGraphics.lineTo(10,-204);
+        treeGraphics.strokePath();
+
+        treeGraphics.beginPath();
+        treeGraphics.moveTo(-8,-150);
+        treeGraphics.lineTo(-6,-116);
+        treeGraphics.strokePath();
+
+        treeVisual.add(treeGraphics);
         this.bossTreeVisual=treeVisual;
 
         this.bossTreeLeaves=this.add.container(11680,190).setDepth(6);
