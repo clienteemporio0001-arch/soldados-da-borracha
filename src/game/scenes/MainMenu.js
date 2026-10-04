@@ -111,15 +111,15 @@ export class MainMenu extends Scene
             color: '#9fba9f'
         }).setOrigin(0.5);
 
-        const pcTitle = this.add.text(330, 235, 'PC / TECLADO', {
+        const pcTitle = this.add.text(320, 242, 'PC / TECLADO', {
             fontFamily: 'Arial Black',
-            fontSize: '20px',
+            fontSize: '19px',
             color: '#d6b56c'
         }).setOrigin(0.5);
 
         const pcText = this.add.text(
-            330,
-            355,
+            320,
+            280,
             [
                 'A / D  ou  ← / →',
                 'Mover',
@@ -131,29 +131,31 @@ export class MainMenu extends Scene
                 'Atacar com o terçado',
                 '',
                 'SHIFT',
-                'Dash (após desbloquear)'
+                'Dash após desbloquear'
             ],
             {
                 fontFamily: 'Arial',
-                fontSize: '17px',
+                fontSize: '16px',
                 color: '#e5e8de',
                 align: 'center',
-                lineSpacing: 4
+                lineSpacing: 3
             }
-        ).setOrigin(0.5);
+        ).setOrigin(0.5, 0);
 
-        const mobileTitle = this.add.text(695, 235, 'CELULAR / TOUCH', {
+        const divider = this.add.rectangle(512, 385, 2, 285, 0xd6b56c, 0.18);
+
+        const mobileTitle = this.add.text(704, 242, 'CELULAR / TOUCH', {
             fontFamily: 'Arial Black',
-            fontSize: '20px',
+            fontSize: '19px',
             color: '#d6b56c'
         }).setOrigin(0.5);
 
         const mobileText = this.add.text(
-            695,
-            355,
+            704,
+            280,
             [
                 'JOYSTICK',
-                'Mover para esquerda/direita',
+                'Mover esquerda / direita',
                 '',
                 'PULO',
                 'Saltar',
@@ -162,29 +164,29 @@ export class MainMenu extends Scene
                 'Usar o terçado',
                 '',
                 'DASH',
-                'Aparece após desbloquear'
+                'Disponível após desbloquear'
             ],
             {
                 fontFamily: 'Arial',
-                fontSize: '17px',
+                fontSize: '16px',
                 color: '#e5e8de',
                 align: 'center',
-                lineSpacing: 4
+                lineSpacing: 3
             }
-        ).setOrigin(0.5);
+        ).setOrigin(0.5, 0);
 
         const tip = this.add.text(
             512,
-            548,
+            552,
             'Dica: cuide de VIDA, FOME e FÔLEGO durante a jornada.',
             {
                 fontFamily: 'Arial',
-                fontSize: '16px',
+                fontSize: '15px',
                 color: '#9fba9f'
             }
         ).setOrigin(0.5);
 
-        const closeButton = this.add.rectangle(512, 615, 220, 52, 0x8b5a2b)
+        const closeButton = this.add.rectangle(512, 620, 220, 52, 0x8b5a2b)
             .setStrokeStyle(2, 0xd6b56c)
             .setInteractive({ useHandCursor: true });
 
@@ -217,6 +219,7 @@ export class MainMenu extends Scene
             pcText,
             mobileTitle,
             mobileText,
+            divider,
             tip,
             closeButton,
             closeLabel
