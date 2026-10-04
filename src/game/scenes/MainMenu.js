@@ -46,13 +46,17 @@ export class MainMenu extends Scene
             }
         ).setOrigin(0.5);
 
-        this.createMenuButton(512, 500, 310, 64, 'INICIAR JORNADA', () => {
+        this.createMenuButton(512, 472, 310, 60, 'INICIAR JORNADA', () => {
             this.startJourney();
         });
 
-        this.createMenuButton(512, 580, 310, 58, 'SELECIONAR FASE', () => {
+        this.createMenuButton(512, 542, 310, 54, 'SELECIONAR FASE', () => {
             this.scene.start('LevelSelectScene');
-        }, 21);
+        }, 20);
+
+        this.createMenuButton(512, 607, 310, 50, 'COMO JOGAR', () => {
+            this.showControlsModal();
+        }, 19);
 
         this.add.text(
             512,
@@ -71,6 +75,152 @@ export class MainMenu extends Scene
             buttonSize: 48
         });
 
+        if (this.registry.get('controlsIntroShown') !== true)
+        {
+            this.registry.set('controlsIntroShown', true);
+            this.time.delayedCall(180, () => this.showControlsModal());
+        }
+
+    }
+
+    showControlsModal ()
+    {
+        if (this.controlsModal?.active)
+        {
+            return;
+        }
+
+        const modal = this.add.container(0, 0).setDepth(1000);
+        this.controlsModal = modal;
+
+        const blocker = this.add.rectangle(512, 384, 1024, 768, 0x000000, 0.78)
+            .setInteractive();
+
+        const panel = this.add.rectangle(512, 384, 790, 550, 0x07100f, 0.98)
+            .setStrokeStyle(3, 0xd6b56c, 0.95);
+
+        const title = this.add.text(512, 145, 'COMO JOGAR', {
+            fontFamily: 'Arial Black',
+            fontSize: '34px',
+            color: '#f1e1ae'
+        }).setOrigin(0.5);
+
+        const subtitle = this.add.text(512, 187, 'CONTROLES', {
+            fontFamily: 'Arial Black',
+            fontSize: '17px',
+            color: '#9fba9f'
+        }).setOrigin(0.5);
+
+        const pcTitle = this.add.text(330, 235, 'PC / TECLADO', {
+            fontFamily: 'Arial Black',
+            fontSize: '20px',
+            color: '#d6b56c'
+        }).setOrigin(0.5);
+
+        const pcText = this.add.text(
+            330,
+            355,
+            [
+                'A / D  ou  ← / →',
+                'Mover',
+                '',
+                'W / ↑ / ESPAÇO',
+                'Pular',
+                '',
+                'J',
+                'Atacar com o terçado',
+                '',
+                'SHIFT',
+                'Dash (após desbloquear)'
+            ],
+            {
+                fontFamily: 'Arial',
+                fontSize: '17px',
+                color: '#e5e8de',
+                align: 'center',
+                lineSpacing: 4
+            }
+        ).setOrigin(0.5);
+
+        const mobileTitle = this.add.text(695, 235, 'CELULAR / TOUCH', {
+            fontFamily: 'Arial Black',
+            fontSize: '20px',
+            color: '#d6b56c'
+        }).setOrigin(0.5);
+
+        const mobileText = this.add.text(
+            695,
+            355,
+            [
+                'JOYSTICK',
+                'Mover para esquerda/direita',
+                '',
+                'PULO',
+                'Saltar',
+                '',
+                'ATAQUE',
+                'Usar o terçado',
+                '',
+                'DASH',
+                'Aparece após desbloquear'
+            ],
+            {
+                fontFamily: 'Arial',
+                fontSize: '17px',
+                color: '#e5e8de',
+                align: 'center',
+                lineSpacing: 4
+            }
+        ).setOrigin(0.5);
+
+        const tip = this.add.text(
+            512,
+            548,
+            'Dica: cuide de VIDA, FOME e FÔLEGO durante a jornada.',
+            {
+                fontFamily: 'Arial',
+                fontSize: '16px',
+                color: '#9fba9f'
+            }
+        ).setOrigin(0.5);
+
+        const closeButton = this.add.rectangle(512, 615, 220, 52, 0x8b5a2b)
+            .setStrokeStyle(2, 0xd6b56c)
+            .setInteractive({ useHandCursor: true });
+
+        const closeLabel = this.add.text(512, 615, 'ENTENDI', {
+            fontFamily: 'Arial Black',
+            fontSize: '19px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+
+        const close = () => {
+            if (!modal.active) return;
+            this.input.keyboard?.off('keydown-ESC', close);
+            this.input.keyboard?.off('keydown-ENTER', close);
+            modal.destroy(true);
+            if (this.controlsModal === modal) this.controlsModal = null;
+        };
+
+        closeButton.on('pointerover', () => closeButton.setFillStyle(0xb37638));
+        closeButton.on('pointerout', () => closeButton.setFillStyle(0x8b5a2b));
+        closeButton.on('pointerdown', close);
+        this.input.keyboard?.on('keydown-ESC', close);
+        this.input.keyboard?.on('keydown-ENTER', close);
+
+        modal.add([
+            blocker,
+            panel,
+            title,
+            subtitle,
+            pcTitle,
+            pcText,
+            mobileTitle,
+            mobileText,
+            tip,
+            closeButton,
+            closeLabel
+        ]);
     }
 
     createMenuButton (x, y, width, height, label, onClick, fontSize = 24)
