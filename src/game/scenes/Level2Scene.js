@@ -2211,10 +2211,18 @@ export class Level2Scene extends Scene
         const leftForearm = this.add.ellipse(-1,10,12.5,24,0xa96b49,1).setAngle(3);
         const leftForearmShade = this.add.ellipse(-3,11,4,18,0x754531,0.34).setAngle(3);
         const leftBracer = this.add.ellipse(-1,17,14,8,0x3d6236,1).setStrokeStyle(1,0x203c27,0.84);
-        const leftHand = this.add.ellipse(0,23,11.5,10,0xb27652,1).setStrokeStyle(1,0x673c2a,0.84);
-        const leftClaw1=this.add.triangle(-4,27,-2,0,2,0,0,4,0xead7b5,.9);
-        const leftClaw2=this.add.triangle(1,28,-2,0,2,0,0,4,0xead7b5,.9);
-        leftForearmRig.add([leftForearm,leftForearmShade,leftBracer,leftHand,leftClaw1,leftClaw2]);
+        const leftHand = this.add.ellipse(0,23,13,11,0xb27652,1).setStrokeStyle(1,0x673c2a,0.84);
+        const leftPalmShade=this.add.ellipse(-2,23,5,8,0x7c4935,.24);
+        const leftFinger1=this.add.ellipse(-4,28,3.2,7,0xa96a4b,1).setAngle(8);
+        const leftFinger2=this.add.ellipse(0,29,3.2,7.5,0xad6d4d,1);
+        const leftFinger3=this.add.ellipse(4,28,3.2,7,0xa96a4b,1).setAngle(-8);
+        const leftNail1=this.add.ellipse(-4,30,1.4,2.2,0xd6b89b,.72).setAngle(8);
+        const leftNail2=this.add.ellipse(0,31,1.4,2.2,0xd6b89b,.72);
+        const leftNail3=this.add.ellipse(4,30,1.4,2.2,0xd6b89b,.72).setAngle(-8);
+        leftForearmRig.add([
+            leftForearm,leftForearmShade,leftBracer,leftHand,leftPalmShade,
+            leftFinger1,leftFinger2,leftFinger3,leftNail1,leftNail2,leftNail3
+        ]);
         leftArmRig.add([leftUpperArm,leftUpperShade,leftForearmRig]);
 
         const rightArmRig = this.add.container(22,-15);
@@ -2225,10 +2233,18 @@ export class Level2Scene extends Scene
         const rightForearm = this.add.ellipse(1,10,12.5,24,0xa96b49,1).setAngle(-3);
         const rightForearmShade = this.add.ellipse(3,11,4,18,0x754531,0.34).setAngle(-3);
         const rightBracer = this.add.ellipse(1,17,14,8,0x3d6236,1).setStrokeStyle(1,0x203c27,0.84);
-        const rightHand = this.add.ellipse(0,23,11.5,10,0xb27652,1).setStrokeStyle(1,0x673c2a,0.84);
-        const rightClaw1=this.add.triangle(-1,28,-2,0,2,0,0,4,0xead7b5,.9);
-        const rightClaw2=this.add.triangle(4,27,-2,0,2,0,0,4,0xead7b5,.9);
-        rightForearmRig.add([rightForearm,rightForearmShade,rightBracer,rightHand,rightClaw1,rightClaw2]);
+        const rightHand = this.add.ellipse(0,23,13,11,0xb27652,1).setStrokeStyle(1,0x673c2a,0.84);
+        const rightPalmShade=this.add.ellipse(2,23,5,8,0x7c4935,.24);
+        const rightFinger1=this.add.ellipse(-4,28,3.2,7,0xa96a4b,1).setAngle(8);
+        const rightFinger2=this.add.ellipse(0,29,3.2,7.5,0xad6d4d,1);
+        const rightFinger3=this.add.ellipse(4,28,3.2,7,0xa96a4b,1).setAngle(-8);
+        const rightNail1=this.add.ellipse(-4,30,1.4,2.2,0xd6b89b,.72).setAngle(8);
+        const rightNail2=this.add.ellipse(0,31,1.4,2.2,0xd6b89b,.72);
+        const rightNail3=this.add.ellipse(4,30,1.4,2.2,0xd6b89b,.72).setAngle(-8);
+        rightForearmRig.add([
+            rightForearm,rightForearmShade,rightBracer,rightHand,rightPalmShade,
+            rightFinger1,rightFinger2,rightFinger3,rightNail1,rightNail2,rightNail3
+        ]);
         rightArmRig.add([rightUpperArm,rightUpperShade,rightForearmRig]);
 
         const leftLegRig = this.add.container(-11,18);
@@ -2240,10 +2256,15 @@ export class Level2Scene extends Scene
         const leftShin = this.add.polygon(0,10,[-6,-9,6,-9,7,7,4,13,-5,13,-7,6],0x845239,1);
         const leftShinShade=this.add.ellipse(-3,9,4,16,0x593528,.32);
         const leftFoot = this.add.container(0,21);
-        const leftHeel = this.add.ellipse(5,1,15,10,0x66402d,1);
-        const leftBackToe = this.add.ellipse(-11,2,27,10,0x74452f,1).setAngle(-7);
-        const leftToeMark = this.add.rectangle(-17,2,7,2,0xb07a4b,0.78);
-        leftFoot.add([leftHeel,leftBackToe,leftToeMark]);
+        // Pé humanoide voltado para trás: calcanhar junto à canela e antepé apontando para trás.
+        const leftHeel = this.add.ellipse(5,0,14,11,0x66402d,1).setStrokeStyle(1,0x4c3025,.7);
+        const leftArch = this.add.ellipse(-5,2,17,9,0x70452f,1).setAngle(-5);
+        const leftBackToe = this.add.ellipse(-14,3,18,9,0x7a4931,1).setAngle(-8);
+        const leftToe1=this.add.ellipse(-21,1,5.5,4.5,0x815137,1).setAngle(-10);
+        const leftToe2=this.add.ellipse(-20,4,5,4,0x7b4b33,1).setAngle(-7);
+        const leftToe3=this.add.ellipse(-18,6,4.5,3.7,0x73462f,1).setAngle(-4);
+        const leftToeMark = this.add.ellipse(-21,1,2,1.4,0xc49a72,.55).setAngle(-10);
+        leftFoot.add([leftHeel,leftArch,leftBackToe,leftToe1,leftToe2,leftToe3,leftToeMark]);
         leftShinRig.add([leftShin,leftShinShade,leftFoot]);
         leftLegRig.add([leftThigh,leftThighShade,leftKnee,leftShinRig]);
 
@@ -2256,10 +2277,15 @@ export class Level2Scene extends Scene
         const rightShin = this.add.polygon(0,10,[-6,-9,6,-9,7,6,5,13,-4,13,-7,7],0x845239,1);
         const rightShinShade=this.add.ellipse(3,9,4,16,0x593528,.32);
         const rightFoot = this.add.container(0,21);
-        const rightHeel = this.add.ellipse(5,1,15,10,0x66402d,1);
-        const rightBackToe = this.add.ellipse(-11,2,27,10,0x74452f,1).setAngle(7);
-        const rightToeMark = this.add.rectangle(-17,2,7,2,0xb07a4b,0.78);
-        rightFoot.add([rightHeel,rightBackToe,rightToeMark]);
+        // Mesmo desenho anatômico, mantendo os dois pés caracteristicamente virados para trás.
+        const rightHeel = this.add.ellipse(5,0,14,11,0x66402d,1).setStrokeStyle(1,0x4c3025,.7);
+        const rightArch = this.add.ellipse(-5,2,17,9,0x70452f,1).setAngle(5);
+        const rightBackToe = this.add.ellipse(-14,3,18,9,0x7a4931,1).setAngle(8);
+        const rightToe1=this.add.ellipse(-21,1,5.5,4.5,0x815137,1).setAngle(10);
+        const rightToe2=this.add.ellipse(-20,4,5,4,0x7b4b33,1).setAngle(7);
+        const rightToe3=this.add.ellipse(-18,6,4.5,3.7,0x73462f,1).setAngle(4);
+        const rightToeMark = this.add.ellipse(-21,1,2,1.4,0xc49a72,.55).setAngle(10);
+        rightFoot.add([rightHeel,rightArch,rightBackToe,rightToe1,rightToe2,rightToe3,rightToeMark]);
         rightShinRig.add([rightShin,rightShinShade,rightFoot]);
         rightLegRig.add([rightThigh,rightThighShade,rightKnee,rightShinRig]);
 
@@ -2282,11 +2308,26 @@ export class Level2Scene extends Scene
         const pupilL = this.add.ellipse(-8,-2,1.4,2.4,0x100807,1);
         const pupilR = this.add.ellipse(8,-2,1.4,2.4,0x100807,1);
         const nose = this.add.polygon(0,5,[-3,-2,3,-2,1,5,-1,5],0x75402f,1);
-        const snarlL=this.add.rectangle(-5,8,7,1.5,0x5c2a22,.85).setAngle(-8);
-        const snarlR=this.add.rectangle(5,8,7,1.5,0x5c2a22,.85).setAngle(8);
-        const mouthDark = this.add.ellipse(0,12,16,8,0x2f1513,1);
-        const fangL = this.add.triangle(-4.5,10,-2.1,0,2.1,0,0,5.2,0xf2e3bf);
-        const fangR = this.add.triangle(4.5,10,-2.1,0,2.1,0,0,5.2,0xf2e3bf);
+        const snarlL=this.add.rectangle(-5,8,7,1.5,0x5c2a22,.9).setAngle(-10);
+        const snarlR=this.add.rectangle(5,8,7,1.5,0x5c2a22,.9).setAngle(10);
+        const mouthDark = this.add.roundedRectangle(0,12,18,8,3,0x2f1513,1)
+            .setStrokeStyle(1,0x5a2a20,.9);
+        const teethBand=this.add.roundedRectangle(0,11.6,15,5.4,1.8,0xe7d7b8,1)
+            .setStrokeStyle(1,0x8f7358,.7);
+        const teethLines=this.add.graphics();
+        teethLines.lineStyle(1,0x8b6d53,.75);
+        [-5,-2.5,0,2.5,5].forEach(x=>{
+            teethLines.beginPath();
+            teethLines.moveTo(x,9.4);
+            teethLines.lineTo(x,13.8);
+            teethLines.strokePath();
+        });
+        teethLines.lineStyle(1,0x6c4b3c,.72);
+        teethLines.beginPath();
+        teethLines.moveTo(-7,12);
+        teethLines.lineTo(7,12);
+        teethLines.strokePath();
+        const clenchedJaw=this.add.rectangle(0,16,13,2,0x704031,.42);
 
         // Cabelo-fogo com massa contínua e pontas sobrepostas para evitar peças "soltas".
         const hairRig = this.add.container(0,-18);
@@ -2324,7 +2365,8 @@ export class Level2Scene extends Scene
 
         headRig.add([
             neck,earL,earR,head,cheekL,cheekR,jaw,faceShade,browL,browR,
-            eyeGlowL,eyeGlowR,eyeL,eyeR,pupilL,pupilR,nose,snarlL,snarlR,mouthDark,fangL,fangR,
+            eyeGlowL,eyeGlowR,eyeL,eyeR,pupilL,pupilR,nose,snarlL,snarlR,
+            mouthDark,teethBand,teethLines,clenchedJaw,
             hairRig,hairLeafL,hairLeafR
         ]);
 
