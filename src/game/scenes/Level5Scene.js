@@ -809,31 +809,49 @@ export class Level5Scene extends Scene
         this.bossTree=this.add.rectangle(11680,365,44,360,0x3a291e,.08).setDepth(7);
 
         const treeVisual=this.add.container(11680,592).setDepth(8.5);
+
+        // Visual da árvore final: tronco contínuo e galhos integrados.
+        // O bossTree físico/lógico permanece separado e intocado.
         const trunk=this.add.polygon(0,-178,[
-            -42,178,-36,118,-29,56,-25,-18,-30,-92,-22,-178,
-            18,-178,27,-96,24,-20,31,48,38,112,48,178
+            -46,178,-40,122,-36,66,-32,12,-35,-48,-31,-108,-25,-178,
+            24,-178,30,-112,28,-52,33,10,37,68,43,124,50,178
         ],0x493323,.99);
 
-        const trunkShade=this.add.polygon(-10,-175,[
-            -18,175,-13,105,-12,30,-8,-46,-13,-112,-7,-175,
-            8,-175,5,-90,8,-10,5,72,10,148
-        ],0x2e2219,.48);
+        const trunkShade=this.add.polygon(-8,-176,[
+            -24,176,-19,112,-17,48,-18,-18,-17,-86,-13,-176,
+            5,-176,7,-94,6,-22,9,48,12,118,16,168
+        ],0x2e2219,.42);
 
-        const bark1=this.add.rectangle(-18,-225,7,165,0x76553a,.34).setAngle(2);
-        const bark2=this.add.rectangle(15,-185,6,190,0x806044,.28).setAngle(-3);
+        // Texturas curtas ficam dentro do tronco; removidos os retângulos longos
+        // que apareciam como "varetas" soltas atravessando a composição.
+        const barkMarks=[
+            this.add.rectangle(-17,-248,5,48,0x76553a,.28).setAngle(3),
+            this.add.rectangle(13,-206,4,42,0x806044,.24).setAngle(-4),
+            this.add.rectangle(-8,-126,4,36,0x76553a,.22).setAngle(2)
+        ];
 
         const leftRoot=this.add.polygon(-30,-8,[-8,0,-60,16,-84,26,-16,25],0x3d2c20,.98);
         const rightRoot=this.add.polygon(28,-8,[8,0,58,14,84,24,14,25],0x3d2c20,.98);
         const centerRoot=this.add.polygon(0,-5,[-12,0,-27,31,4,25,18,2],0x543a27,.95);
 
-        const branchLeft=this.add.polygon(-28,-285,[-8,12,-82,-44,-74,-55,2,-5],0x493323,.98).setAngle(-4);
-        const branchRight=this.add.polygon(26,-300,[5,10,78,-54,89,-45,14,18],0x493323,.98).setAngle(3);
-        const upperFork=this.add.polygon(4,-332,[-9,15,-34,-78,-21,-83,11,8],0x422f22,.98);
+        // Galhos mais grossos e conectados ao tronco, sem peças finas ou soltas.
+        const branchLeft=this.add.polygon(-24,-286,[
+            -10,18,-70,-34,-91,-53,-82,-66,-55,-44,5,-2
+        ],0x493323,.98);
+        const branchRight=this.add.polygon(24,-296,[
+            -4,12,56,-34,86,-60,96,-50,71,-24,12,20
+        ],0x493323,.98);
+        const crownForkLeft=this.add.polygon(-12,-330,[
+            -12,20,-30,-44,-26,-82,-14,-86,2,-36,8,10
+        ],0x422f22,.98);
+        const crownForkRight=this.add.polygon(12,-326,[
+            -8,16,18,-38,29,-72,40,-67,31,-24,9,22
+        ],0x422f22,.98);
 
         treeVisual.add([
             leftRoot,rightRoot,centerRoot,
-            trunk,trunkShade,bark1,bark2,
-            branchLeft,branchRight,upperFork
+            trunk,trunkShade,...barkMarks,
+            branchLeft,branchRight,crownForkLeft,crownForkRight
         ]);
         this.bossTreeVisual=treeVisual;
 
