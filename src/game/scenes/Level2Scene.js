@@ -2310,9 +2310,9 @@ export class Level2Scene extends Scene
         const nose = this.add.polygon(0,5,[-3,-2,3,-2,1,5,-1,5],0x75402f,1);
         const snarlL=this.add.rectangle(-5,8,7,1.5,0x5c2a22,.9).setAngle(-10);
         const snarlR=this.add.rectangle(5,8,7,1.5,0x5c2a22,.9).setAngle(10);
-        const mouthDark = this.add.roundedRectangle(0,12,18,8,3,0x2f1513,1)
+        const mouthDark = this.add.rectangle(0,12,18,8,0x2f1513,1)
             .setStrokeStyle(1,0x5a2a20,.9);
-        const teethBand=this.add.roundedRectangle(0,11.6,15,5.4,1.8,0xe7d7b8,1)
+        const teethBand=this.add.rectangle(0,11.6,15,5.4,0xe7d7b8,1)
             .setStrokeStyle(1,0x8f7358,.7);
         const teethLines=this.add.graphics();
         teethLines.lineStyle(1,0x8b6d53,.75);
