@@ -222,37 +222,64 @@ export class FinalVideoScene extends Scene
             .setScrollFactor(0)
             .setDepth(200);
 
-        this.add.text(512, 175, 'SOLDADO DA BORRACHA', {
+        this.add.text(512, 140, 'SOLDADO DA BORRACHA', {
             fontFamily: 'Arial Black',
             fontSize: '42px',
             color: '#f1e1ae'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
 
-        this.add.text(512, 305, 'JORNADA CONCLUÍDA', {
+        this.add.text(512, 245, 'JORNADA CONCLUÍDA', {
             fontFamily: 'Arial Black',
             fontSize: '34px',
             color: '#d6b56c'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
 
-        this.add.text(512, 385, 'TROPA DO SERINGAL', {
+        this.add.text(512, 315, 'TROPA DO SERINGAL', {
             fontFamily: 'Arial Black',
             fontSize: '22px',
             color: '#9fba9f'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
 
-        const button = this.add.rectangle(512, 545, 310, 64, 0x8b5a2b)
+        this.add.text(
+            512,
+            405,
+            'Dedicado à minha mãe, Odilia,\ne às histórias do Acre que ajudaram a formar quem eu sou.',
+            {
+                fontFamily: 'Arial',
+                fontSize: '19px',
+                color: '#d9d3bd',
+                align: 'center',
+                lineSpacing: 8
+            }
+        ).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+
+        const creditsButton = this.add.rectangle(512, 515, 310, 56, 0x203829)
+            .setStrokeStyle(2, 0x78917c)
+            .setScrollFactor(0)
+            .setDepth(201)
+            .setInteractive({ useHandCursor: true });
+
+        this.add.text(512, 515, 'CRÉDITOS', {
+            fontFamily: 'Arial Black',
+            fontSize: '20px',
+            color: '#f1e1ae'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+
+        const menuButton = this.add.rectangle(512, 590, 310, 58, 0x8b5a2b)
             .setStrokeStyle(3, 0xd6b56c)
             .setScrollFactor(0)
             .setDepth(201)
             .setInteractive({ useHandCursor: true });
 
-        this.add.text(512, 545, 'VOLTAR AO MENU', {
+        this.add.text(512, 590, 'VOLTAR AO MENU', {
             fontFamily: 'Arial Black',
-            fontSize: '22px',
+            fontSize: '21px',
             color: '#ffffff'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
 
-        button.on('pointerdown', () => {
+        creditsButton.on('pointerdown', () => this.showCreditsScreen());
+
+        menuButton.on('pointerdown', () => {
             if (this.returningToMenu)
             {
                 return;
@@ -260,6 +287,69 @@ export class FinalVideoScene extends Scene
 
             this.returningToMenu = true;
             this.scene.start('MainMenu');
+        });
+    }
+
+    showCreditsScreen ()
+    {
+        const overlay = this.add.container(0, 0)
+            .setScrollFactor(0)
+            .setDepth(300);
+
+        const bg = this.add.rectangle(512, 384, 1024, 768, 0x020705, 1);
+
+        const title = this.add.text(512, 72, 'CRÉDITOS', {
+            fontFamily: 'Arial Black',
+            fontSize: '34px',
+            color: '#f1e1ae'
+        }).setOrigin(0.5);
+
+        const credits = this.add.text(
+            512,
+            310,
+            [
+                'SOLDADO DA BORRACHA',
+                '',
+                'Criação, Game Design, Programação e Produção',
+                'Manoel Rufino Da Silva Mendes',
+                '',
+                'Equipe',
+                'Tropa do Seringal',
+                '',
+                'Apoio de Inteligência Artificial',
+                'ChatGPT — apoio na programação, revisão, iteração e desenvolvimento',
+                '',
+                'Arte e áudio',
+                'O projeto utiliza assets próprios, licenciados e materiais criados com auxílio de IA.',
+                'Os respectivos usos e atribuições são informados com transparência.',
+                '',
+                'Dedicatória',
+                'À minha mãe, Odilia, e às histórias do Acre que inspiraram esta jornada.'
+            ],
+            {
+                fontFamily: 'Arial',
+                fontSize: '18px',
+                color: '#d9d3bd',
+                align: 'center',
+                lineSpacing: 6,
+                wordWrap: { width: 840 }
+            }
+        ).setOrigin(0.5);
+
+        const backButton = this.add.rectangle(512, 690, 270, 54, 0x8b5a2b)
+            .setStrokeStyle(2, 0xd6b56c)
+            .setInteractive({ useHandCursor: true });
+
+        const backLabel = this.add.text(512, 690, 'VOLTAR', {
+            fontFamily: 'Arial Black',
+            fontSize: '20px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+
+        overlay.add([bg, title, credits, backButton, backLabel]);
+
+        backButton.on('pointerdown', () => {
+            overlay.destroy(true);
         });
     }
 
