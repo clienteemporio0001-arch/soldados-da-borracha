@@ -13,15 +13,26 @@ export class MainMenu extends Scene
     {
         this.audioManager = getAudioManager(this);
 
-        // Capa cinematográfica do menu. O "cover" preserva a proporção da arte
-        // e o deslocamento horizontal mantém Mapinguari + companheira em destaque.
-        const menuBg = this.add.image(470, 384, 'menuBg').setDepth(-20);
-        const coverScale = Math.max(1024 / menuBg.width, 768 / menuBg.height);
-        menuBg.setScale(coverScale);
+        // Fundo do menu com fallback seguro para o visual original.
+        // Se a capa falhar ao carregar, o menu nunca fica preto.
+        if (this.textures.exists('menuBg'))
+        {
+            const menuBg = this.add.image(512, 384, 'menuBg').setDepth(-20);
+            const coverScale = Math.max(1024 / menuBg.width, 768 / menuBg.height);
+            menuBg.setScale(coverScale);
 
-        // Escurecimento leve para leitura sem apagar a imagem.
-        this.add.rectangle(512, 384, 1024, 768, 0x020705, 0.30).setDepth(-19);
-        this.add.rectangle(512, 390, 590, 650, 0x020705, 0.24).setDepth(-18);
+            // Overlay leve: preserva a arte e mantém os textos legíveis.
+            this.add.rectangle(512, 384, 1024, 768, 0x020705, 0.18).setDepth(-19);
+            this.add.rectangle(512, 390, 590, 650, 0x020705, 0.12).setDepth(-18);
+        }
+        else
+        {
+            // Fallback idêntico ao visual estável anterior.
+            this.add.rectangle(512, 384, 1024, 768, 0x071a12).setDepth(-20);
+            this.add.circle(830, 130, 70, 0xd9e2d0, 0.8).setDepth(-19);
+            this.add.rectangle(512, 610, 1024, 150, 0x9fb7aa, 0.08).setDepth(-19);
+            this.add.rectangle(512, 670, 1024, 100, 0xffffff, 0.04).setDepth(-19);
+        }
 
         this.add.text(512, 92, 'TROPA DO SERINGAL', {
             fontFamily: 'Arial',
