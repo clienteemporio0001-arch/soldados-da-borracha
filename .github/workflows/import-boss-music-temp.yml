@@ -24,6 +24,11 @@ jobs:
           echo '463e8a5e8bf2642e66c50cbde3d950f024b70c4793e2146d6b2e84c2df4d9344  /tmp/boss.mp3' | sha256sum -c -
           test "$(stat -c '%s' /tmp/boss.mp3)" = "4402782"
 
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
       - name: Convert exact MP3 to OGG Vorbis
         run: |
           set -euo pipefail
