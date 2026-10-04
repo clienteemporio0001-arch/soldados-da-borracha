@@ -20,6 +20,7 @@ class AudioManager
         this.music = null;
         this.musicKey = null;
         this.musicBaseGain = 1;
+        this.musicOwner = null;
         this.loops = new Map();
         this.cooldowns = new Map();
         this.sceneStates = new WeakMap();
@@ -301,10 +302,29 @@ class AudioManager
         else dispose();
     }
 
+    stopMusic (fadeOut = 0)
+    {
+        const sound = this.music;
+        if (!sound) {
+            this.musicKey = null;
+            this.musicOwner = null;
+            return;
+        }
+
+        this.music = null;
+        this.musicKey = null;
+        this.musicOwner = null;
+
+        const dispose = () => this.disposeSound(sound);
+        if (fadeOut > 0 && sound.isPlaying) this.fadeSoundVolume(sound, 0, fadeOut, dispose);
+        else dispose();
+    }
+
     playMusic (key, options = {})
     {
         if (this.musicKey === key && this.music?.isPlaying) {
             const nextBaseGain = options.volume ?? this.musicBaseGain ?? 1;
+            this.musicOwner = options.owner ?? this.scene?.sys?.settings?.key ?? this.musicOwner;
             if (nextBaseGain !== this.musicBaseGain) {
                 this.musicBaseGain = nextBaseGain;
                 this.refreshActiveVolumes();
@@ -324,6 +344,7 @@ class AudioManager
             next.play();
             this.music = next;
             this.musicKey = key;
+            this.musicOwner = options.owner ?? this.scene?.sys?.settings?.key ?? null;
             this.musicBaseGain = options.volume ?? 1;
             const target = this.categoryVolume('music', this.musicBaseGain * (asset.gain ?? 1));
             this.fadeSoundVolume(next, target, options.fadeIn ?? 700);
@@ -351,7 +372,10 @@ class AudioManager
         scene.input?.once?.('pointerdown', unlockFromGesture);
         scene.input?.keyboard?.once?.('keydown', unlockFromGesture);
 
-        if (options.music) this.playMusic(options.music, { volume: options.musicVolume ?? 1 });
+        if (options.music) this.playMusic(options.music, {
+            volume: options.musicVolume ?? 1,
+            owner: scene.sys?.settings?.key ?? null
+        });
         if (options.ambient) {
             this.ensureLoop('forest_ambient', options.ambient, {
                 volume: options.ambientVolume ?? 1,
@@ -487,12 +511,33 @@ class AudioManager
         const caboquimBossActive = scene.caboclinhoTestActive && !scene.caboclinhoTestComplete;
         const mapinguariBossActive = scene.bossStarted && !scene.bossDefeated;
         const bossActive = curupiraBossActive || caboquimBossActive || mapinguariBossActive;
+        const sceneOwner = scene.sys?.settings?.key ?? null;
+
         if (bossActive) {
-            this.playMusic('music_boss');
-            this.setLoopVolume('forest_ambient', 0.46);
+            this.playMusic('music_boss', {
+                volume: 1.08,
+                fadeIn: 650,
+                fadeOut: 600,
+                owner: sceneOwner
+            });
+            this.stopLoop('forest_ambient', 550);
+        } else if (sceneOwner === 'Level5Scene' && scene.bossDefeated) {
+            // O final da Fase 5 segue direto para o vídeo; não reintroduza
+            // a trilha da floresta durante a pausa após derrotar o Mapinguari.
+            if (this.musicKey === 'music_boss') this.stopMusic(550);
+            this.stopLoop('forest_ambient', 400);
         } else {
-            this.playMusic('music_forest');
-            this.setLoopVolume('forest_ambient', scene.weatherSystem?.isRaining ? 0.45 : 1);
+            this.playMusic('music_forest', {
+                volume: 1,
+                fadeIn: 650,
+                fadeOut: 600,
+                owner: sceneOwner
+            });
+            this.ensureLoop('forest_ambient', 'forest_ambient', {
+                volume: scene.weatherSystem?.isRaining ? 0.45 : 1,
+                fadeIn: 650,
+                owner: sceneOwner
+            });
         }
 
         if (scene.curupiraState !== state.curupiraState) {
@@ -555,6 +600,7 @@ class AudioManager
             if (!owner || entry.owner === owner) this.stopLoop(id);
         }
         this.sceneStates.delete(scene);
+        if (owner && this.musicOwner === owner) this.stopMusic(450);
         if (this.scene === scene) this.scene = null;
     }
 }
