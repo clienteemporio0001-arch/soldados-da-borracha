@@ -79,6 +79,13 @@ jobs:
           test "$(sha256sum public/assets/audio/player/blade_01.ogg | cut -d' ' -f1)" = "$(sha256sum dist/assets/audio/player/blade_01.ogg | cut -d' ' -f1)"
           test "$(sha256sum public/assets/audio/player/blade_02.ogg | cut -d' ' -f1)" = "$(sha256sum dist/assets/audio/player/blade_02.ogg | cut -d' ' -f1)"
 
+      - name: Upload itch.io build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: soldado-da-borracha-itchio
+          path: ./dist
+          if-no-files-found: error
+
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
