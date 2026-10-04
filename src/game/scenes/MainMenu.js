@@ -12,15 +12,23 @@ export class MainMenu extends Scene
     create ()
     {
         this.audioManager = getAudioManager(this);
-        this.add.rectangle(512, 384, 1024, 768, 0x071a12);
-        this.add.circle(830, 130, 70, 0xd9e2d0, 0.8);
-        this.add.rectangle(512, 610, 1024, 150, 0x9fb7aa, 0.08);
-        this.add.rectangle(512, 670, 1024, 100, 0xffffff, 0.04);
+
+        // Capa cinematográfica do menu. O "cover" preserva a proporção da arte
+        // e o deslocamento horizontal mantém Mapinguari + companheira em destaque.
+        const menuBg = this.add.image(470, 384, 'menuBg').setDepth(-20);
+        const coverScale = Math.max(1024 / menuBg.width, 768 / menuBg.height);
+        menuBg.setScale(coverScale);
+
+        // Escurecimento leve para leitura sem apagar a imagem.
+        this.add.rectangle(512, 384, 1024, 768, 0x020705, 0.30).setDepth(-19);
+        this.add.rectangle(512, 390, 590, 650, 0x020705, 0.24).setDepth(-18);
 
         this.add.text(512, 92, 'TROPA DO SERINGAL', {
             fontFamily: 'Arial',
             fontSize: '24px',
-            color: '#d6b56c',
+            color: '#f1e1ae',
+            stroke: '#120c07',
+            strokeThickness: 4,
             letterSpacing: 4
         }).setOrigin(0.5);
 
@@ -40,7 +48,9 @@ export class MainMenu extends Scene
             {
                 fontFamily: 'Arial',
                 fontSize: '21px',
-                color: '#c8d8cc',
+                color: '#f1f3ed',
+                stroke: '#090604',
+                strokeThickness: 4,
                 align: 'center',
                 lineSpacing: 8
             }
@@ -65,7 +75,9 @@ export class MainMenu extends Scene
             {
                 fontFamily: 'Arial',
                 fontSize: '18px',
-                color: '#799487'
+                color: '#d7dfd9',
+                stroke: '#090604',
+                strokeThickness: 3
             }
         ).setOrigin(0.5);
 
