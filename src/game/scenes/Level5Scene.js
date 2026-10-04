@@ -804,78 +804,47 @@ export class Level5Scene extends Scene
         this.platforms.add(this.arenaLeftPlatform);this.platforms.add(this.arenaRightPlatform);
         this.addArenaUnstablePlatform(10750,555,140,18);
 
-        // Mantém o bossTree original porque ele participa do telegraph do ataque TREE.
-        // O novo visual orgânico é apenas decorativo e não altera hitboxes ou lógica do boss.
-        this.bossTree=this.add.rectangle(11680,365,44,360,0x3a291e,.08).setDepth(7);
+        // bossTree permanece apenas como referência lógica do ataque TREE.
+        // Ele precisa ser totalmente invisível para não criar uma coluna fantasma
+        // por trás da árvore visual quando recebe tween de rotação no telegraph.
+        this.bossTree=this.add.rectangle(11680,365,44,360,0x000000,0).setDepth(7).setVisible(false);
 
         const treeVisual=this.add.container(11680,592).setDepth(8.5);
-
-        // Visual final da árvore desenhado em Graphics para evitar artefatos
-        // de polígonos/retângulos soltos. O bossTree lógico continua separado.
         const treeGraphics=this.add.graphics();
 
-        // Tronco principal: largo, contínuo e com base mais pesada.
+        // Uma única silhueta estável: apenas formas preenchidas, sem strokes/linhas
+        // que possam gerar varetas ou segmentos soltos.
         treeGraphics.fillStyle(0x493323,.99);
-        treeGraphics.fillRoundedRect(-44,-365,88,365,18);
+        treeGraphics.fillRoundedRect(-43,-360,86,360,18);
 
-        // Base/raízes.
+        // Galhos principais já nascem dentro do tronco para não parecerem peças soltas.
+        treeGraphics.fillStyle(0x493323,.99);
+        treeGraphics.fillTriangle(-30,-275,-118,-345,-18,-304);
+        treeGraphics.fillTriangle(28,-282,118,-350,18,-310);
+
+        // Copa/forquilha superior integrada ao corpo do tronco.
+        treeGraphics.fillStyle(0x422f22,.98);
+        treeGraphics.fillTriangle(-24,-326,-52,-405,-5,-346);
+        treeGraphics.fillTriangle(22,-326,55,-400,5,-346);
+
+        // Base e raízes compactas, totalmente conectadas ao tronco.
         treeGraphics.fillStyle(0x3d2c20,.99);
-        treeGraphics.fillTriangle(-42,-18,-118,18,-18,12);
-        treeGraphics.fillTriangle(42,-18,118,18,18,12);
-        treeGraphics.fillTriangle(-24,-8,0,34,28,-5);
+        treeGraphics.fillTriangle(-40,-22,-112,12,-16,8);
+        treeGraphics.fillTriangle(40,-22,112,12,16,8);
+        treeGraphics.fillTriangle(-26,-10,0,30,28,-8);
 
-        // Sombra do tronco, sempre contida dentro dele.
-        treeGraphics.fillStyle(0x2e2219,.38);
-        treeGraphics.fillRoundedRect(-30,-355,22,338,10);
-
-        // Galhos grossos e conectados ao tronco.
-        treeGraphics.lineStyle(30,0x493323,.99);
-        treeGraphics.beginPath();
-        treeGraphics.moveTo(-20,-286);
-        treeGraphics.lineTo(-92,-342);
-        treeGraphics.strokePath();
-
-        treeGraphics.beginPath();
-        treeGraphics.moveTo(20,-292);
-        treeGraphics.lineTo(96,-354);
-        treeGraphics.strokePath();
-
-        // Forquilhas superiores curtas, sem linhas atravessando a cena.
-        treeGraphics.lineStyle(22,0x422f22,.98);
-        treeGraphics.beginPath();
-        treeGraphics.moveTo(-10,-330);
-        treeGraphics.lineTo(-38,-398);
-        treeGraphics.strokePath();
-
-        treeGraphics.beginPath();
-        treeGraphics.moveTo(10,-326);
-        treeGraphics.lineTo(42,-392);
-        treeGraphics.strokePath();
-
-        // Marcas de casca curtas e internas.
-        treeGraphics.lineStyle(4,0x76553a,.28);
-        treeGraphics.beginPath();
-        treeGraphics.moveTo(-15,-300);
-        treeGraphics.lineTo(-12,-254);
-        treeGraphics.strokePath();
-
-        treeGraphics.beginPath();
-        treeGraphics.moveTo(13,-245);
-        treeGraphics.lineTo(10,-204);
-        treeGraphics.strokePath();
-
-        treeGraphics.beginPath();
-        treeGraphics.moveTo(-8,-150);
-        treeGraphics.lineTo(-6,-116);
-        treeGraphics.strokePath();
+        // Sombra interna curta; não ultrapassa a silhueta do tronco.
+        treeGraphics.fillStyle(0x2e2219,.28);
+        treeGraphics.fillRoundedRect(-26,-348,18,326,8);
 
         treeVisual.add(treeGraphics);
         this.bossTreeVisual=treeVisual;
 
+        // Copa separada apenas para o shake existente do boss, sempre atrás do tronco.
         this.bossTreeLeaves=this.add.container(11680,190).setDepth(6);
         [
-            [-88,5,54,38],[-52,-35,62,45],[-10,-48,68,48],
-            [38,-38,64,45],[82,-3,56,40],[-45,22,58,42],[27,18,66,44]
+            [-82,4,58,40],[-48,-31,66,47],[-7,-46,72,50],
+            [38,-34,66,47],[79,1,58,41],[-42,24,62,43],[28,20,68,45]
         ].forEach(([x,y,w,h],i)=>{
             this.bossTreeLeaves.add(
                 this.add.ellipse(x,y,w,h,i%2?0x173d27:0x10351f,.94)
@@ -1605,6 +1574,10 @@ export class Level5Scene extends Scene
             if(!this.bossAttackHitRegistered&&Math.abs(this.player.x-tree.x)<125&&this.player.y>490){this.bossAttackHitRegistered=true;this.damagePlayer(25,this.player.x<tree.x?-170:170,-250);}
         },onComplete:()=>{
             this.cameras.main.shake(140,.003);
+            // O tronco do ataque é temporário: remove assim que a queda termina
+            // para não ficar renderizado como uma peça solta na árvore/arena.
+            if(this.activeBossFallenTree===tree)this.activeBossFallenTree=null;
+            if(tree.active)tree.destroy();
             this.openBossVulnerability(this.bossStage===3?820:1000);
         }});
     }
