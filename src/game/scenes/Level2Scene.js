@@ -2161,121 +2161,157 @@ export class Level2Scene extends Scene
             .setScale(this.curupiraBaseScale)
             .setVisible(false);
 
-        // Rig procedural do Curupira: boss maior, robusto e com silhueta de guardião.
+        // Rig visual do Curupira: silhueta mais orgânica, ameaçadora e coerente.
+        // A estrutura de containers/parts é preservada para não alterar gameplay nem animações.
         const rig = this.add.container(0, 0);
-        const shadow = this.add.ellipse(0, 38, 61, 13, 0x07100d, 0.34);
+        const shadow = this.add.ellipse(0, 39, 64, 14, 0x07100d, 0.38);
 
         const backLeaves = this.add.container(0, -7);
         [
-            [-23,-11,-30,0x294f31],[-18,0,-18,0x365f39],[-12,11,-9,0x3f6f40],
-            [23,-11,30,0x294f31],[18,0,18,0x365f39],[12,11,9,0x3f6f40]
-        ].forEach(([x,y,angle,color])=>{
-            backLeaves.add(this.add.ellipse(x,y,20,8,color,0.94).setAngle(angle));
+            [-27,-14,-34,0x244b2d,23,9],[-21,-3,-23,0x315c36,25,9],[-15,10,-12,0x3f6c3d,23,8],
+            [27,-14,34,0x244b2d,23,9],[21,-3,23,0x315c36,25,9],[15,10,12,0x3f6c3d,23,8],
+            [-4,17,-4,0x527c42,20,7],[5,18,5,0x486f3b,20,7]
+        ].forEach(([x,y,angle,color,w,h])=>{
+            backLeaves.add(this.add.ellipse(x,y,w,h,color,0.96).setAngle(angle));
         });
 
         const torsoRig = this.add.container(0, -2);
         const torso = this.add.polygon(0, 0, [
-            -24,-22, 24,-22, 22,7, 16,23, 0,28, -16,23, -22,7
-        ], 0x355d38, 1).setStrokeStyle(2, 0x172d1d, 0.95);
-        const chest = this.add.ellipse(-5,-4,26,34,0x4c794a,0.48);
+            -21,-24, -29,-15, -25,3, -19,18, -10,26,
+            0,29,
+            10,26, 19,18, 25,3, 29,-15, 21,-24,
+            10,-28, -10,-28
+        ], 0x315838, 1).setStrokeStyle(2, 0x152b1c, 0.98);
+        const torsoWarm = this.add.polygon(1,1,[
+            -11,-20,5,-23,15,-13,13,8,6,21,-4,23,-12,11
+        ],0x6d4936,0.44);
+        const chestL = this.add.ellipse(-8,-7,20,29,0x567c48,0.72).setAngle(-8);
+        const chestR = this.add.ellipse(8,-7,20,29,0x4a7042,0.62).setAngle(8);
+        const sternum = this.add.rectangle(0,-4,4,31,0x88a15f,0.24).setAngle(2);
         const chestFiber = this.add.graphics();
-        chestFiber.lineStyle(2,0x87a25a,0.5);
-        chestFiber.beginPath(); chestFiber.moveTo(-12,-16); chestFiber.lineTo(7,19); chestFiber.strokePath();
-        chestFiber.beginPath(); chestFiber.moveTo(10,-16); chestFiber.lineTo(-5,18); chestFiber.strokePath();
-        const belt = this.add.rectangle(0,17,42,7,0x5a3b22,0.98).setStrokeStyle(1,0x2f2118,0.8);
-        const frontLeafL = this.add.ellipse(-13,20,19,8,0x4e7b3e,1).setAngle(-18);
-        const frontLeafR = this.add.ellipse(13,20,19,8,0x668f48,1).setAngle(18);
-        torsoRig.add([torso,chest,chestFiber,belt,frontLeafL,frontLeafR]);
+        chestFiber.lineStyle(1.5,0xa8b46b,0.42);
+        chestFiber.beginPath(); chestFiber.moveTo(-16,-17); chestFiber.lineTo(-3,19); chestFiber.strokePath();
+        chestFiber.beginPath(); chestFiber.moveTo(15,-17); chestFiber.lineTo(3,19); chestFiber.strokePath();
+        chestFiber.lineStyle(1,0x213b29,0.55);
+        chestFiber.beginPath(); chestFiber.moveTo(-17,5); chestFiber.lineTo(15,8); chestFiber.strokePath();
+        const belt = this.add.ellipse(0,18,39,9,0x5a3b22,1).setStrokeStyle(1,0x2f2118,0.9);
+        const frontLeafL = this.add.ellipse(-14,22,22,9,0x4d783e,1).setAngle(-22);
+        const frontLeafM = this.add.ellipse(0,24,22,8,0x668c48,1).setAngle(2);
+        const frontLeafR = this.add.ellipse(14,22,22,9,0x547f40,1).setAngle(22);
+        torsoRig.add([torso,torsoWarm,chestL,chestR,sternum,chestFiber,belt,frontLeafL,frontLeafM,frontLeafR]);
 
-        const shoulderL = this.add.ellipse(-24,-17,23,11,0x527d3e,0.98).setAngle(-24);
-        const shoulderR = this.add.ellipse(24,-17,23,11,0x527d3e,0.98).setAngle(24);
+        const shoulderL = this.add.ellipse(-25,-17,25,14,0x4f783f,1).setAngle(-18).setStrokeStyle(1,0x203824,0.72);
+        const shoulderR = this.add.ellipse(25,-17,25,14,0x4f783f,1).setAngle(18).setStrokeStyle(1,0x203824,0.72);
 
         const leftArmRig = this.add.container(-22,-15);
-        const leftUpperArm = this.add.rectangle(0,13,12,28,0x9c5f40).setOrigin(0.5,0.06).setStrokeStyle(1,0x613a29,0.8);
+        const leftUpperArm = this.add.ellipse(-1,13,13.5,30,0x9e6142,1)
+            .setAngle(5).setStrokeStyle(1,0x613a29,0.86);
+        const leftUpperShade = this.add.ellipse(-3,14,5,24,0x6e402f,0.36).setAngle(5);
         const leftForearmRig = this.add.container(0,26);
-        const leftForearm = this.add.rectangle(0,10,11,23,0xa46645).setOrigin(0.5,0.06);
-        const leftBracer = this.add.rectangle(0,17,13,7,0x3d6236).setStrokeStyle(1,0x203c27,0.8);
-        const leftHand = this.add.circle(0,23,6.2,0xad704f).setStrokeStyle(1,0x673c2a,0.8);
-        leftForearmRig.add([leftForearm,leftBracer,leftHand]);
-        leftArmRig.add([leftUpperArm,leftForearmRig]);
+        const leftForearm = this.add.ellipse(-1,10,12.5,24,0xa96b49,1).setAngle(3);
+        const leftForearmShade = this.add.ellipse(-3,11,4,18,0x754531,0.34).setAngle(3);
+        const leftBracer = this.add.ellipse(-1,17,14,8,0x3d6236,1).setStrokeStyle(1,0x203c27,0.84);
+        const leftHand = this.add.ellipse(0,23,11.5,10,0xb27652,1).setStrokeStyle(1,0x673c2a,0.84);
+        const leftClaw1=this.add.triangle(-4,27,-2,0,2,0,0,4,0xead7b5,.9);
+        const leftClaw2=this.add.triangle(1,28,-2,0,2,0,0,4,0xead7b5,.9);
+        leftForearmRig.add([leftForearm,leftForearmShade,leftBracer,leftHand,leftClaw1,leftClaw2]);
+        leftArmRig.add([leftUpperArm,leftUpperShade,leftForearmRig]);
 
         const rightArmRig = this.add.container(22,-15);
-        const rightUpperArm = this.add.rectangle(0,13,12,28,0x9c5f40).setOrigin(0.5,0.06).setStrokeStyle(1,0x613a29,0.8);
+        const rightUpperArm = this.add.ellipse(1,13,13.5,30,0x9e6142,1)
+            .setAngle(-5).setStrokeStyle(1,0x613a29,0.86);
+        const rightUpperShade = this.add.ellipse(3,14,5,24,0x6e402f,0.36).setAngle(-5);
         const rightForearmRig = this.add.container(0,26);
-        const rightForearm = this.add.rectangle(0,10,11,23,0xa46645).setOrigin(0.5,0.06);
-        const rightBracer = this.add.rectangle(0,17,13,7,0x3d6236).setStrokeStyle(1,0x203c27,0.8);
-        const rightHand = this.add.circle(0,23,6.2,0xad704f).setStrokeStyle(1,0x673c2a,0.8);
-        rightForearmRig.add([rightForearm,rightBracer,rightHand]);
-        rightArmRig.add([rightUpperArm,rightForearmRig]);
+        const rightForearm = this.add.ellipse(1,10,12.5,24,0xa96b49,1).setAngle(-3);
+        const rightForearmShade = this.add.ellipse(3,11,4,18,0x754531,0.34).setAngle(-3);
+        const rightBracer = this.add.ellipse(1,17,14,8,0x3d6236,1).setStrokeStyle(1,0x203c27,0.84);
+        const rightHand = this.add.ellipse(0,23,11.5,10,0xb27652,1).setStrokeStyle(1,0x673c2a,0.84);
+        const rightClaw1=this.add.triangle(-1,28,-2,0,2,0,0,4,0xead7b5,.9);
+        const rightClaw2=this.add.triangle(4,27,-2,0,2,0,0,4,0xead7b5,.9);
+        rightForearmRig.add([rightForearm,rightForearmShade,rightBracer,rightHand,rightClaw1,rightClaw2]);
+        rightArmRig.add([rightUpperArm,rightUpperShade,rightForearmRig]);
 
         const leftLegRig = this.add.container(-11,18);
-        const leftThigh = this.add.rectangle(0,12,13,27,0x754832).setOrigin(0.5,0.05).setStrokeStyle(1,0x4b3023,0.8);
+        const leftThigh = this.add.polygon(0,13,[-7,-12,6,-12,8,7,4,14,-5,14,-8,6],0x754832,1)
+            .setStrokeStyle(1,0x4b3023,0.84);
+        const leftThighShade=this.add.ellipse(-3,10,5,21,0x4e3125,.34);
+        const leftKnee=this.add.ellipse(0,25,12,9,0x68412f,1);
         const leftShinRig = this.add.container(0,25);
-        const leftShin = this.add.rectangle(0,9,12,21,0x845239).setOrigin(0.5,0.05);
+        const leftShin = this.add.polygon(0,10,[-6,-9,6,-9,7,7,4,13,-5,13,-7,6],0x845239,1);
+        const leftShinShade=this.add.ellipse(-3,9,4,16,0x593528,.32);
         const leftFoot = this.add.container(0,21);
-        const leftHeel = this.add.ellipse(6,1,14,9,0x66402d);
-        const leftBackToe = this.add.ellipse(-12,2,27,9,0x74452f).setAngle(-8);
-        const leftToeMark = this.add.rectangle(-17,2,7,2,0x9a6a45,0.75);
+        const leftHeel = this.add.ellipse(5,1,15,10,0x66402d,1);
+        const leftBackToe = this.add.ellipse(-11,2,27,10,0x74452f,1).setAngle(-7);
+        const leftToeMark = this.add.rectangle(-17,2,7,2,0xb07a4b,0.78);
         leftFoot.add([leftHeel,leftBackToe,leftToeMark]);
-        leftShinRig.add([leftShin,leftFoot]);
-        leftLegRig.add([leftThigh,leftShinRig]);
+        leftShinRig.add([leftShin,leftShinShade,leftFoot]);
+        leftLegRig.add([leftThigh,leftThighShade,leftKnee,leftShinRig]);
 
         const rightLegRig = this.add.container(11,18);
-        const rightThigh = this.add.rectangle(0,12,13,27,0x754832).setOrigin(0.5,0.05).setStrokeStyle(1,0x4b3023,0.8);
+        const rightThigh = this.add.polygon(0,13,[-6,-12,7,-12,8,6,5,14,-4,14,-8,7],0x754832,1)
+            .setStrokeStyle(1,0x4b3023,0.84);
+        const rightThighShade=this.add.ellipse(3,10,5,21,0x4e3125,.34);
+        const rightKnee=this.add.ellipse(0,25,12,9,0x68412f,1);
         const rightShinRig = this.add.container(0,25);
-        const rightShin = this.add.rectangle(0,9,12,21,0x845239).setOrigin(0.5,0.05);
+        const rightShin = this.add.polygon(0,10,[-6,-9,6,-9,7,6,5,13,-4,13,-7,7],0x845239,1);
+        const rightShinShade=this.add.ellipse(3,9,4,16,0x593528,.32);
         const rightFoot = this.add.container(0,21);
-        const rightHeel = this.add.ellipse(6,1,14,9,0x66402d);
-        const rightBackToe = this.add.ellipse(-12,2,27,9,0x74452f).setAngle(8);
-        const rightToeMark = this.add.rectangle(-17,2,7,2,0x9a6a45,0.75);
+        const rightHeel = this.add.ellipse(5,1,15,10,0x66402d,1);
+        const rightBackToe = this.add.ellipse(-11,2,27,10,0x74452f,1).setAngle(7);
+        const rightToeMark = this.add.rectangle(-17,2,7,2,0xb07a4b,0.78);
         rightFoot.add([rightHeel,rightBackToe,rightToeMark]);
-        rightShinRig.add([rightShin,rightFoot]);
-        rightLegRig.add([rightThigh,rightShinRig]);
+        rightShinRig.add([rightShin,rightShinShade,rightFoot]);
+        rightLegRig.add([rightThigh,rightThighShade,rightKnee,rightShinRig]);
 
         const headRig = this.add.container(0,-42);
-        const neck = this.add.rectangle(0,15,13,11,0x8d5438);
-        const earL = this.add.polygon(-18,0,[-5,-6,3,0,-5,6],0x985b3e,1);
-        const earR = this.add.polygon(18,0,[5,-6,-3,0,5,6],0x985b3e,1);
-        const head = this.add.ellipse(0,0,37,39,0xaa6847).setStrokeStyle(2,0x593024,0.9);
-        const jaw = this.add.ellipse(0,10,25,15,0x8d523b,0.42);
-        const faceShade = this.add.ellipse(6,4,16,24,0x7f4937,0.26);
+        const neck = this.add.ellipse(0,15,14,13,0x8d5438,1);
+        const earL = this.add.polygon(-18,-1,[-5,-7,4,0,-5,6],0x985b3e,1);
+        const earR = this.add.polygon(18,-1,[5,-7,-4,0,5,6],0x985b3e,1);
+        const head = this.add.ellipse(0,-1,35,39,0xaa6847,1).setStrokeStyle(2,0x593024,0.94);
+        const cheekL=this.add.ellipse(-9,7,13,16,0xbd7a55,.42).setAngle(-12);
+        const cheekR=this.add.ellipse(9,7,13,16,0x774333,.28).setAngle(12);
+        const jaw = this.add.polygon(0,12,[-10,-5,10,-5,7,5,0,10,-7,5],0x8d523b,.76);
+        const faceShade = this.add.ellipse(7,2,15,26,0x713f31,0.24);
 
-        const browL = this.add.rectangle(-8,-7,11,3.5,0x321913).setAngle(24);
-        const browR = this.add.rectangle(8,-7,11,3.5,0x321913).setAngle(-24);
-        const eyeGlowL = this.add.circle(-8,-1,4.2,0xff6a1f,0.36);
-        const eyeGlowR = this.add.circle(8,-1,4.2,0xff6a1f,0.36);
-        const eyeL = this.add.ellipse(-8,-1,5.2,2.8,0xffbd35);
-        const eyeR = this.add.ellipse(8,-1,5.2,2.8,0xffbd35);
-        const pupilL = this.add.ellipse(-8,-1,1.5,2.2,0x120a08);
-        const pupilR = this.add.ellipse(8,-1,1.5,2.2,0x120a08);
-        const nose = this.add.triangle(0,5,-3,3,3,3,0,-4,0x7b4431);
-        const mouthDark = this.add.ellipse(0,11,15,7,0x351a16,0.95);
-        const fangL = this.add.triangle(-4.5,10,-2.1,0,2.1,0,0,4.7,0xf0e1bf);
-        const fangR = this.add.triangle(4.5,10,-2.1,0,2.1,0,0,4.7,0xf0e1bf);
+        const browL = this.add.rectangle(-8,-8,12,3.5,0x2c1712,1).setAngle(27);
+        const browR = this.add.rectangle(8,-8,12,3.5,0x2c1712,1).setAngle(-27);
+        const eyeGlowL = this.add.circle(-8,-2,4.6,0xff4a16,0.44);
+        const eyeGlowR = this.add.circle(8,-2,4.6,0xff4a16,0.44);
+        const eyeL = this.add.ellipse(-8,-2,5.8,2.8,0xffc037,1).setAngle(8);
+        const eyeR = this.add.ellipse(8,-2,5.8,2.8,0xffc037,1).setAngle(-8);
+        const pupilL = this.add.ellipse(-8,-2,1.4,2.4,0x100807,1);
+        const pupilR = this.add.ellipse(8,-2,1.4,2.4,0x100807,1);
+        const nose = this.add.polygon(0,5,[-3,-2,3,-2,1,5,-1,5],0x75402f,1);
+        const snarlL=this.add.rectangle(-5,8,7,1.5,0x5c2a22,.85).setAngle(-8);
+        const snarlR=this.add.rectangle(5,8,7,1.5,0x5c2a22,.85).setAngle(8);
+        const mouthDark = this.add.ellipse(0,12,16,8,0x2f1513,1);
+        const fangL = this.add.triangle(-4.5,10,-2.1,0,2.1,0,0,5.2,0xf2e3bf);
+        const fangR = this.add.triangle(4.5,10,-2.1,0,2.1,0,0,5.2,0xf2e3bf);
 
-        // Cabelo-fogo sem triângulos soltos: todas as chamas nascem e se sobrepõem à massa do cabelo.
+        // Cabelo-fogo com massa contínua e pontas sobrepostas para evitar peças "soltas".
         const hairRig = this.add.container(0,-18);
-        const hairMass = this.add.ellipse(0,0,52,27,0x9f2f1c).setStrokeStyle(1,0x6f2117,0.78);
-        const hairMid = this.add.ellipse(-1,-3,43,22,0xd94420,0.98);
-        const hairHot = this.add.ellipse(-2,-5,29,14,0xf36f25,0.88);
+        const hairMass = this.add.ellipse(0,1,53,28,0x8f281b,1).setStrokeStyle(1,0x5f1c15,0.82);
+        const hairMid = this.add.ellipse(0,-3,45,23,0xd43d1d,1);
+        const hairHot = this.add.ellipse(-1,-6,31,15,0xf56c22,0.94);
         const flameData = [
-            [-20,-11,13,29,-16,0xb52f1c,0xef5a23],
-            [-13,-16,14,34,-9,0xc93a1d,0xf47a27],
-            [-5,-19,14,39,-3,0xe14b20,0xff9230],
-            [4,-20,15,41,4,0xe85521,0xffa337],
-            [13,-16,14,34,10,0xd7431f,0xf47a27],
-            [20,-11,13,29,16,0xb9341d,0xef5a23]
+            [-23,-8,14,29,-20,0xad2c1b,0xef5a23],
+            [-17,-14,15,34,-14,0xc2361c,0xf36e25],
+            [-10,-19,16,39,-9,0xd9441e,0xff8329],
+            [-2,-23,17,44,-3,0xe34a1e,0xff9a30],
+            [7,-22,17,43,5,0xe9541f,0xffa43a],
+            [15,-17,16,37,11,0xd9441e,0xff8329],
+            [22,-10,14,31,18,0xb8321c,0xf36e25]
         ];
         const hairFlames = [];
         const hairInnerFlames = [];
         flameData.forEach(([x,y,w,h,angle,outerColor,innerColor],index)=>{
-            const flame=this.add.ellipse(x,y,w,h,outerColor,0.98).setAngle(angle).setOrigin(0.5,0.72);
-            const inner=this.add.ellipse(x,y+3,w*0.45,h*0.52,innerColor,0.82).setAngle(angle).setOrigin(0.5,0.76);
+            const flame=this.add.ellipse(x,y,w,h,outerColor,1).setAngle(angle).setOrigin(0.5,0.72);
+            const inner=this.add.ellipse(x,y+4,w*0.44,h*0.52,innerColor,0.9).setAngle(angle).setOrigin(0.5,0.76);
             hairFlames.push(flame);
             hairInnerFlames.push(inner);
             hairRig.add([flame,inner]);
-            if(index===2||index===3){
-                const core=this.add.ellipse(x,y+7,w*0.22,h*0.27,0xffcf4a,0.82).setAngle(angle).setOrigin(0.5,0.8);
+            if(index>=2 && index<=4){
+                const core=this.add.ellipse(x,y+8,w*0.22,h*0.26,0xffcf4c,0.88).setAngle(angle).setOrigin(0.5,0.82);
                 hairInnerFlames.push(core);
                 hairRig.add(core);
             }
@@ -2283,12 +2319,12 @@ export class Level2Scene extends Scene
         hairRig.addAt(hairMass,0);
         hairRig.addAt(hairMid,1);
         hairRig.addAt(hairHot,2);
-        const hairLeafL = this.add.ellipse(-21,-13,13,5,0x557b3b,0.96).setAngle(-30);
-        const hairLeafR = this.add.ellipse(21,-12,12,5,0x608842,0.96).setAngle(30);
+        const hairLeafL = this.add.ellipse(-23,-10,14,6,0x557b3b,0.98).setAngle(-34);
+        const hairLeafR = this.add.ellipse(23,-9,14,6,0x608842,0.98).setAngle(34);
 
         headRig.add([
-            neck,earL,earR,head,jaw,faceShade,browL,browR,
-            eyeGlowL,eyeGlowR,eyeL,eyeR,pupilL,pupilR,nose,mouthDark,fangL,fangR,
+            neck,earL,earR,head,cheekL,cheekR,jaw,faceShade,browL,browR,
+            eyeGlowL,eyeGlowR,eyeL,eyeR,pupilL,pupilR,nose,snarlL,snarlR,mouthDark,fangL,fangR,
             hairRig,hairLeafL,hairLeafR
         ]);
 
