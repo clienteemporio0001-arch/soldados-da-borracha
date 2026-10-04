@@ -1806,8 +1806,8 @@ export class Level3Scene extends Scene
         this.caboclinhoVisualState = 'IDLE';
         this.caboclinhoMaxHealth = 100;
         this.caboclinhoHealth = 100;
-        this.caboclinhoArenaMinX = 7000;
-        this.caboclinhoArenaMaxX = 8500;
+        this.caboclinhoArenaMinX = 9660;
+        this.caboclinhoArenaMaxX = 10760;
         this.caboclinhoNextActionAt = 0;
         this.caboclinhoActionSerial = 0;
         this.caboclinhoStrongActions = 0;
@@ -1823,7 +1823,7 @@ export class Level3Scene extends Scene
         this.caboclinhoVisual = this.createCaboclinhoVisual();
         this.caboclinhoVisual.setVisible(false);
 
-        this.caboclinho = this.add.rectangle(7480, 390, 44, 70, 0x000000, 0);
+        this.caboclinho = this.add.rectangle(10380, 610, 44, 70, 0x000000, 0);
         this.physics.add.existing(this.caboclinho);
         this.caboclinho.body.setSize(44, 70);
         this.caboclinho.body.setCollideWorldBounds(true);
@@ -1845,8 +1845,8 @@ export class Level3Scene extends Scene
         // dos botões de transição normais.
         this.events.once('shutdown', () => this.cleanupCaboclinhoBoss());
 
-        this.caboclinhoArenaBarrierL = this.add.rectangle(6920, 520, 28, 280, 0x153321, 0.82).setDepth(14).setVisible(false);
-        this.caboclinhoArenaBarrierR = this.add.rectangle(8580, 520, 28, 280, 0x153321, 0.82).setDepth(14).setVisible(false);
+        this.caboclinhoArenaBarrierL = this.add.rectangle(9660, 500, 28, 420, 0x153321, 0).setDepth(14).setVisible(false);
+        this.caboclinhoArenaBarrierR = this.add.rectangle(10770, 450, 28, 520, 0x153321, 0).setDepth(14).setVisible(false);
         [this.caboclinhoArenaBarrierL, this.caboclinhoArenaBarrierR].forEach(barrier => {
             this.physics.add.existing(barrier, true);
             barrier.body.enable = false;
@@ -1858,7 +1858,7 @@ export class Level3Scene extends Scene
 
         this.createCaboclinhoBossHud();
 
-        this.caboclinhoTrigger = this.add.rectangle(7000, 535, 170, 190, 0x000000, 0);
+        this.caboclinhoTrigger = this.add.rectangle(9760, 535, 190, 210, 0x000000, 0);
         this.physics.add.existing(this.caboclinhoTrigger);
         this.caboclinhoTrigger.body.setAllowGravity(false);
         this.caboclinhoTrigger.body.setImmovable(true);
@@ -2171,16 +2171,17 @@ export class Level3Scene extends Scene
 
         this.caboclinhoTestActive = true;
         this.caboclinhoTrigger.body.enable = false;
-        this.spawnPoint = { x: 7080, y: 540 };
+        this.spawnPoint = { x: 9820, y: 610 };
 
         this.forestMonkeySystem?.cleanup?.();
         this.oncaEncounter?.cleanupActive?.(true);
 
         this.resetCaboclinhoBoss(false);
         this.caboclinhoBossHud.setVisible(true);
-        this.caboclinhoArenaBarrierL.setVisible(true);
-        this.caboclinhoArenaBarrierR.setVisible(true);
-        this.caboclinhoArenaBarrierL.body.enable = true;
+        this.caboclinhoArenaBarrierL.setVisible(false);
+        this.caboclinhoArenaBarrierR.setVisible(false);
+        // Mantém o caminho de retorno livre; somente a subida final fica bloqueada.
+        this.caboclinhoArenaBarrierL.body.enable = false;
         this.caboclinhoArenaBarrierR.body.enable = true;
 
         const panel = this.add.rectangle(512, 355, 650, 112, 0x06100d, 0.92).setScrollFactor(0).setDepth(180);
@@ -2217,7 +2218,7 @@ export class Level3Scene extends Scene
         this.caboclinhoVisualDestroyed = false;
 
         if (this.caboclinho) {
-            this.caboclinho.setPosition(7480, 390);
+            this.caboclinho.setPosition(10380, 610);
             this.caboclinho.body.enable = true;
             this.caboclinho.body.setVelocity(0, 0);
         }
@@ -2225,7 +2226,7 @@ export class Level3Scene extends Scene
         if (this.caboclinhoVisual) {
             this.tweens.killTweensOf(this.caboclinhoVisual);
             this.caboclinhoVisual
-                .setPosition(7480, 390)
+                .setPosition(10380, 610)
                 .setVisible(true)
                 .setAlpha(1)
                 .setAngle(0)
