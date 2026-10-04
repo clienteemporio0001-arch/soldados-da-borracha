@@ -1,6 +1,6 @@
 export const AUDIO_ASSETS = {
     music_forest: { category: 'music', path: 'audio/music/music_forest.ogg', license: 'CC0-1.0', gain: 1 },
-    music_boss: { category: 'music', path: 'audio/music/music_boss.ogg', license: 'CC0-1.0', gain: 0.92 },
+    music_boss: { category: 'music', path: 'audio/music/music_boss.ogg', license: 'Pixabay Content License', gain: 1.25 },
     music_final: { category: 'music', path: null, license: null },
 
     forest_ambient: { category: 'ambient', path: 'audio/ambient/forest_ambient.mp3', license: 'CC0-1.0', gain: 1 },
